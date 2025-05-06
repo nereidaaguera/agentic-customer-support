@@ -1,0 +1,118 @@
+[tool.poetry]
+name = "telco-support-agent"
+version = "0.1.0"
+description = "Production-grade AI-powered telco customer support Agent System built on Databricks"
+authors = ["Databricks <agents@databricks.com>"]
+readme = "README.md"
+packages = [{include = "telco_support_agent"}]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pyspark = "^3.5.0"
+delta-spark = "^3.0.0"
+pydantic = "2.8.2"
+faker = "^20.1.0"
+databricks-sdk = "0.52.0"
+mlflow-skinny = "2.21.3"
+openai = "1.69.0"
+numpy = "1.26.4"
+pandas = "1.5.3"
+cloudpickle = "2.2.1"
+scikit-learn = "1.4.2"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.0"
+ruff = "^0.1.5"
+black = "^23.11.0"
+mypy = "^1.7.0"
+ipykernel = "^6.26.0"
+pre-commit = "^3.7.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 88
+target-version = ["py312"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88  # Black's default
+
+# Exclude directories and files
+exclude = [
+    ".git",
+    ".ruff_cache",
+    ".venv",
+    "__pycache__",
+    "notebooks", 
+    "notebooks/**",
+    "*.ipynb",
+    ".pytest_cache",
+    "dist",
+]
+
+[tool.ruff.lint]
+# Enable specific rule sets
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "N",   # pep8-naming
+    "D",   # pydocstyle
+    "UP",  # pyupgrade
+    "S",   # flake8-bandit (security)
+    "ICN", # flake8-import-conventions
+]
+
+# Ignore specific rules
+ignore = [
+    "E501",    # line too long (handled by formatter)
+    "B008",    # function call in default arg
+    "D100",    # Missing docstring in public module
+    "D101",    # Missing docstring in public class
+    "D107",    # Missing docstring in __init__
+    "S101",    # Use of assert (common in tests)
+    "N805",    # First argument of a method should be named `self`
+    "N812",    # Lowercase method imported as non-lowercase
+]
+
+# Rule-specific configurations
+[tool.ruff.lint.pydocstyle]
+convention = "google"  # Google-style docstrings
+
+# Files that don't need certain checks
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]  # Ignore unused imports in __init__.py
+"tests/**" = ["S101", "D"]  # Ignore assert usage and docstring issues in tests
+"notebooks/**" = ["E", "W", "F", "I", "D"]  # Relaxed rules for notebooks
+
+[tool.ruff.lint.isort]
+known-first-party = ["telco_support_agent"]
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+combine-as-imports = true
+split-on-trailing-comma = true
+
+[tool.ruff.format]
+quote-style = "double"  # Use double quotes consistently
+indent-style = "space"
+line-ending = "auto"
+docstring-code-format = true
+docstring-code-line-length = "dynamic"
+
+[tool.poetry.requires-plugins]
+poetry-plugin-export = ">=1.8"
