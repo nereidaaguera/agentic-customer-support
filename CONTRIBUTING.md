@@ -25,6 +25,7 @@ pre-commit hooks will automatically enforce these standards when you commit.
 
 ```bash
 # install pre-commit hooks
+# may hit issues with this if Databricks pre-commit git hooks installed. Can skip
 poetry run pre-commit install
 ```
 
