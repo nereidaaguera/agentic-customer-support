@@ -2,13 +2,13 @@
 
 ## Development Workflow
 
-1. **Fork the repo** and clone it to your local machine
-2. **Create a new branch** for your feature or bugfix, prepending with `<your-name>/` (e.g., `niall/add-customer-data-generation`)
-3. **Install dependencies** using Poetry: `poetry install`
-4. **Make changes**, following coding standards
-5. **Run tests and linting** to ensure quality: `./scripts/lint.sh` and `pytest`
-6. **Commit changes** with clear, descriptive commit messages
-7. **Push branch** and submit a pull request. Tag at least one reviewer
+
+1. **Create a new branch** for your feature or bugfix, prepending with `<your-name>/` (e.g., `niall/add-customer-data-generation`)
+2. **Install dependencies** using Poetry: `poetry install`
+3. **Make changes**, following coding standards 
+4. **Run tests and linting** to ensure quality: `./scripts/lint.sh` and `pytest`
+5. **Commit changes** with clear, descriptive commit messages
+6. **Push branch** and submit a pull request. Tag at least one reviewer
 
 ## Code Style
 
