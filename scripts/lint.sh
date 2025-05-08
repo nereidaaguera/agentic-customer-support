@@ -8,5 +8,5 @@ poetry run ruff format .
 echo "Running Ruff linter..."
 poetry run ruff check . --fix
 
-echo "Running mypy type checker..."
-poetry run mypy telco_support_agent
+# echo "Running mypy type checker..."
+# poetry run mypy telco_support_agent

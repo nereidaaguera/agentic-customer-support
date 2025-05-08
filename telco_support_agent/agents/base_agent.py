@@ -126,7 +126,6 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         for tool_call in tool_calls:
             function = tool_call["function"]
             args = json.loads(function["arguments"])
-            # Cast tool result to a string, since not all tools return as string
             result = str(self.execute_tool(tool_name=function["name"], args=args))
             self.messages.append(
                 {"role": "tool", "content": result, "tool_call_id": tool_call["id"]}
@@ -136,7 +135,6 @@ class BaseAgent(ResponsesAgent, abc.ABC):
                 "call_id": tool_call["id"],
                 "output": result,
             }
-            # Following the example exactly - using item parameter
             yield ResponsesStreamEvent(
                 type="response.output_item.done", item=responses_tool_call_output
             )
