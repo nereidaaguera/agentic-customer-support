@@ -74,7 +74,7 @@ This project is designed to run on [Databricks Runtime 16.4 ML LTS](https://docs
 
 #### Prerequisites
 - Python 3.12.3 (matches Databricks Runtime 16.4 ML LTS)
-- Poetry for dependency management
+- Poetry (2.1.2 and above) for dependency management
 
 #### Local Development
 
@@ -88,7 +88,7 @@ pyenv local 3.12.3
 # Check Python version
 python --version  # Should output Python 3.12.3
 
-# Install poetry
+# Install poetry - requires at least 2.1.2
 curl -sSL https://install.python-poetry.org | python3 -
 
 # Configure poetry to use Python 3.12
