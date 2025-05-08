@@ -1,6 +1,7 @@
 # Databricks notebook source
 # MAGIC %md
 # MAGIC # Base Agent Test
+
 # COMMAND ----------
 
 # MAGIC %pip install -U backoff openai pydantic mlflow
@@ -134,13 +135,6 @@ test_input = ResponsesRequest(
     ]
 )
 
-try:
-    response = basic_agent.predict(test_input)
-    print("Success! The agent is working correctly.")
-    print("\nAgent Response:")
-    print(json.dumps(response.output, indent=2))
-except Exception as e:
-    print(f"Error testing the agent: {e}")
-    import traceback
-    print("\nStacktrace:")
-    traceback.print_exc()
+response = basic_agent.predict(test_input)
+print("\nAgent Response:")
+print(response.output)
