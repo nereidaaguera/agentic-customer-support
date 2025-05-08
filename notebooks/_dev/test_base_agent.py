@@ -4,21 +4,10 @@
 
 # COMMAND ----------
 
-# MAGIC %pip install -U backoff openai pydantic mlflow
+# MAGIC %pip install -r ../../requirements.txt
 # MAGIC dbutils.library.restartPython()
 
 # COMMAND ----------
-
-# MAGIC %md 
-# MAGIC ## Import `BaseAgent`
-
-# COMMAND ----------
-
-from telco_support_agent.agents.base_agent import BaseAgent, ToolInfo
-
-# COMMAND ----------
-
-
 
 import json
 from typing import Any, Dict
@@ -26,10 +15,12 @@ from uuid import uuid4
 
 from mlflow.types.responses import ResponsesRequest
 
+from telco_support_agent.agents.base_agent import BaseAgent, ToolInfo
+
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Create simple calculator tool
+# MAGIC ## Simple calculator tool
 
 # COMMAND ----------
 
