@@ -8,15 +8,11 @@ packages = [{include = "telco_support_agent"}]
 
 [tool.poetry.dependencies]
 python = "^3.12"
-pyspark = "^3.5.0"
-delta-spark = "^3.0.0"
 pydantic = "2.8.2"
 faker = "^20.1.0"
 databricks-sdk = "0.52.0"
 mlflow-skinny = "2.22.0"
 openai = "^1.78.0"
-cloudpickle = "2.2.1"
-scikit-learn = "1.4.2"
 backoff = "^2.2.1"
 six= "1.16.0"
 
