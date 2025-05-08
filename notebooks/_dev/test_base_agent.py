@@ -3,7 +3,7 @@
 # MAGIC # Base Agent Test
 # COMMAND ----------
 
-# MAGIC %pip install -U backoff databricks-openai openai pydantic databricks-agents mlflow
+# MAGIC %pip install -U backoff openai pydantic mlflow
 # MAGIC dbutils.library.restartPython()
 
 # COMMAND ----------
@@ -17,77 +17,97 @@ from telco_support_agent.agents.base_agent import BaseAgent, ToolInfo
 
 # COMMAND ----------
 
-# MAGIC %md
-# MAGIC ## Import other necessary libraries
 
-# COMMAND ----------
 
 import json
-from typing import Any, Callable
+from typing import Any, Dict
 from uuid import uuid4
 
-import mlflow
-from databricks.sdk import WorkspaceClient
-from databricks_openai import UCFunctionToolkit
-from mlflow.types.responses import (
-    ResponsesRequest,
-)
-from unitycatalog.ai.core.base import get_uc_function_client
+from mlflow.types.responses import ResponsesRequest
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Create a concrete TestAgent class
+# MAGIC ## Create simple calculator tool
 
 # COMMAND ----------
 
-def create_tool_info(tool_spec, exec_fn=None):
-    """Create ToolInfo object from tool spec."""
-    # Remove strict parameter if using Claude model
-    if "strict" in tool_spec.get("function", {}):
-        del tool_spec["function"]["strict"]
+def calculator_tool(**kwargs):
+    operation = kwargs.get("operation")
+    a = kwargs.get("a")
+    b = kwargs.get("b")
     
-    tool_name = tool_spec["function"]["name"]
-    udf_name = tool_name.replace("__", ".")
+    if not all([operation, a is not None, b is not None]):
+        return "Error: Missing required parameters. Need 'operation', 'a', and 'b'."
     
-    # Use provided exec_fn or create default UC function executor
-    if exec_fn:
-        return ToolInfo(name=tool_name, spec=tool_spec, exec_fn=exec_fn)
+    try:
+        a = float(a)
+        b = float(b)
+    except (ValueError, TypeError):
+        return "Error: Parameters 'a' and 'b' must be numbers."
     
-    # Define wrapper for UC tool execution
-    uc_function_client = get_uc_function_client()
-    def default_exec_fn(**kwargs):
-        function_result = uc_function_client.execute_function(udf_name, kwargs)
-        if function_result.error is not None:
-            return function_result.error
-        else:
-            return function_result.value
-    
-    return ToolInfo(name=tool_name, spec=tool_spec, exec_fn=default_exec_fn)
+    if operation == "add":
+        return f"Result: {a + b}"
+    elif operation == "subtract":
+        return f"Result: {a - b}"
+    elif operation == "multiply":
+        return f"Result: {a * b}"
+    elif operation == "divide":
+        if b == 0:
+            return "Error: Cannot divide by zero."
+        return f"Result: {a / b}"
+    else:
+        return f"Error: Unknown operation '{operation}'. Supported operations are: add, subtract, multiply, divide."
+
+# calculator tool spec
+calculator_tool_spec = {
+    "type": "function",
+    "function": {
+        "name": "calculator",
+        "description": "Perform basic arithmetic operations",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": ["add", "subtract", "multiply", "divide"],
+                    "description": "The operation to perform"
+                },
+                "a": {
+                    "type": "number",
+                    "description": "The first number"
+                },
+                "b": {
+                    "type": "number",
+                    "description": "The second number"
+                }
+            },
+            "required": ["operation", "a", "b"]
+        }
+    }
+}
+
+calculator_tool_info = ToolInfo(
+    name="calculator",
+    spec=calculator_tool_spec,
+    exec_fn=calculator_tool
+)
 
 # COMMAND ----------
 
-class TestAgent(BaseAgent):
-    """Simple test agent that extends BaseAgent."""
-    
+# MAGIC %md
+# MAGIC ## Basic test agent
+
+# COMMAND ----------
+
+class BasicTestAgent(BaseAgent):    
     def __init__(self, llm_endpoint: str):
-        """Initialize the test agent with basic tools.
-        
-        Args:
-            llm_endpoint: Name of the LLM endpoint to use
-        """
         system_prompt = """
-        You are a helpful assistant. You can use Python code to help answer questions.
+        You are a helpful assistant that can perform calculations.
+        Use the calculator tool to help with arithmetic operations.
         """
         
-        # Set up Python executor tool
-        uc_tool_names = ["system.ai.python_exec"]
-        uc_toolkit = UCFunctionToolkit(function_names=uc_tool_names)
-        
-        # Create tools
-        tools = []
-        for tool_spec in uc_toolkit.tools:
-            tools.append(create_tool_info(tool_spec))
+        tools = [calculator_tool_info]
         
         super().__init__(
             llm_endpoint=llm_endpoint,
@@ -98,28 +118,24 @@ class TestAgent(BaseAgent):
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Create and test the agent
+# MAGIC ## Create / test agent
 
 # COMMAND ----------
 
-# Define LLM endpoint
 LLM_ENDPOINT = "databricks-claude-3-7-sonnet"
 
-# Create the test agent
-test_agent = TestAgent(llm_endpoint=LLM_ENDPOINT)
+basic_agent = BasicTestAgent(llm_endpoint=LLM_ENDPOINT)
 
 # COMMAND ----------
 
-# test with basic Python execution task
 test_input = ResponsesRequest(
     input=[
-        {"role": "user", "content": "Calculate the sum of numbers from 1 to 10 using Python."}
+        {"role": "user", "content": "What is 42 multiplied by 7?"}
     ]
 )
 
-# Get prediction
 try:
-    response = test_agent.predict(test_input)
+    response = basic_agent.predict(test_input)
     print("Success! The agent is working correctly.")
     print("\nAgent Response:")
     print(json.dumps(response.output, indent=2))
