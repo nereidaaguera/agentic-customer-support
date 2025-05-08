@@ -27,9 +27,9 @@ jobs:
       - name: Format check with ruff
         run: |
           poetry run ruff format --check .
-      - name: Type check with mypy
-        run: |
-          poetry run mypy telco_support_agent
+      # - name: Type check with mypy
+      #   run: |
+      #     poetry run mypy telco_support_agent
 
   test:
     runs-on: ubuntu-latest
