@@ -85,10 +85,11 @@ Always use the route_to_specialized_agent tool to route queries, providing a cle
             llm_endpoint=llm_endpoint, tools=[routing_tool], system_prompt=system_prompt
         )
 
-        # self.account_agent = None  # Placeholder for account agent
-        # self.billing_agent = None  # Placeholder for billing agent
-        # self.tech_support_agent = None  # Placeholder for tech support agent
-        # self.product_agent = None  # Placeholder for product agent
+        # placeholders for specialized agents
+        # self.account_agent = None
+        # self.billing_agent = None
+        # self.tech_support_agent = None
+        # self.product_agent = None
 
     @mlflow.trace(span_type=SpanType.TOOL)
     def route_to_specialized_agent(self, agent_type: str, reason: str) -> str:
@@ -104,8 +105,17 @@ Always use the route_to_specialized_agent tool to route queries, providing a cle
         Returns:
             Response describing the routing decision
         """
-        # TODO: testing: just return routing info
+        agent_descriptions = {
+            "account": "customer account information, profile details, and account management",
+            "billing": "billing inquiries, payment information, and usage details",
+            "tech_support": "technical issues, troubleshooting, and device setup assistance",
+            "product": "product information, plan comparisons, and promotional offers",
+        }
+
         response = f"ROUTING DECISION: Route query to {agent_type.upper()} AGENT\n\n"
         response += f"REASON: {reason}\n\n"
+
+        if agent_type in agent_descriptions:
+            response += f"NOTE: The {agent_type.upper()} AGENT specializes in {agent_descriptions[agent_type]}."
 
         return response

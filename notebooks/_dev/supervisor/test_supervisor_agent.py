@@ -33,12 +33,13 @@ def test_query(query):
     response = supervisor.predict(request)
     
     for output_item in response.output:
-        if output_item.get("type") == "message":
-            for content_item in output_item.get("content", []):
-                if content_item.get("type") == "output_text":
-                    print(content_item.get("text"))
-        elif output_item.get("type") == "function_call_output":
-            print(output_item.get("output"))
+        if hasattr(output_item, "type"):
+            if output_item.type == "message" and hasattr(output_item, "content"):
+                for content_item in output_item.content:
+                    if hasattr(content_item, "type") and content_item.type == "output_text":
+                        print(content_item.text)
+            elif output_item.type == "function_call_output" and hasattr(output_item, "output"):
+                print(output_item.output)
     
     print("\n" + "="*80)
 
