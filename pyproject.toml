@@ -11,10 +11,10 @@ python = "^3.12"
 pydantic = "2.8.2"
 faker = "^20.1.0"
 databricks-sdk = "0.52.0"
-mlflow-skinny = "2.22.0"
+mlflow = "^3.0.0rc0"
 openai = "^1.78.0"
 backoff = "^2.2.1"
-six= "1.16.0"
+six = "1.16.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"
