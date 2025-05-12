@@ -5,7 +5,7 @@ import json
 import logging
 from collections.abc import Generator
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Union
 from uuid import uuid4
 
 import backoff
@@ -71,7 +71,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
 
     @classmethod
     def _load_config(
-        cls, agent_type: str, config_dir: Optional[Path | str] = None
+        cls, agent_type: str, config_dir: Optional[Union[str, Path]] = None
     ) -> AgentConfig:
         """Load agent configuration from YAML file.
 
@@ -88,14 +88,17 @@ class BaseAgent(ResponsesAgent, abc.ABC):
 
         # get config file
         if config_dir is None:
-            config_dir = Path(__file__).parent.parent / "configs" / "agents"
+            from telco_support_agent import PROJECT_ROOT
+
+            config_dir = PROJECT_ROOT / "configs" / "agents"
         else:
             config_dir = Path(config_dir)
+
         config_path = config_dir / f"{agent_type}.yaml"
 
         if not config_path.exists():
             raise FileNotFoundError(
-                f"No config file found for agent type: {agent_type}"
+                f"No config file found for agent type: {agent_type} at {config_path}"
             )
 
         # load and validate
