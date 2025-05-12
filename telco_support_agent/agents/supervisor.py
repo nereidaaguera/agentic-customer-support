@@ -1,82 +1,110 @@
 """Supervisor agent to orchestrate specialized sub-agents."""
 
+import logging
+from typing import Optional
 
 import mlflow
 from mlflow.entities import SpanType
 
-# from telco_support_agent.agents.account import AccountAgent
 from telco_support_agent.agents.base_agent import BaseAgent
 
-# from telco_support_agent.agents.billing import BillingAgent
-# from telco_support_agent.agents.product import ProductAgent
-# from telco_support_agent.agents.tech_support import TechSupportAgent
-from telco_support_agent.tools import ToolInfo
+logger = logging.getLogger(__name__)
 
 
 class SupervisorAgent(BaseAgent):
-    """Supervisor agent that orchestrates specialized sub-agents."""
+    """Supervisor agent to orchestrate specialized sub-agents.
 
-    def __init__(self, llm_endpoint: str):
-        """Initialize the supervisor agent with specialized sub-agents.
+    This agent analyzes customer queries and routes them to the appropriate
+    sub-agent based on query content and intent.
+    """
+
+    def __init__(
+        self,
+        llm_endpoint: Optional[str] = None,
+        config_dir: Optional[str] = None,
+    ):
+        """Initialize supervisor agent.
 
         Args:
-            llm_endpoint: Name of the LLM endpoint to use
+            llm_endpoint: Optional override for LLM endpoint
+            config_dir: Optional directory for config files
         """
-        system_prompt = """"""  # TODO
-
-        # init specialized agents
-        # self.account_agent = AccountAgent(llm_endpoint)
-        # self.billing_agent = BillingAgent(llm_endpoint)
-        # self.tech_support_agent = TechSupportAgent(llm_endpoint)
-        # self.product_agent = ProductAgent(llm_endpoint)
-
-        # tool for routing to specialized agents
-        routing_tool = ToolInfo(
-            name="route_to_specialized_agent",
-            spec={
-                "type": "function",
-                "function": {
-                    "name": "route_to_specialized_agent",
-                    "description": "Route a query to a specialized agent",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "agent_type": {
-                                "type": "string",
-                                "enum": [
-                                    "account",
-                                    "billing",
-                                    "tech_support",
-                                    "product",
-                                ],
-                                "description": "The type of specialized agent to route to",
-                            },
-                            "reason": {
-                                "type": "string",
-                                "description": "The reason for routing to this agent type",
-                            },
-                        },
-                        "required": ["agent_type", "reason"],
-                    },
-                },
-            },
-            exec_fn=self.route_to_specialized_agent,
-        )
-
-        # init base agent with the routing tool
+        # init base agent
         super().__init__(
-            llm_endpoint=llm_endpoint, tools=[routing_tool], system_prompt=system_prompt
+            agent_type="supervisor",
+            llm_endpoint=llm_endpoint,
+            config_dir=config_dir,
         )
+
+        # init sub-agents when needed
+        self._sub_agents = {}
+
+    def get_description(self) -> str:
+        """Return a description of this agent."""
+        return "Supervisor agent that routes customer queries to sub-agents"
 
     @mlflow.trace(span_type=SpanType.TOOL)
-    def route_to_specialized_agent(self, agent_type: str, reason: str) -> str:
-        """Route query to specialized agent.
+    def tool_route_to_specialized_agent(self, agent_type: str, reason: str) -> str:
+        """Route query to appropriate sub-agent.
 
         Args:
-            agent_type: Sub-agent to route to
-            reason: Reason for routing to sub-agent
+            agent_type: Type of sub-agent to route to
+            reason: Reason for routing to this agent
 
         Returns:
-            Response from the sub-agent
+            Response from sub-agent or routing info in test mode
         """
-        pass  # TODO: Implement routing logic to specialized agents
+        agent_descriptions = {
+            "account": "customer account information, profile details, and account management",
+            "billing": "billing inquiries, payment information, and usage details",
+            "tech_support": "technical issues, troubleshooting, and device setup assistance",
+            "product": "product information, plan comparisons, and promotional offers",
+        }
+
+        logger.info(f"Routing to {agent_type} agent: {reason}")
+
+        # TODO: In the full implementation, initialize and call sub-agent
+        # for now, return a formatted response about routing
+        response = f"ROUTING DECISION: Route query to {agent_type.upper()} AGENT\n\n"
+        response += f"REASON: {reason}\n\n"
+
+        if agent_type in agent_descriptions:
+            response += f"NOTE: The {agent_type.upper()} AGENT specializes in {agent_descriptions[agent_type]}."
+
+        return response
+
+    def _get_sub_agent(self, agent_type: str) -> BaseAgent:
+        """Get or initialize a sub-agent.
+
+        Args:
+            agent_type: Type of sub-agent to get
+
+        Returns:
+            Initialized sub-agent
+        """
+        # get cached agent if available
+        if agent_type in self._sub_agents:
+            return self._sub_agents[agent_type]
+
+        # # import sub-agent classes
+        # if agent_type == "account":
+        #     from telco_support_agent.agents.account import AccountAgent
+        #     agent_class = AccountAgent
+        # elif agent_type == "billing":
+        #     from telco_support_agent.agents.billing import BillingAgent
+        #     agent_class = BillingAgent
+        # elif agent_type == "tech_support":
+        #     from telco_support_agent.agents.tech_support import TechSupportAgent
+        #     agent_class = TechSupportAgent
+        # elif agent_type == "product":
+        #     from telco_support_agent.agents.product import ProductAgent
+        #     agent_class = ProductAgent
+        # else:
+        #     raise ValueError(f"Unknown agent type: {agent_type}")
+
+        # agent = # TODO
+
+        # cache
+        # self._sub_agents[agent_type] = agent
+
+        # return agent

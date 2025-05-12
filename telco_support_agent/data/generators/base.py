@@ -12,7 +12,7 @@ from faker import Faker
 from pyspark.sql import DataFrame
 from pyspark.sql.types import StructType
 
-from telco_support_agent.data.utils.spark_utils import spark
+from telco_support_agent.utils.spark_utils import spark
 
 
 class BaseGenerator:
