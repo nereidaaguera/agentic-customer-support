@@ -1,5 +1,5 @@
 # Databricks notebook source
-# MAGIC %pip install -r ../../../requirements.txt --pre
+# MAGIC %pip install -r ../../../requirements.txt --pre -qqqq
 # MAGIC dbutils.library.restartPython()
 
 # COMMAND ----------
@@ -10,7 +10,6 @@ from telco_support_agent.agents.supervisor import SupervisorAgent
 
 # COMMAND ----------
 
-# init agent - automatically loads the config
 supervisor = SupervisorAgent()
 
 print(f"Agent type: {supervisor.agent_type}")
