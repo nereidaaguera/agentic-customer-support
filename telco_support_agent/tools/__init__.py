@@ -1,5 +1,6 @@
 """Tool implementations for agent use."""
 
+from collections.abc import Callable
 from typing import Any, Optional
 
 from pydantic import BaseModel
@@ -24,7 +25,7 @@ class ToolConfig(BaseModel):
 class ToolInfo:
     """Tool information container with execution function."""
 
-    def __init__(self, name: str, spec: dict[str, Any], exec_fn: callable):
+    def __init__(self, name: str, spec: dict[str, Any], exec_fn: Callable):
         """Initialize tool info.
 
         Args:
