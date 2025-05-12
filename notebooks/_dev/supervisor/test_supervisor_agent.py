@@ -10,9 +10,12 @@ from telco_support_agent.agents.supervisor import SupervisorAgent
 
 # COMMAND ----------
 
-LLM_ENDPOINT = "databricks-claude-3-7-sonnet"
+# init agent - automatically loads the config
+supervisor = SupervisorAgent()
 
-supervisor = SupervisorAgent(llm_endpoint=LLM_ENDPOINT)
+print(f"Agent type: {supervisor.agent_type}")
+print(f"LLM endpoint: {supervisor.llm_endpoint}")
+print(f"LLM parameters: {supervisor.llm_params}")
 
 # COMMAND ----------
 
