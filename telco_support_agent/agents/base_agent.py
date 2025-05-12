@@ -88,9 +88,9 @@ class BaseAgent(ResponsesAgent, abc.ABC):
 
         # get config file
         if config_dir is None:
-            from telco_support_agent import PROJECT_ROOT
-
-            config_dir = PROJECT_ROOT / "configs" / "agents"
+            package_dir = Path(__file__).parent.parent
+            project_root = package_dir.parent
+            config_dir = project_root / "configs" / "agents"
         else:
             config_dir = Path(config_dir)
 
