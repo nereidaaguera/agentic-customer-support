@@ -11,7 +11,7 @@ python = "^3.12"
 pydantic = "2.8.2"
 faker = "^20.1.0"
 databricks-sdk = "0.52.0"
-mlflow-skinny = "2.22.0"
+mlflow = "^3.0.0rc0"
 openai = "^1.78.0"
 backoff = "^2.2.1"
 six= "1.16.0"
@@ -86,6 +86,7 @@ ignore = [
     "S101",    # Use of assert (common in tests)
     "N805",    # First argument of a method should be named `self`
     "N812",    # Lowercase method imported as non-lowercase
+    "UP007",   # Use `X | Y` for type annotations - ignoring to support Python <3.10
 ]
 
 # Rule-specific configurations
