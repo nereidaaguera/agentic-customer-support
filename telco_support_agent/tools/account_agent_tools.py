@@ -14,9 +14,6 @@ class UCTool(ABC):
         self.client = DatabricksFunctionClient()
         self.function_name = function_name
         self.spec = self.create_function()
-        self.exec_fn = self.client.get_function_as_callable(
-            function_name=self.function_name
-        )
 
     @abstractmethod
     def create_function(self) -> ChatCompletionToolParam:
