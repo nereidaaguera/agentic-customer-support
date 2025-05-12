@@ -5,6 +5,7 @@ from mlflow.entities import SpanType
 
 from telco_support_agent.agents.base_agent import BaseAgent
 from telco_support_agent.tools import ToolInfo
+from telco_support_agent.utils.config import load_agent_config
 
 
 class SupervisorAgent(BaseAgent):
@@ -20,76 +21,68 @@ class SupervisorAgent(BaseAgent):
         Args:
             llm_endpoint: Name of the LLM endpoint to use
         """
-        system_prompt = """You are an intelligent supervisor for a telecom customer support system. Your job is to analyze customer queries and route them to the appropriate specialized agent.
+        # Load config
+        self.config = load_agent_config("supervisor")
+        system_prompt = self.config.get("system_prompt", "")
 
-When a customer submits a query, you must:
-1. Carefully analyze the query to understand its intent, topic, and required expertise
-2. Determine which specialized agent would be best suited to handle this query
-3. Use the route_to_specialized_agent tool to route the query to that agent
-4. Provide a clear reason for your routing decision
+        # Create routing tool
+        routing_tool = self._create_routing_tool()
 
-You have the following specialized agents available:
-
-1. ACCOUNT AGENT: Handles queries related to customer profiles, account status, subscription details, and account management.
-   Examples: "What plan am I on?", "When did I create my account?", "Is my autopay enabled?", "How many lines do I have?"
-
-2. BILLING AGENT: Handles queries related to bills, payments, charges, billing cycles, and usage.
-   Examples: "Why is my bill higher this month?", "When is my payment due?", "I see a charge I don't recognize", "How much data did I use?"
-
-3. TECH_SUPPORT AGENT: Handles queries related to troubleshooting, connectivity issues, device setup, and technical problems.
-   Examples: "My phone won't connect", "I can't make calls", "How do I reset my voicemail?", "Why is my internet slow?"
-
-4. PRODUCT AGENT: Handles queries related to service plans, devices, promotions, and plan comparisons.
-   Examples: "What's the difference between plans?", "Do you have promotions?", "Is my phone 5G compatible?", "Which plan has the most data?"
-
-Route each query to the most appropriate agent based on its primary topic. If a query spans multiple domains, route it to the agent that would handle the most central aspect of the query.
-
-Always use the route_to_specialized_agent tool to route queries, providing a clear and specific reason for your choice.
-"""
-
-        # tool for routing to specialized agents
-        routing_tool = ToolInfo(
-            name="route_to_specialized_agent",
-            spec={
-                "type": "function",
-                "function": {
-                    "name": "route_to_specialized_agent",
-                    "description": "Route a query to a specialized agent",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "agent_type": {
-                                "type": "string",
-                                "enum": [
-                                    "account",
-                                    "billing",
-                                    "tech_support",
-                                    "product",
-                                ],
-                                "description": "The type of specialized agent to route to",
-                            },
-                            "reason": {
-                                "type": "string",
-                                "description": "The reason for routing to this agent type",
-                            },
-                        },
-                        "required": ["agent_type", "reason"],
-                    },
-                },
-            },
-            exec_fn=self.route_to_specialized_agent,
-        )
-
-        # init base agent with the routing tool
+        # init base agent with routing tool
         super().__init__(
             llm_endpoint=llm_endpoint, tools=[routing_tool], system_prompt=system_prompt
         )
 
-        # placeholders for specialized agents
+        # placeholders for sub-agents
         # self.account_agent = None
         # self.billing_agent = None
         # self.tech_support_agent = None
         # self.product_agent = None
+
+    def _create_routing_tool(self) -> ToolInfo:
+        """Create the routing tool from configuration.
+
+        Returns:
+            Configured routing tool
+        """
+        # Get tool configs
+        tool_configs = self.config.get("tools", [])
+
+        # routing tool config
+        for tool_config in tool_configs:
+            if tool_config["name"] == "route_to_specialized_agent":
+                return ToolInfo(
+                    name=tool_config["name"],
+                    spec={
+                        "type": "function",
+                        "function": {
+                            "name": tool_config["name"],
+                            "description": tool_config["description"],
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "agent_type": {
+                                        "type": "string",
+                                        "enum": tool_config["parameters"]["agent_type"][
+                                            "enum"
+                                        ],
+                                        "description": tool_config["parameters"][
+                                            "agent_type"
+                                        ]["description"],
+                                    },
+                                    "reason": {
+                                        "type": "string",
+                                        "description": tool_config["parameters"][
+                                            "reason"
+                                        ]["description"],
+                                    },
+                                },
+                                "required": ["agent_type", "reason"],
+                            },
+                        },
+                    },
+                    exec_fn=self.route_to_specialized_agent,
+                )
 
     @mlflow.trace(span_type=SpanType.TOOL)
     def route_to_specialized_agent(self, agent_type: str, reason: str) -> str:
@@ -105,6 +98,7 @@ Always use the route_to_specialized_agent tool to route queries, providing a cle
         Returns:
             Response describing the routing decision
         """
+        # TODO: testing - return a formatted response about routing
         agent_descriptions = {
             "account": "customer account information, profile details, and account management",
             "billing": "billing inquiries, payment information, and usage details",
