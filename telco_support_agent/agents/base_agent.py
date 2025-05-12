@@ -392,8 +392,3 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         ]
 
         yield from self.call_and_run_tools(messages)
-
-    @abc.abstractmethod
-    def get_description(self) -> str:
-        """Return a description of this agent."""
-        pass

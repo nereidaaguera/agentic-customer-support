@@ -9,7 +9,7 @@
 
 # COMMAND ----------
 
-import json
+import logging
 from typing import Any, Dict
 from uuid import uuid4
 
@@ -102,10 +102,15 @@ class BasicTestAgent(BaseAgent):
         tools = [calculator_tool_info]
         
         super().__init__(
+            agent_type="calculator",
             llm_endpoint=llm_endpoint,
             tools=tools,
             system_prompt=system_prompt
         )
+    
+    def tool_calculator(self, **kwargs):
+        """Tool implementation for calculator."""
+        return calculator_tool(**kwargs)
 
 # COMMAND ----------
 
@@ -118,6 +123,9 @@ LLM_ENDPOINT = "databricks-claude-3-7-sonnet"
 
 basic_agent = BasicTestAgent(llm_endpoint=LLM_ENDPOINT)
 
+print(f"Agent type: {basic_agent.agent_type}")
+print(f"LLM endpoint: {basic_agent.llm_endpoint}")
+
 # COMMAND ----------
 
 test_input = ResponsesRequest(
@@ -128,4 +136,12 @@ test_input = ResponsesRequest(
 
 response = basic_agent.predict(test_input)
 print("\nAgent Response:")
-print(response.output)
+
+for output_item in response.output:
+    if hasattr(output_item, "type"):
+        if output_item.type == "message" and hasattr(output_item, "content"):
+            for content_item in output_item.content:
+                if hasattr(content_item, "type") and content_item.type == "output_text":
+                    print(content_item.text)
+        elif output_item.type == "function_call_output" and hasattr(output_item, "output"):
+            print(output_item.output)
