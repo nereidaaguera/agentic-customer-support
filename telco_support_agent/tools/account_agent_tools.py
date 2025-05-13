@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Any
 from io import StringIO
+from typing import Any
 
 import pandas as pd
 from unitycatalog.ai.core.databricks import DatabricksFunctionClient
@@ -16,22 +16,27 @@ class UCTool(ABC):
         self.client = DatabricksFunctionClient()
         self.function_name = function_name
         self.spec = self.create_function()
-        self.spec['function'].pop("strict")
+        # Remove strict parameter from function. it does not work with claude.
+        self.spec["function"].pop("strict")
 
     @abstractmethod
     def create_function(self) -> ChatCompletionToolParam:
         """Create tool function in unity catalog."""
         pass
 
+    @abstractmethod
+    def exec_fn(self, **kwargs: dict[str, Any]) -> Any:
+        """Executing of the function in unity catalog."""
+        output = self.client.execute_function(self.function_name, parameters=kwargs)
+        return output.value
+
     def get_tool_info(self) -> ToolInfo:
         """Return tool info to an agent inherent from BaseAgent."""
-
-        def exec_fn(**kwargs: dict[str, Any]) -> Any:
-            output = self.client.execute_function(self.function_name, parameters=kwargs)
-            df = pd.read_csv(StringIO(output.value))
-            return df.to_markdown(index=False)
-
-        return ToolInfo(name=self.function_name.replace(".", "__"), spec=self.spec, exec_fn=exec_fn)
+        return ToolInfo(
+            name=self.function_name.replace(".", "__"),
+            spec=self.spec,
+            exec_fn=self.exec_fn,
+        )
 
 
 class AccountInfoTool(UCTool):
@@ -44,6 +49,12 @@ class AccountInfoTool(UCTool):
 
     def __init__(self) -> None:
         super().__init__("telco_customer_support_dev.bronze.account_info_tool")
+
+    def exec_fn(self, **kwargs: dict[str, Any]) -> Any:
+        """Executing of the function in unity catalog and formatting output to markdown."""
+        result = super().exec_fn(**kwargs)
+        df = pd.read_csv(StringIO(result))
+        return df.to_markdown(index=False)
 
     def create_function(self) -> ChatCompletionToolParam:
         """Create tool function in unity catalog."""
