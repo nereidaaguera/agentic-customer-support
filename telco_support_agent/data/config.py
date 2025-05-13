@@ -150,10 +150,10 @@ CONFIG: ConfigDict = {
         "device_types": {"Smartphone": 0.7, "Tablet": 0.2, "Hotspot": 0.1},
         # Payment statuses
         "payment_statuses": {
-            "Paid": 0.85,
-            "Unpaid": 0.1,
-            "Late": 0.04,
-            "Partial": 0.01,
+            "Paid": 0.65,
+            "Unpaid": 0.2,
+            "Late": 0.1,
+            "Partial": 0.05,
         },
         # Subscription statuses
         "subscription_statuses": {"Active": 0.9, "Paused": 0.05, "Cancelled": 0.05},

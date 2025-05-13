@@ -122,9 +122,13 @@ class BillingGenerator(BaseGenerator):
                 # Adjust probabilities based on age of bill
                 adj_payment_statuses = {
                     "Paid": payment_statuses["Paid"] + paid_boost,
-                    "Unpaid": payment_statuses["Unpaid"] - (paid_boost * 0.7),
-                    "Late": payment_statuses["Late"] - (paid_boost * 0.2),
-                    "Partial": payment_statuses["Partial"] - (paid_boost * 0.1),
+                    "Unpaid": max(
+                        0.01, payment_statuses["Unpaid"] - (paid_boost * 0.7)
+                    ),
+                    "Late": max(0.01, payment_statuses["Late"] - (paid_boost * 0.2)),
+                    "Partial": max(
+                        0.01, payment_statuses["Partial"] - (paid_boost * 0.1)
+                    ),
                 }
 
                 # Normalize probabilities
