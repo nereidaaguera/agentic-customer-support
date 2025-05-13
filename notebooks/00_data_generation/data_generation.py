@@ -251,6 +251,48 @@ ORDER BY billing_cycle
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC ## Cross-Reference Example: Devices, Promotions, and Billing
+# MAGIC 
+# MAGIC Demonstrates how device SKUs connect with promotions and billing records.
+
+# COMMAND ----------
+
+# Simple cross-reference query showing device-promotion-billing relationships
+display(spark.sql("""
+-- Find customers with premium devices and their associated promotions and billing records
+SELECT 
+  d.device_id,
+  d.manufacturer,
+  d.device_name,
+  p.promo_id,
+  p.promo_name,
+  p.discount_type,
+  p.discount_value,
+  b.billing_id,
+  b.billing_cycle,
+  b.base_amount,
+  b.total_amount,
+  b.status AS payment_status
+FROM telco_customer_support_dev.bronze.devices d
+JOIN telco_customer_support_dev.bronze.subscriptions s ON d.device_id = s.device_id
+LEFT JOIN telco_customer_support_dev.bronze.promotions p ON s.promo_id = p.promo_id
+JOIN telco_customer_support_dev.bronze.billing b ON s.subscription_id = b.subscription_id
+WHERE 
+  (d.manufacturer = 'Samsung' AND d.device_name LIKE '%S25%')
+  OR (d.manufacturer = 'Apple' AND d.device_name LIKE '%iPhone 16%')
+  OR (d.manufacturer = 'Google' AND d.device_name LIKE '%Pixel 9%')
+  AND s.status = 'Active'
+  AND b.billing_cycle >= '2025-01'
+ORDER BY 
+  d.manufacturer,
+  d.device_name,
+  b.billing_cycle DESC
+LIMIT 20
+"""))
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC ## Knowledge Base Data
 
 # COMMAND ----------
