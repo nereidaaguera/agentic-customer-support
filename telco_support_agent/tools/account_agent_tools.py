@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Any
+from io import StringIO
 
+import pandas as pd
 from unitycatalog.ai.core.databricks import DatabricksFunctionClient
 from unitycatalog.ai.openai.toolkit import ChatCompletionToolParam, UCFunctionToolkit
 
@@ -14,6 +16,7 @@ class UCTool(ABC):
         self.client = DatabricksFunctionClient()
         self.function_name = function_name
         self.spec = self.create_function()
+        self.spec['function'].pop("strict")
 
     @abstractmethod
     def create_function(self) -> ChatCompletionToolParam:
@@ -25,17 +28,18 @@ class UCTool(ABC):
 
         def exec_fn(**kwargs: dict[str, Any]) -> Any:
             output = self.client.execute_function(self.function_name, parameters=kwargs)
-            return output.value
+            df = pd.read_csv(StringIO(output.value))
+            return df.to_markdown(index=False)
 
-        return ToolInfo(name=self.function_name, spec=self.spec, exec_fn=exec_fn)
+        return ToolInfo(name=self.function_name.replace(".", "__"), spec=self.spec, exec_fn=exec_fn)
 
 
 class AccountInfoTool(UCTool):
     SQL_BODY = """
-                CREATE OR REPLACE FUNCTION {function_name}(customer_id STRING COMMENT 'ID of the customer whose info to look up.')
+                CREATE OR REPLACE FUNCTION {function_name}(customer STRING COMMENT 'ID of the customer whose info to look up.')
                 RETURNS TABLE
                 COMMENT 'Returns data about a specific customer including their registration date and address.'
-                RETURN SELECT * from telco_customer_support_dev.bronze.customers where customer_id = customer_id LIMIT 1
+                RETURN SELECT * from telco_customer_support_dev.bronze.customers where customer_id = customer LIMIT 1
             """
 
     def __init__(self) -> None:
