@@ -4,10 +4,6 @@
 
 # COMMAND ----------
 
-dbutils.library.restartPython()
-
-# COMMAND ----------
-
 from mlflow.types.responses import ResponsesRequest
 
 from telco_support_agent.agents.account import AccountAgent
@@ -23,24 +19,24 @@ print(f"LLM parameters: {account_agent.llm_params}")
 # COMMAND ----------
 
 request = ResponsesRequest(
-    input=[{"role": "user", "content": "How many plans do I have on my account?"},
-           {"role": "assistant", "content": "To provide you info about your plans, I need your customer ID. Could you please provide me with this information?"},
-           {"role": "user", "content": "My customer ID is CUS-10601"},
-           {"role": "assistant", "content": "Based on the information I've retrieved, you currently have 2 active plans on your account"},
-           {"role": "user", "content": "Can you describe the cheapest plan?"}]
+    input=[{"role": "user", "content": "How many plans do I have on my account? My ID is CUS-10601"}]
 )
 
 # COMMAND ----------
 
-account_agent.predict(request)
+response = account_agent.predict(request)
+
+# COMMAND ----------
+
+response.output[-1].content[0]['text']
 
 # COMMAND ----------
 
 test_queries = [
-    "What plan am I currently on?",
-    "Why is my bill higher this month?",
-    "My phone won't connect to the network",
-    "What's the difference between the Standard and Premium plans?"
+    "How many plans do I have on my account? My ID is CUS-10601",
+    "What plan am I currently on? My ID is CUS-10601",
+    "When did I create my account? My ID is CUS-10601",
+    "Is my autopay enabled in my subscriptions? My ID is CUS-10601",
 ]
 
 def test_query(query):
@@ -50,17 +46,8 @@ def test_query(query):
         input=[{"role": "user", "content": query}]
     )
     
-    response = supervisor.predict(request)
-    
-    for output_item in response.output:
-        if hasattr(output_item, "type"):
-            if output_item.type == "message" and hasattr(output_item, "content"):
-                for content_item in output_item.content:
-                    if hasattr(content_item, "type") and content_item.type == "output_text":
-                        print(content_item.text)
-            elif output_item.type == "function_call_output" and hasattr(output_item, "output"):
-                print(output_item.output)
-    
+    response = account_agent.predict(request)
+    print(response.output[-1].content[0]['text'])
     print("\n" + "="*80)
 
 # COMMAND ----------
