@@ -110,8 +110,10 @@ class BillingGenerator(BaseGenerator):
 
                 # Set payment status based on distribution (weighted)
                 # But make older bills more likely to be paid
-                months_ago = (date.today().year - billing_cycle_date.year) * 12 + (
-                    date.today().month - billing_cycle_date.month
+                months_ago = max(
+                    0,
+                    (date.today().year - billing_cycle_date.year) * 12
+                    + (date.today().month - billing_cycle_date.month),
                 )
                 paid_boost = min(
                     0.5, months_ago * 0.1

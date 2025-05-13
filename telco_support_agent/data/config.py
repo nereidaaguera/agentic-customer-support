@@ -130,9 +130,9 @@ CONFIG: ConfigDict = {
     },
     # Date ranges
     "date_ranges": {
-        "customer_registration": ["2020-01-01", "2025-03-01"],
-        "billing_cycles": ["2024-01", "2025-03"],
-        "device_release": ["2019-01-01", "2025-01-01"],
+        "customer_registration": ["2020-01-01", "2025-05-01"],
+        "billing_cycles": ["2024-01", "2025-06"],
+        "device_release": ["2019-01-01", "2025-05-01"],
     },
     # Distributions for categorical variables
     "distributions": {
