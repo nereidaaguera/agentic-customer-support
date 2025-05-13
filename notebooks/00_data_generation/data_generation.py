@@ -17,7 +17,6 @@ from telco_support_agent.data.generators.billing import BillingGenerator
 from telco_support_agent.data.generators.customers import CustomerGenerator
 from telco_support_agent.data.generators.knowledge_base import KnowledgeGenerator
 from telco_support_agent.data.generators.products import ProductGenerator
-from pyspark.sql import DataFrame
 
 # COMMAND ----------
 
@@ -53,7 +52,7 @@ generate_config = {
 def should_generate(table_name: str) -> bool:
     return generate_config["all"] or generate_config.get(table_name, False)
 
-def load_existing_table(table_name: str) -> DataFrame:
+def load_existing_table(table_name: str):
     return spark.table(f"telco_customer_support_{env}.bronze.{table_name}")
 
 # COMMAND ----------
