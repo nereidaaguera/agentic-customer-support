@@ -252,7 +252,8 @@ class ProductGenerator(BaseGenerator):
                 "Silver",
                 "Gold",
             ]
-            num_colors = self.random.randint(3, 6)
+            max_colors = min(6, len(colors))
+            num_colors = self.random.randint(3, max_colors)
             color_options = ", ".join(self.random.sample(colors, num_colors))
 
             # Generate release date
