@@ -178,21 +178,21 @@ class ProductGenerator(BaseGenerator):
             # Generate device name
             if manufacturer == "Apple":
                 if device_type == "Smartphone":
-                    model = f"iPhone {self.random.randint(12, 15)} {self.random.choice(['', 'Pro', 'Pro Max'])}"
+                    model = f"iPhone {self.random.randint(13, 16)} {self.random.choice(['', 'Pro', 'Pro Max', 'Plus', 'e'])}"
                 elif device_type == "Tablet":
-                    model = f"iPad {self.random.choice(['', 'Air', 'Pro'])} {self.random.randint(8, 11)}"
+                    model = f"iPad {self.random.choice(['', 'Air', 'Pro', 'mini'])} {self.random.randint(8, 11)}"
                 else:  # Hotspot
                     model = f"MiFi {self.random.randint(1, 5)}"
             elif manufacturer == "Samsung":
                 if device_type == "Smartphone":
-                    model = f"Galaxy S{self.random.randint(20, 26)} {self.random.choice(['', 'Plus', 'Ultra'])}"
+                    model = f"Galaxy S{self.random.randint(22, 25)} {self.random.choice(['', 'Plus', 'Ultra', 'Edge'])}"
                 elif device_type == "Tablet":
-                    model = f"Galaxy Tab S{self.random.randint(7, 9)}"
+                    model = f"Galaxy Tab S{self.random.randint(7, 10)}"
                 else:  # Hotspot
                     model = f"Mobile Hotspot {self.random.randint(1, 5)}"
             elif manufacturer == "Google":
                 if device_type == "Smartphone":
-                    model = f"Pixel {self.random.randint(6, 9)} {self.random.choice(['', 'Pro'])}"
+                    model = f"Pixel {self.random.randint(7, 9)} {self.random.choice(['', 'Pro', 'Pro XL'])}"
                 elif device_type == "Tablet":
                     model = f"Pixel Tablet {self.random.choice(['', 'Pro'])}"
                 else:  # Hotspot
