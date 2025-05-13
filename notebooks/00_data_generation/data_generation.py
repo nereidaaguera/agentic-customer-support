@@ -252,12 +252,11 @@ ORDER BY billing_cycle
 
 # MAGIC %md
 # MAGIC ## Cross-Reference Example: Devices, Promotions, and Billing
-# MAGIC 
-# MAGIC Demonstrates how device SKUs connect with promotions and billing records.
+# MAGIC
+# MAGIC Demonstrate how device SKUs connect with promotions and billing records.
 
 # COMMAND ----------
 
-# Simple cross-reference query showing device-promotion-billing relationships
 display(spark.sql("""
 -- Find customers with premium devices and their associated promotions and billing records
 SELECT 
