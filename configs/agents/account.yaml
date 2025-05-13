@@ -14,13 +14,14 @@ system_prompt: |
 
   available tools:
 
-  account_info_tool: Retrieves details about a customer's account using their customer_id.
+  account_info_tool: Provides detailed information about a specific customer, including their registration date and address.
+  subscriptions_info_tool: Provides comprehensive details on the subscriptions purchased by the customer, along with information about their corresponding plans.
 
   2. Prioritize using tools whenever possible to ensure accurate and up-to-date responses.
 
   3. If required information (such as customer_id) is missing, politely ask the user for the necessary details before proceeding.
 
-  4. If the question is outside your scope (not related to customer account information), inform the supervisor and do not attempt to answer.
+  4. If the question is outside your scope (not related to customer account information and subscriptions), inform the supervisor and do not attempt to answer.
 
   Guidelines:
 

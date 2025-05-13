@@ -1,7 +1,10 @@
 from typing import Optional
 
 from telco_support_agent.agents.base_agent import BaseAgent
-from telco_support_agent.tools.account_agent_tools import AccountInfoTool, PlansInfoTool
+from telco_support_agent.tools.account_agent_tools import (
+    AccountInfoTool,
+    SubscriptionsInfoTool,
+)
 
 
 class AccountAgent(BaseAgent):
@@ -10,7 +13,7 @@ class AccountAgent(BaseAgent):
     This agent answers questions related with user's account information.
     """
 
-    uc_tools = [AccountInfoTool(), PlansInfoTool()]
+    uc_tools = [AccountInfoTool(), SubscriptionsInfoTool()]
 
     def __init__(
         self, llm_endpoint: Optional[str] = None, config_dir: Optional[str] = None

@@ -20,11 +20,7 @@ class UCTool(ABC):
     """Base UC Tool class all tools will inherit from."""
 
     def __init__(
-        self,
-        catalog: str,
-        schema: str,
-        function_name: str,
-        function_type: FunctionType
+        self, catalog: str, schema: str, function_name: str, function_type: FunctionType
     ) -> None:
         self.client = DatabricksFunctionClient()
         self.catalog = catalog
@@ -48,7 +44,7 @@ class UCTool(ABC):
             )
         toolkit = UCFunctionToolkit(function_names=[self.uc_name])
         return toolkit.tools[0]
-    
+
     @abstractmethod
     def create_function_value(self) -> Union[str | Callable]:
         """Create function value for the tool."""
@@ -73,7 +69,8 @@ class AccountInfoTool(UCTool):
     SQL_BODY = """
                 CREATE OR REPLACE FUNCTION {function_name}(customer STRING COMMENT 'ID of the customer whose info to look up.')
                 RETURNS TABLE
-                COMMENT 'Provides detailed information about a specific customer, including their registration date and address.'
+                COMMENT 'Provides detailed information about a specific customer, including their registration date and address.
+                Use this tool to address queries about customer account.'
                 RETURN SELECT * from telco_customer_support_dev.bronze.customers where customer_id = customer LIMIT 1
             """
 
@@ -82,12 +79,12 @@ class AccountInfoTool(UCTool):
             "telco_customer_support_dev",
             "bronze",
             "account_info_tool",
-            FunctionType.SQL
+            FunctionType.SQL,
         )
 
     def create_function_value(self) -> Union[str | Callable]:
-        return self.SQL_BODY.format(
-            function_name=f"{self.uc_name}")
+        """Create function value for the tool."""
+        return self.SQL_BODY.format(function_name=f"{self.uc_name}")
 
     def exec_fn(self, **kwargs: dict[str, Any]) -> Any:
         """Executing of the function in unity catalog and formatting output to markdown."""
@@ -96,12 +93,13 @@ class AccountInfoTool(UCTool):
         return df.to_markdown(index=False)
 
 
-class PlansInfoTool(UCTool):
-
+class SubscriptionsInfoTool(UCTool):
     SQL_BODY = """
                 CREATE OR REPLACE FUNCTION {function_name}(customer STRING COMMENT 'ID of the customer whose info to look up.')
                 RETURNS TABLE
-                COMMENT 'Retrieves information regarding the particular plans purchased by the customer.'
+                COMMENT 'Provides comprehensive details on the subscriptions purchased by the customer,
+                along with information about their corresponding plans.
+                Use this tool to address queries about subscriptions and the plans linked to them.'
                 RETURN SELECT * EXCEPT(plans.plan_id) FROM telco_customer_support_dev.bronze.subscriptions,
                 telco_customer_support_dev.bronze.plans where subscriptions.plan_id = plans.plan_id and subscriptions.customer_id = customer
             """
@@ -110,13 +108,13 @@ class PlansInfoTool(UCTool):
         super().__init__(
             "telco_customer_support_dev",
             "bronze",
-            "plans_info_tool",
-            FunctionType.SQL
+            "subscriptions_info_tool",
+            FunctionType.SQL,
         )
-    
+
     def create_function_value(self) -> Union[str | Callable]:
-        return self.SQL_BODY.format(
-            function_name=f"{self.uc_name}")
+        """Create function value for the tool."""
+        return self.SQL_BODY.format(function_name=f"{self.uc_name}")
 
     def exec_fn(self, **kwargs: dict[str, Any]) -> Any:
         """Executing of the function in unity catalog and formatting output to markdown."""
