@@ -162,11 +162,11 @@ class ProductGenerator(BaseGenerator):
         price_ranges = self.config["products"]["devices"]["price_ranges"]
 
         manufacturer_distribution = {
-            "Apple": 0.60,    
-            "Samsung": 0.23, 
-            "Google": 0.05,   
-            "Motorola": 0.04, 
-            "OnePlus": 0.02,  
+            "Apple": 0.60,
+            "Samsung": 0.23,
+            "Google": 0.05,
+            "Motorola": 0.04,
+            "OnePlus": 0.02,
             "Xiaomi": 0.01,
         }
 
@@ -179,7 +179,7 @@ class ProductGenerator(BaseGenerator):
         for device_id in device_ids:
             # Select device type based on distribution
             device_type = self.select_weighted(device_types)
-            
+
             # Select manufacturer based on market share distribution
             manufacturer = self.select_weighted(manufacturer_distribution)
 
