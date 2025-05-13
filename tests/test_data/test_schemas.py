@@ -3,6 +3,7 @@ Tests for data schema validation.
 
 Module to test the Pydantic models to ensure proper validation of data.
 """
+
 from datetime import date, datetime, timedelta
 
 import pytest

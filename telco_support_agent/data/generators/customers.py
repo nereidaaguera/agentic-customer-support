@@ -3,6 +3,7 @@
 This module contains the CustomerGenerator class for generating customer and subscription
 data.
 """
+
 from datetime import date, timedelta
 from typing import Any
 

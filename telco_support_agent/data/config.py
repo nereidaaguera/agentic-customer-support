@@ -3,6 +3,7 @@
 This module contains Config parameters used throughout the data generation
 process, including volumes, distributions, and date ranges.
 """
+
 from typing import TypedDict
 
 

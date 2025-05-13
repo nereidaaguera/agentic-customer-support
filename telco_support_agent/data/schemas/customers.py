@@ -2,6 +2,7 @@
 
 Defines Pydantic models for customer and subscription data validation.
 """
+
 import re
 from datetime import date
 

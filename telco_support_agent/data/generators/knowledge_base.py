@@ -3,6 +3,7 @@
 This module contains the KnowledgeGenerator class for generating knowledge base
 articles and support tickets using foundation models.
 """
+
 from datetime import date, datetime, timedelta
 from typing import Any
 

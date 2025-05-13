@@ -3,6 +3,7 @@ Test config file for pytest.
 
 This file is automatically loaded by pytest and can be used to configure tests.
 """
+
 import sys
 from pathlib import Path
 

@@ -2,6 +2,7 @@
 
 This module contains the BillingGenerator class for generating billing and usage data.
 """
+
 from datetime import date, datetime, timedelta
 from typing import Any
 

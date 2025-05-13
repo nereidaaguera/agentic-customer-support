@@ -3,6 +3,7 @@
 This module contains the BaseGenerator class which is inherited by all
 entity-specific generators.
 """
+
 import random
 from datetime import datetime, timedelta
 from typing import Any
