@@ -150,7 +150,7 @@ class ProductGenerator(BaseGenerator):
         return df
 
     def generate_devices(self) -> DataFrame:
-        """Generate devices data.
+        """Generate devices data with realistic market distribution.
 
         Returns:
             DataFrame containing generated devices data.
@@ -158,9 +158,17 @@ class ProductGenerator(BaseGenerator):
         # Get config
         count = self.config["volumes"]["devices"]
         device_types = self.config["distributions"]["device_types"]
-        manufacturers = self.config["products"]["devices"]["manufacturers"]
         storage_options = self.config["products"]["devices"]["storage_options"]
         price_ranges = self.config["products"]["devices"]["price_ranges"]
+
+        manufacturer_distribution = {
+            "Apple": 0.60,    
+            "Samsung": 0.23, 
+            "Google": 0.05,   
+            "Motorola": 0.04, 
+            "OnePlus": 0.02,  
+            "Xiaomi": 0.01,
+        }
 
         # Generate device IDs
         device_ids = self.generate_id("DEV", 2001, count)
@@ -171,16 +179,16 @@ class ProductGenerator(BaseGenerator):
         for device_id in device_ids:
             # Select device type based on distribution
             device_type = self.select_weighted(device_types)
+            
+            # Select manufacturer based on market share distribution
+            manufacturer = self.select_weighted(manufacturer_distribution)
 
-            # Select manufacturer
-            manufacturer = self.random.choice(manufacturers)
-
-            # Generate device name
+            # Generate device name based on manufacturer and latest models
             if manufacturer == "Apple":
                 if device_type == "Smartphone":
                     model = f"iPhone {self.random.randint(13, 16)} {self.random.choice(['', 'Pro', 'Pro Max', 'Plus', 'e'])}"
                 elif device_type == "Tablet":
-                    model = f"iPad {self.random.choice(['', 'Air', 'Pro', 'mini'])} {self.random.randint(8, 11)}"
+                    model = f"iPad {self.random.choice(['', 'Air', 'Pro', 'mini'])} {self.random.randint(9, 11)}"
                 else:  # Hotspot
                     model = f"MiFi {self.random.randint(1, 5)}"
             elif manufacturer == "Samsung":
@@ -204,13 +212,20 @@ class ProductGenerator(BaseGenerator):
                     model = f"Moto Tab G{self.random.randint(70, 90)}"
                 else:  # Hotspot
                     model = f"Moto Hotspot {self.random.randint(1, 5)}"
-            else:  # OnePlus
+            elif manufacturer == "OnePlus":
                 if device_type == "Smartphone":
-                    model = f"OnePlus {self.random.randint(9, 12)} {self.random.choice(['', 'Pro', 'T'])}"
+                    model = f"OnePlus {self.random.randint(11, 13)} {self.random.choice(['', 'Pro', 'T'])}"
                 elif device_type == "Tablet":
                     model = f"OnePlus Pad {self.random.choice(['', 'Pro'])}"
                 else:  # Hotspot
                     model = f"OnePlus Connect {self.random.randint(1, 3)}"
+            else:  # Xiaomi
+                if device_type == "Smartphone":
+                    model = f"Xiaomi {self.random.choice(['Redmi', 'POCO', 'Mi'])} {self.random.randint(12, 14)}"
+                elif device_type == "Tablet":
+                    model = f"Xiaomi Pad {self.random.randint(6, 8)}"
+                else:  # Hotspot
+                    model = f"Xiaomi Mi Fi {self.random.randint(1, 5)}"
 
             device_name = f"{manufacturer} {model}"
 
@@ -230,6 +245,7 @@ class ProductGenerator(BaseGenerator):
                 "Google": 1.1,
                 "OnePlus": 0.9,
                 "Motorola": 0.8,
+                "Xiaomi": 0.7,
             }
 
             base_price = price_min + (price_max - price_min) * self.random.random()
@@ -270,7 +286,6 @@ class ProductGenerator(BaseGenerator):
             # Most devices are active, but older ones might not be
             is_active = self.random.random() < (0.5 + (release_year - 2019) * 0.1)
 
-            # Add to data
             data.append(
                 (
                     device_id,
@@ -281,13 +296,12 @@ class ProductGenerator(BaseGenerator):
                     monthly_installment,
                     storage_gb,
                     color_options,
-                    release_date.date(),  # Convert datetime to date
+                    release_date.date(),
                     is_5g_compatible,
                     is_active,
                 )
             )
 
-        # Create schema
         schema = StructType(
             [
                 StructField("device_id", StringType(), False),
@@ -304,7 +318,6 @@ class ProductGenerator(BaseGenerator):
             ]
         )
 
-        # Create DataFrame
         df = self.create_dataframe_from_schema(schema, data)
 
         return df
