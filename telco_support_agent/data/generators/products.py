@@ -307,15 +307,13 @@ class ProductGenerator(BaseGenerator):
         return df
 
     def generate_promotions(self) -> DataFrame:
-        """Generate promotions data.
+        """Generate promotions data with realistic telecom marketing strategies.
 
         Returns:
             DataFrame containing generated promotions data.
         """
         # Get config
         count = self.config["volumes"]["promotions"]
-        discount_types = self.config["products"]["promotions"]["discount_types"]
-        discount_ranges = self.config["products"]["promotions"]["discount_ranges"]
 
         # Generate promotion IDs
         promo_ids = self.generate_id("PROMO", 4001, count)
@@ -323,48 +321,183 @@ class ProductGenerator(BaseGenerator):
         # Prepare data
         data = []
 
+        promotion_types = [
+            # New customer acquisition
+            {
+                "category": "New Customer",
+                "formats": [
+                    {
+                        "name": "First 3 Months 50% Off",
+                        "type": "Percentage",
+                        "value": 50.0,
+                        "duration": 90,
+                    },
+                    {
+                        "name": "Switch & Save",
+                        "type": "Fixed",
+                        "value": 20.0,
+                        "duration": 180,
+                    },
+                    {
+                        "name": "First Month Free",
+                        "type": "Percentage",
+                        "value": 100.0,
+                        "duration": 30,
+                    },
+                ],
+            },
+            # Device promotions
+            {
+                "category": "Device",
+                "formats": [
+                    {
+                        "name": "iPhone 15 Trade-In Credit",
+                        "type": "Fixed",
+                        "value": 100.0,
+                        "duration": 60,
+                    },
+                    {
+                        "name": "Galaxy S25 Upgrade",
+                        "type": "Fixed",
+                        "value": 150.0,
+                        "duration": 90,
+                    },
+                    {
+                        "name": "Free Pixel 9 with Premium Plan",
+                        "type": "Service",
+                        "value": 0.0,
+                        "duration": 60,
+                    },
+                ],
+            },
+            # Plan promotions
+            {
+                "category": "Plan",
+                "formats": [
+                    {
+                        "name": "Unlimited Plan Discount",
+                        "type": "Percentage",
+                        "value": 15.0,
+                        "duration": 120,
+                    },
+                    {
+                        "name": "Family Plan Extra Line Free",
+                        "type": "Service",
+                        "value": 0.0,
+                        "duration": 90,
+                    },
+                    {
+                        "name": "Premium Plan Trial",
+                        "type": "Percentage",
+                        "value": 25.0,
+                        "duration": 60,
+                    },
+                ],
+            },
+            # Seasonal promotions
+            {
+                "category": "Seasonal",
+                "formats": [
+                    {
+                        "name": "Summer Data Boost",
+                        "type": "Service",
+                        "value": 0.0,
+                        "duration": 90,
+                    },
+                    {
+                        "name": "Back to School Bundle",
+                        "type": "Fixed",
+                        "value": 25.0,
+                        "duration": 45,
+                    },
+                    {
+                        "name": "Holiday Device Offer",
+                        "type": "Fixed",
+                        "value": 50.0,
+                        "duration": 30,
+                    },
+                ],
+            },
+            # Loyalty/retention
+            {
+                "category": "Loyalty",
+                "formats": [
+                    {
+                        "name": "Loyalty Reward",
+                        "type": "Percentage",
+                        "value": 10.0,
+                        "duration": 150,
+                    },
+                    {
+                        "name": "Anniversary Discount",
+                        "type": "Fixed",
+                        "value": 15.0,
+                        "duration": 60,
+                    },
+                    {
+                        "name": "Premium Customer Thank You",
+                        "type": "Service",
+                        "value": 0.0,
+                        "duration": 90,
+                    },
+                ],
+            },
+        ]
+
+        # Current month for seasonal timing
+        current_month = datetime.now().month
+
         for promo_id in promo_ids:
-            # Select discount type based on distribution
-            discount_type = self.select_weighted(discount_types)
+            # Select promotion category and format
+            category = self.random.choice(promotion_types)
+            promo_format = self.random.choice(category["formats"])
 
-            # Generate promotion name and description based on type
+            # Basic promotion details
+            promo_name = promo_format["name"]
+            discount_type = promo_format["type"]
+            discount_value = promo_format["value"]
+            duration_days = promo_format["duration"]
+
+            # Generate realistic descriptions
             if discount_type == "Percentage":
-                discount_value = self.random.randint(
-                    discount_ranges["Percentage"][0], discount_ranges["Percentage"][1]
-                )
-                promo_name = f"{discount_value}% Off Plan"
-                description = f"Get {discount_value}% off your monthly plan charges."
-
+                description = f"{promo_name}: Get {int(discount_value)}% off for {duration_days // 30} months on qualifying plans."
             elif discount_type == "Fixed":
-                discount_value = self.random.randint(
-                    discount_ranges["Fixed"][0], discount_ranges["Fixed"][1]
-                )
-                promo_name = f"${discount_value} Off Monthly Bill"
-                description = f"Get ${discount_value} off your monthly bill."
-
+                description = f"{promo_name}: ${int(discount_value)} monthly credit for {duration_days // 30} months with eligible service."
             else:  # Service
-                service_types = [
-                    "Premium Content",
-                    "Free Device Upgrade",
-                    "Free International Calling",
-                    "Extra Data",
-                    "Priority Support",
-                ]
-                service = self.random.choice(service_types)
+                description = f"{promo_name}: Enjoy this special offer for {duration_days // 30} months with qualifying service."
 
-                # Service promotions don't have a direct discount value
-                # Set a placeholder value for database consistency
-                discount_value = 0.0
+            # Add plan or device targeting for some promotions
+            if category["category"] == "Plan":
+                plan_tiers = ["Basic", "Standard", "Premium", "Unlimited"]
+                tier = self.random.choice(plan_tiers)
+                description += f" Available with {tier} plans."
+                promo_name = f"{tier} {promo_name}"
 
-                promo_name = f"Free {service}"
-                description = f"Get free {service.lower()} with your plan."
+            if category["category"] == "Device":
+                # Keep device name in promotion name but add clarity
+                description += " Requires new line activation and approved credit."
 
-            # Generate start and end dates
-            # Promotions last 3-6 months
-            end_date = datetime.now() + timedelta(days=self.random.randint(30, 180))
-            start_date = end_date - timedelta(days=self.random.randint(90, 180))
+            # Handle seasonal timing more realistically
+            if category["category"] == "Seasonal":
+                # Summer promos in summer, holiday promos in winter, etc.
+                if "Summer" in promo_name:
+                    start_month = max(5, min(6, current_month))  # May-June
+                elif "Holiday" in promo_name:
+                    start_month = max(11, min(12, current_month))  # Nov-Dec
+                elif "School" in promo_name:
+                    start_month = max(7, min(8, current_month))  # July-Aug
+                else:
+                    start_month = current_month
+            else:
+                start_month = current_month
 
-            # Determine if promotion is active based on dates
+            # Generate start and end dates more realistically
+            start_date = datetime(datetime.now().year, start_month, 1) + timedelta(
+                days=self.random.randint(0, 15)
+            )
+            end_date = start_date + timedelta(days=duration_days)
+
+            # Determine if promotion is active
             is_active = start_date <= datetime.now() <= end_date
 
             # Add to data
@@ -373,15 +506,14 @@ class ProductGenerator(BaseGenerator):
                     promo_id,
                     promo_name,
                     discount_type,
-                    float(discount_value),  # Ensure discount_value is float
-                    start_date.date(),  # Convert datetime to date
-                    end_date.date(),  # Convert datetime to date
+                    float(discount_value),
+                    start_date.date(),
+                    end_date.date(),
                     description,
                     is_active,
                 )
             )
 
-        # Create schema
         schema = StructType(
             [
                 StructField("promo_id", StringType(), False),
@@ -396,5 +528,4 @@ class ProductGenerator(BaseGenerator):
         )
 
         df = self.create_dataframe_from_schema(schema, data)
-
         return df
