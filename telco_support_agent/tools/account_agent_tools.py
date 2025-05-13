@@ -24,15 +24,15 @@ class UCTool(ABC):
         catalog: str,
         schema: str,
         function_name: str,
-        function_type: FunctionType,
-        function_value: Union[str | Callable],
+        function_type: FunctionType
     ) -> None:
         self.client = DatabricksFunctionClient()
         self.catalog = catalog
         self.schema = schema
         self.function_name = function_name
+        self.uc_name = f"{self.catalog}.{self.schema}.{self.function_name}"
         self.function_type = function_type
-        self.spec = self.create_function(function_value)
+        self.spec = self.create_function(self.create_function_value())
         # Remove strict parameter from function. it does not work with claude.
         self.spec["function"].pop("strict")
 
@@ -46,19 +46,24 @@ class UCTool(ABC):
             self.client.create_python_function(
                 func=function_value, catalog=self.catalog, schema=self.schema
             )
-        toolkit = UCFunctionToolkit(function_names=[self.function_name])
+        toolkit = UCFunctionToolkit(function_names=[self.uc_name])
         return toolkit.tools[0]
+    
+    @abstractmethod
+    def create_function_value(self) -> Union[str | Callable]:
+        """Create function value for the tool."""
+        pass
 
     @abstractmethod
     def exec_fn(self, **kwargs: dict[str, Any]) -> Any:
         """Executing of the function in unity catalog."""
-        output = self.client.execute_function(self.function_name, parameters=kwargs)
+        output = self.client.execute_function(self.uc_name, parameters=kwargs)
         return output.value
 
     def get_tool_info(self) -> ToolInfo:
         """Return tool info to an agent inherent from BaseAgent."""
         return ToolInfo(
-            name=self.function_name.replace(".", "__"),
+            name=self.uc_name.replace(".", "__"),
             spec=self.spec,
             exec_fn=self.exec_fn,
         )
@@ -77,11 +82,12 @@ class AccountInfoTool(UCTool):
             "telco_customer_support_dev",
             "bronze",
             "account_info_tool",
-            FunctionType.SQL,
-            self.SQL_BODY.format(
-                function_name=f"{self.catalog}.{self.schema}.{self.function_name}"
-            ),
+            FunctionType.SQL
         )
+
+    def create_function_value(self) -> Union[str | Callable]:
+        return self.SQL_BODY.format(
+            function_name=f"{self.uc_name}")
 
     def exec_fn(self, **kwargs: dict[str, Any]) -> Any:
         """Executing of the function in unity catalog and formatting output to markdown."""
@@ -91,11 +97,12 @@ class AccountInfoTool(UCTool):
 
 
 class PlansInfoTool(UCTool):
+
     SQL_BODY = """
                 CREATE OR REPLACE FUNCTION {function_name}(customer STRING COMMENT 'ID of the customer whose info to look up.')
                 RETURNS TABLE
                 COMMENT 'Retrieves information regarding the particular plans purchased by the customer.'
-                RETURN SELECT * FROM telco_customer_support_dev.bronze.subscriptions,
+                RETURN SELECT * EXCEPT(plans.plan_id) FROM telco_customer_support_dev.bronze.subscriptions,
                 telco_customer_support_dev.bronze.plans where subscriptions.plan_id = plans.plan_id and subscriptions.customer_id = customer
             """
 
@@ -104,11 +111,12 @@ class PlansInfoTool(UCTool):
             "telco_customer_support_dev",
             "bronze",
             "plans_info_tool",
-            FunctionType.SQL,
-            self.SQL_BODY.format(
-                function_name=f"{self.catalog}.{self.schema}.{self.function_name}"
-            ),
+            FunctionType.SQL
         )
+    
+    def create_function_value(self) -> Union[str | Callable]:
+        return self.SQL_BODY.format(
+            function_name=f"{self.uc_name}")
 
     def exec_fn(self, **kwargs: dict[str, Any]) -> Any:
         """Executing of the function in unity catalog and formatting output to markdown."""

@@ -4,6 +4,10 @@
 
 # COMMAND ----------
 
+dbutils.library.restartPython()
+
+# COMMAND ----------
+
 from mlflow.types.responses import ResponsesRequest
 
 from telco_support_agent.agents.account import AccountAgent
@@ -19,9 +23,11 @@ print(f"LLM parameters: {account_agent.llm_params}")
 # COMMAND ----------
 
 request = ResponsesRequest(
-    input=[{"role": "user", "content": "When did I create my account?"},
-           {"role": "assistant", "content": "To provide you with the date you created your account, I need your customer ID. Could you please provide me with this information?"},
-           {"role": "user", "content": "My customer ID is CUS-10501"}]
+    input=[{"role": "user", "content": "How many plans do I have on my account?"},
+           {"role": "assistant", "content": "To provide you info about your plans, I need your customer ID. Could you please provide me with this information?"},
+           {"role": "user", "content": "My customer ID is CUS-10601"},
+           {"role": "assistant", "content": "Based on the information I've retrieved, you currently have 2 active plans on your account"},
+           {"role": "user", "content": "Can you describe the cheapest plan?"}]
 )
 
 # COMMAND ----------
