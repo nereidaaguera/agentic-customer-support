@@ -17,10 +17,44 @@ from telco_support_agent.data.generators.billing import BillingGenerator
 from telco_support_agent.data.generators.customers import CustomerGenerator
 from telco_support_agent.data.generators.knowledge_base import KnowledgeGenerator
 from telco_support_agent.data.generators.products import ProductGenerator
+from pyspark.sql import DataFrame
 
 # COMMAND ----------
 
 env = "dev"
+
+# Configure which tables to generate (set to True for tables to generate)
+generate_config = {
+    
+    # Set to True to regenerate all tables
+    "all": False,
+
+    # Product data
+    "plans": True,
+    "devices": True,
+    "promotions": True,
+    
+    # Customer data
+    "customers": True,
+    "subscriptions": True,
+    
+    # Billing data
+    "billing": True,
+    "usage": True,
+    
+    # Knowledge base data
+    "kb_articles": False,
+    "support_tickets": False,
+    
+}
+
+# COMMAND ----------
+
+def should_generate(table_name: str) -> bool:
+    return generate_config["all"] or generate_config.get(table_name, False)
+
+def load_existing_table(table_name: str) -> DataFrame:
+    return spark.table(f"telco_customer_support_{env}.bronze.{table_name}")
 
 # COMMAND ----------
 
@@ -38,12 +72,14 @@ product_gen = ProductGenerator(CONFIG)
 
 # COMMAND ----------
 
-plans_df = product_gen.generate_plans()
-display(plans_df)
-
-# COMMAND ----------
-
-plans_df.count()
+if should_generate("plans"):
+    plans_df = product_gen.generate_plans()
+    display(plans_df)
+    print(f"Generated {plans_df.count()} plans")
+    product_gen.save_to_delta(plans_df, f"telco_customer_support_{env}.bronze.plans")
+else:
+    plans_df = load_existing_table("plans")
+    print("Using existing plans data")
 
 # COMMAND ----------
 
@@ -52,8 +88,14 @@ plans_df.count()
 
 # COMMAND ----------
 
-devices_df = product_gen.generate_devices()
-display(devices_df)
+if should_generate("devices"):
+    devices_df = product_gen.generate_devices()
+    display(devices_df)
+    print(f"Generated {devices_df.count()} devices")
+    product_gen.save_to_delta(devices_df, f"telco_customer_support_{env}.bronze.devices")
+else:
+    devices_df = load_existing_table("devices")
+    print("Using existing devices data")
 
 # COMMAND ----------
 
@@ -62,18 +104,14 @@ display(devices_df)
 
 # COMMAND ----------
 
-promotions_df = product_gen.generate_promotions()
-display(promotions_df)
-
-# COMMAND ----------
-
-print(f"Generated {promotions_df.count()} promotions")
-
-# COMMAND ----------
-
-product_gen.save_to_delta(plans_df, f"telco_customer_support_{env}.bronze.plans")
-product_gen.save_to_delta(devices_df, f"telco_customer_support_{env}.bronze.devices")
-product_gen.save_to_delta(promotions_df, f"telco_customer_support_{env}.bronze.promotions")
+if should_generate("promotions"):
+    promotions_df = product_gen.generate_promotions()
+    display(promotions_df)
+    print(f"Generated {promotions_df.count()} promotions")
+    product_gen.save_to_delta(promotions_df, f"telco_customer_support_{env}.bronze.promotions")
+else:
+    promotions_df = load_existing_table("promotions")
+    print("Using existing promotions data")
 
 # COMMAND ----------
 
@@ -97,12 +135,14 @@ customer_gen = CustomerGenerator(CONFIG)
 
 # COMMAND ----------
 
-customers_df = customer_gen.generate_customers()
-display(customers_df)
-
-# COMMAND ----------
-
-print(f"Generated {customers_df.count()} customers")
+if should_generate("customers"):
+    customers_df = customer_gen.generate_customers()
+    display(customers_df)
+    print(f"Generated {customers_df.count()} customers")
+    customer_gen.save_to_delta(customers_df, f"telco_customer_support_{env}.bronze.customers")
+else:
+    customers_df = load_existing_table("customers")
+    print("Using existing customers data")
 
 # COMMAND ----------
 
@@ -111,22 +151,19 @@ print(f"Generated {customers_df.count()} customers")
 
 # COMMAND ----------
 
-subscriptions_df = customer_gen.generate_subscriptions(
-    plans_df=plans_df,
-    devices_df=devices_df,
-    promotions_df=promotions_df,
-    customers_df=customers_df
-)
-display(subscriptions_df)
-
-# COMMAND ----------
-
-print(f"Generated {subscriptions_df.count()} subscriptions")
-
-# COMMAND ----------
-
-customer_gen.save_to_delta(customers_df, f"telco_customer_support_{env}.bronze.customers")
-customer_gen.save_to_delta(subscriptions_df, f"telco_customer_support_{env}.bronze.subscriptions")
+if should_generate("subscriptions"):
+    subscriptions_df = customer_gen.generate_subscriptions(
+        plans_df=plans_df,
+        devices_df=devices_df,
+        promotions_df=promotions_df,
+        customers_df=customers_df
+    )
+    display(subscriptions_df)
+    print(f"Generated {subscriptions_df.count()} subscriptions")
+    customer_gen.save_to_delta(subscriptions_df, f"telco_customer_support_{env}.bronze.subscriptions")
+else:
+    subscriptions_df = load_existing_table("subscriptions")
+    print("Using existing subscriptions data")
 
 # COMMAND ----------
 
@@ -135,7 +172,7 @@ print(f"Subscriptions: {spark.sql('SELECT COUNT(*) FROM telco_customer_support_d
 
 # COMMAND ----------
 
-# sample validation query - customers with subscription counts
+# Sample validation query - customers with subscription counts
 display(spark.sql("""
 SELECT 
   c.customer_id, 
@@ -166,12 +203,14 @@ billing_gen = BillingGenerator(CONFIG)
 
 # COMMAND ----------
 
-billing_df = billing_gen.generate_billing(subscriptions_df)
-display(billing_df)
-
-# COMMAND ----------
-
-print(f"Generated {billing_df.count()} billing records")
+if should_generate("billing"):
+    billing_df = billing_gen.generate_billing(subscriptions_df)
+    display(billing_df)
+    print(f"Generated {billing_df.count()} billing records")
+    billing_gen.save_to_delta(billing_df, f"telco_customer_support_{env}.bronze.billing")
+else:
+    billing_df = load_existing_table("billing")
+    print("Using existing billing data")
 
 # COMMAND ----------
 
@@ -180,17 +219,14 @@ print(f"Generated {billing_df.count()} billing records")
 
 # COMMAND ----------
 
-usage_df = billing_gen.generate_usage(subscriptions_df)
-display(usage_df)
-
-# COMMAND ----------
-
-print(f"Generated {usage_df.count()} usage records")
-
-# COMMAND ----------
-
-billing_gen.save_to_delta(billing_df, f"telco_customer_support_{env}.bronze.billing")
-billing_gen.save_to_delta(usage_df, f"telco_customer_support_{env}.bronze.usage")
+if should_generate("usage"):
+    usage_df = billing_gen.generate_usage(subscriptions_df)
+    display(usage_df)
+    print(f"Generated {usage_df.count()} usage records")
+    billing_gen.save_to_delta(usage_df, f"telco_customer_support_{env}.bronze.usage")
+else:
+    usage_df = load_existing_table("usage")
+    print("Using existing usage data")
 
 # COMMAND ----------
 
@@ -228,12 +264,14 @@ knowledge_gen = KnowledgeGenerator(CONFIG)
 
 # COMMAND ----------
 
-kb_df = knowledge_gen.generate_kb_articles()
-display(kb_df)
-
-# COMMAND ----------
-
-print(f"Generated {kb_df.count()} knowledge base articles")
+if should_generate("kb_articles"):
+    kb_df = knowledge_gen.generate_kb_articles()
+    display(kb_df)
+    print(f"Generated {kb_df.count()} knowledge base articles")
+    knowledge_gen.save_to_delta(kb_df, f"telco_customer_support_{env}.bronze.knowledge_base")
+else:
+    kb_df = load_existing_table("knowledge_base")
+    print("Using existing knowledge base data")
 
 # COMMAND ----------
 
@@ -242,17 +280,14 @@ print(f"Generated {kb_df.count()} knowledge base articles")
 
 # COMMAND ----------
 
-tickets_df = knowledge_gen.generate_tickets(customers_df, subscriptions_df)
-display(tickets_df)
-
-# COMMAND ----------
-
-print(f"Generated {tickets_df.count()} support tickets")
-
-# COMMAND ----------
-
-knowledge_gen.save_to_delta(kb_df, f"telco_customer_support_{env}.bronze.knowledge_base")
-knowledge_gen.save_to_delta(tickets_df, f"telco_customer_support_{env}.bronze.support_tickets")
+if should_generate("support_tickets"):
+    tickets_df = knowledge_gen.generate_tickets(customers_df, subscriptions_df)
+    display(tickets_df)
+    print(f"Generated {tickets_df.count()} support tickets")
+    knowledge_gen.save_to_delta(tickets_df, f"telco_customer_support_{env}.bronze.support_tickets")
+else:
+    tickets_df = load_existing_table("support_tickets")
+    print("Using existing support tickets data")
 
 # COMMAND ----------
 
