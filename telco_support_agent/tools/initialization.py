@@ -1,8 +1,10 @@
 """Tool initialization and registration."""
 
-import logging
 
-logger = logging.getLogger(__name__)
+from telco_support_agent.utils.logging_utils import get_logger, setup_logging
+
+setup_logging()
+logger = get_logger(__name__)
 
 
 def initialize_tools():

@@ -1,12 +1,13 @@
 """Account agent for handling account-related queries."""
 
-import logging
 from typing import Optional
 
 from telco_support_agent.agents.base_agent import BaseAgent
 from telco_support_agent.tools.base import ToolRegistry
+from telco_support_agent.utils.logging_utils import get_logger, setup_logging
 
-logger = logging.getLogger(__name__)
+setup_logging()
+logger = get_logger(__name__)
 
 
 class AccountAgent(BaseAgent):

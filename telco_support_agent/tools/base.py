@@ -1,6 +1,5 @@
 """Base classes and interfaces for all agent tools."""
 
-import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from enum import Enum
@@ -8,8 +7,10 @@ from typing import Any, Union
 
 from telco_support_agent.config import get_uc_config
 from telco_support_agent.tools.tool_info import ToolInfo
+from telco_support_agent.utils.logging_utils import get_logger, setup_logging
 
-logger = logging.getLogger(__name__)
+setup_logging()
+logger = get_logger(__name__)
 
 
 class Tool(ABC):

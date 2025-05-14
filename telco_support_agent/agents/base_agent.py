@@ -2,7 +2,6 @@
 
 import abc
 import json
-import logging
 from collections.abc import Generator
 from pathlib import Path
 from typing import Any, Optional, Union
@@ -23,8 +22,10 @@ from pydantic import ValidationError
 
 from telco_support_agent.agents import AgentConfig
 from telco_support_agent.tools import ToolInfo
+from telco_support_agent.utils.logging_utils import get_logger, setup_logging
 
-logger = logging.getLogger(__name__)
+setup_logging()
+logger = get_logger(__name__)
 
 
 class BaseAgent(ResponsesAgent, abc.ABC):
