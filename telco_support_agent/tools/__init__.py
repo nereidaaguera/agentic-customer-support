@@ -5,7 +5,14 @@ from typing import Any, Optional
 
 from pydantic import BaseModel
 
-from telco_support_agent.tools.base import Tool, UCTool, PythonTool, FunctionType, ToolRegistry
+from telco_support_agent.tools.base import (
+    FunctionType,
+    PythonTool,
+    Tool,
+    ToolRegistry,
+    UCTool,
+)
+
 
 class ToolParameter(BaseModel):
     """Model for tool parameter configuration."""
