@@ -117,20 +117,19 @@ class ConfigDict(TypedDict):
 
 # Config dictionary for data generation
 CONFIG: ConfigDict = {
-    # Random seed for reproducibility
     "seed": 42,
     # Data volumes
     "volumes": {
-        "customers": 1000,
-        "plans": 10,
-        "devices": 20,
-        "promotions": 5,
-        "kb_articles": 200,
-        "tickets": 500,
+        "customers": 1500,
+        "plans": 12,
+        "devices": 35,
+        "promotions": 18,
+        "kb_articles": 250,
+        "tickets": 100,
     },
     # Date ranges
     "date_ranges": {
-        "customer_registration": ["2020-01-01", "2025-05-01"],
+        "customer_registration": ["2020-01-01", "2025-06-01"],
         "billing_cycles": ["2024-01", "2025-06"],
         "device_release": ["2019-01-01", "2025-05-01"],
     },
