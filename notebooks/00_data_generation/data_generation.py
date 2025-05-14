@@ -39,23 +39,23 @@ print(f"Running data generation for {env} environment")
 generate_config = {
     
     # Set to True to regenerate all tables
-    "all": True,
+    "all": False,
 
     # Product data
-    "plans": True,
-    "devices": True,
-    "promotions": True,
+    "plans": False,
+    "devices": False,
+    "promotions": False,
     
     # Customer data
-    "customers": True,
-    "subscriptions": True,
+    "customers": False,
+    "subscriptions": False,
     
     # Billing data
-    "billing": True,
-    "usage": True,
+    "billing": False,
+    "usage": False,
     
     # Knowledge base data
-    "kb_articles": True,
+    "kb_articles": False,
     "support_tickets": True,
     
 }
