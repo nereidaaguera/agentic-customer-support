@@ -183,8 +183,6 @@ class ProductGenerator(BaseGenerator):
             # Select manufacturer based on market share distribution
             manufacturer = self.select_weighted(manufacturer_distribution)
 
-            model = ""
-
             # Generate device name based on manufacturer and latest models
             if manufacturer == "Apple":
                 if device_type == "Smartphone":
