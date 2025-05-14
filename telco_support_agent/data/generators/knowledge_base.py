@@ -248,12 +248,14 @@ class KnowledgeGenerator(BaseGenerator):
 
         self.ticket_prompt = (
             "Generate a realistic telecom customer support ticket description for the category: {category}. "
-            "The ticket should be about: {topic}. Make it reference specific device models (like iPhone 15, Galaxy S24), "
+            "The ticket should be about: {topic} and has been assigned the ticket number {ticket_id}. "
+            "Begin the description with 'Re: Ticket {ticket_id}' and then continue with the customer's message. "
+            "Make it reference specific device models (like iPhone 15, Galaxy S24), "
             "plan names, or specific error messages a customer might see. Include realistic customer sentiment "
             "(frustrated, confused, angry, etc.) and convey the urgency level. Make it sound like something a "
             "customer would actually say when contacting support, including specific details and context. "
             "Avoid generic descriptions and include realistic timestamps, locations, or service details "
-            "when appropriate for the issue."
+            "when appropriate for the issue. DO NOT create any additional ticket numbers or reference numbers."
         )
 
         self.resolution_prompt = (
@@ -774,7 +776,9 @@ class KnowledgeGenerator(BaseGenerator):
                     topic = "general assistance"
 
                 # Generate ticket description using LLM
-                prompt = self.ticket_prompt.format(category=category, topic=topic)
+                prompt = self.ticket_prompt.format(
+                    ticket_id=ticket_id, category=category, topic=topic
+                )
                 description = self._generate_content_with_llm(prompt)
 
                 # Enhance with customer data
