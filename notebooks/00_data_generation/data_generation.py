@@ -318,12 +318,13 @@ knowledge_gen = KnowledgeGenerator(CONFIG)
 
 if should_generate("kb_articles"):
     kb_df = knowledge_gen.generate_kb_articles()
-    display(kb_df)
     print(f"Generated {kb_df.count()} knowledge base articles")
     knowledge_gen.save_to_delta(kb_df, f"telco_customer_support_{env}.bronze.knowledge_base")
 else:
     kb_df = load_existing_table("knowledge_base")
     print("Using existing knowledge base data")
+
+display(kb_df)
 
 # COMMAND ----------
 
