@@ -357,6 +357,24 @@ class ProductGenerator(BaseGenerator):
                         "value": 100.0,
                         "duration": 30,
                     },
+                    {
+                        "name": "Port-In Credit",
+                        "type": "Fixed",
+                        "value": 200.0,
+                        "duration": 30,
+                    },
+                    {
+                        "name": "BOGO Line Offer",
+                        "type": "Service",
+                        "value": 0.0,
+                        "duration": 365,
+                    },
+                    {
+                        "name": "Family Migration Bonus",
+                        "type": "Fixed",
+                        "value": 75.0,
+                        "duration": 60,
+                    },
                 ],
             },
             # Device promotions
@@ -380,6 +398,30 @@ class ProductGenerator(BaseGenerator):
                         "type": "Service",
                         "value": 0.0,
                         "duration": 60,
+                    },
+                    {
+                        "name": "Free Phone Upgrade",
+                        "type": "Service",
+                        "value": 0.0,
+                        "duration": 30,
+                    },
+                    {
+                        "name": "Device Protection Bundle",
+                        "type": "Percentage",
+                        "value": 50.0,
+                        "duration": 180,
+                    },
+                    {
+                        "name": "Premium Accessory Package",
+                        "type": "Service",
+                        "value": 0.0,
+                        "duration": 30,
+                    },
+                    {
+                        "name": "Early Upgrade Eligibility",
+                        "type": "Service",
+                        "value": 0.0,
+                        "duration": 180,
                     },
                 ],
             },
@@ -405,6 +447,30 @@ class ProductGenerator(BaseGenerator):
                         "value": 25.0,
                         "duration": 60,
                     },
+                    {
+                        "name": "Data Rollover Plus",
+                        "type": "Service",
+                        "value": 0.0,
+                        "duration": 365,
+                    },
+                    {
+                        "name": "International Add-On Included",
+                        "type": "Service",
+                        "value": 0.0,
+                        "duration": 90,
+                    },
+                    {
+                        "name": "Streaming Service Bundle",
+                        "type": "Service",
+                        "value": 0.0,
+                        "duration": 180,
+                    },
+                    {
+                        "name": "Multi-Line Discount",
+                        "type": "Percentage",
+                        "value": 10.0,
+                        "duration": 365,
+                    },
                 ],
             },
             # Seasonal promotions
@@ -428,6 +494,30 @@ class ProductGenerator(BaseGenerator):
                         "type": "Fixed",
                         "value": 50.0,
                         "duration": 30,
+                    },
+                    {
+                        "name": "Black Friday Special",
+                        "type": "Percentage",
+                        "value": 40.0,
+                        "duration": 14,
+                    },
+                    {
+                        "name": "Valentine's Couples Plan",
+                        "type": "Fixed",
+                        "value": 30.0,
+                        "duration": 28,
+                    },
+                    {
+                        "name": "Spring Trade-In Event",
+                        "type": "Fixed",
+                        "value": 75.0,
+                        "duration": 45,
+                    },
+                    {
+                        "name": "Graduation Gift Promotion",
+                        "type": "Service",
+                        "value": 0.0,
+                        "duration": 60,
                     },
                 ],
             },
@@ -453,6 +543,88 @@ class ProductGenerator(BaseGenerator):
                         "value": 0.0,
                         "duration": 90,
                     },
+                    {
+                        "name": "Long-Term Customer Rate Lock",
+                        "type": "Service",
+                        "value": 0.0,
+                        "duration": 365,
+                    },
+                    {
+                        "name": "Priority Support Access",
+                        "type": "Service",
+                        "value": 0.0,
+                        "duration": 180,
+                    },
+                    {
+                        "name": "Annual Upgrade Option",
+                        "type": "Service",
+                        "value": 0.0,
+                        "duration": 365,
+                    },
+                    {
+                        "name": "5-Year Milestone Gift",
+                        "type": "Fixed",
+                        "value": 100.0,
+                        "duration": 30,
+                    },
+                ],
+            },
+            {
+                "category": "Business",
+                "formats": [
+                    {
+                        "name": "Small Business Starter",
+                        "type": "Percentage",
+                        "value": 25.0,
+                        "duration": 180,
+                    },
+                    {
+                        "name": "Multi-Line Business Discount",
+                        "type": "Fixed",
+                        "value": 15.0,
+                        "duration": 365,
+                    },
+                    {
+                        "name": "Enterprise Solution Package",
+                        "type": "Service",
+                        "value": 0.0,
+                        "duration": 90,
+                    },
+                    {
+                        "name": "Business Device Fleet Upgrade",
+                        "type": "Fixed",
+                        "value": 50.0,
+                        "duration": 120,
+                    },
+                ],
+            },
+            {
+                "category": "Limited-Time",
+                "formats": [
+                    {
+                        "name": "Flash Sale",
+                        "type": "Percentage",
+                        "value": 35.0,
+                        "duration": 5,
+                    },
+                    {
+                        "name": "Weekend Special",
+                        "type": "Fixed",
+                        "value": 25.0,
+                        "duration": 3,
+                    },
+                    {
+                        "name": "One-Day Activation Bonus",
+                        "type": "Fixed",
+                        "value": 50.0,
+                        "duration": 1,
+                    },
+                    {
+                        "name": "48-Hour Priority Shipping",
+                        "type": "Service",
+                        "value": 0.0,
+                        "duration": 2,
+                    },
                 ],
             },
         ]
@@ -474,10 +646,16 @@ class ProductGenerator(BaseGenerator):
             # Generate realistic descriptions
             if discount_type == "Percentage":
                 description = f"{promo_name}: Get {int(discount_value)}% off for {duration_days // 30} months on qualifying plans."
+                if duration_days < 30:
+                    description = f"{promo_name}: Get {int(discount_value)}% off for {duration_days} days on qualifying plans."
             elif discount_type == "Fixed":
                 description = f"{promo_name}: ${int(discount_value)} monthly credit for {duration_days // 30} months with eligible service."
+                if duration_days < 30:
+                    description = f"{promo_name}: ${int(discount_value)} credit for {duration_days} days with eligible service."
             else:  # Service
                 description = f"{promo_name}: Enjoy this special offer for {duration_days // 30} months with qualifying service."
+                if duration_days < 30:
+                    description = f"{promo_name}: Enjoy this special offer for {duration_days} days with qualifying service."
 
             # Add plan or device targeting for some promotions
             if category["category"] == "Plan":
@@ -490,17 +668,86 @@ class ProductGenerator(BaseGenerator):
                 # Keep device name in promotion name but add clarity
                 description += " Requires new line activation and approved credit."
 
+                # Add specific device details for certain promotions
+                if "Free Phone Upgrade" in promo_name:
+                    devices = ["iPhone 15", "Galaxy S24", "Pixel 8", "OnePlus 12"]
+                    eligible_device = self.random.choice(devices)
+                    description += f" Eligible customers can upgrade to a {eligible_device} at no additional cost."
+
+                if "Protection Bundle" in promo_name:
+                    description += " Includes device insurance, screen protection, and priority tech support."
+
+            # descriptions for specific promotion types
+            if "Port-In Credit" in promo_name:
+                description += " Get a $200 bill credit when you bring your number from another carrier."
+
+            if "BOGO" in promo_name:
+                description += " Add a second line to your account and get it free for a full year."
+
+            if "Data Rollover" in promo_name:
+                description += " Unused data from your monthly allowance automatically rolls over to the next month."
+
+            if "Stream" in promo_name:
+                streaming_services = [
+                    "Netflix",
+                    "Disney+",
+                    "HBO Max",
+                    "Prime Video",
+                    "Hulu",
+                ]
+                included_services = self.random.sample(streaming_services, 2)
+                description += f" Includes 6-month subscriptions to {included_services[0]} and {included_services[1]}."
+
+            if "Black Friday" in promo_name:
+                description += (
+                    " Our biggest discounts of the year on select devices and plans."
+                )
+
+            if "5-Year Milestone" in promo_name:
+                description += (
+                    " Special reward for customers who have been with us for 5+ years."
+                )
+
             # Handle seasonal timing more realistically
             if category["category"] == "Seasonal":
                 # Summer promos in summer, holiday promos in winter, etc.
                 if "Summer" in promo_name:
                     start_month = max(5, min(6, current_month))  # May-June
-                elif "Holiday" in promo_name:
+                elif "Holiday" in promo_name or "Black Friday" in promo_name:
                     start_month = max(11, min(12, current_month))  # Nov-Dec
-                elif "School" in promo_name:
+                elif "School" in promo_name or "Graduation" in promo_name:
                     start_month = max(7, min(8, current_month))  # July-Aug
+                elif "Valentine" in promo_name:
+                    start_month = 2  # February
+                elif "Spring" in promo_name:
+                    start_month = 3  # March
                 else:
                     start_month = current_month
+            elif category["category"] == "Limited-Time":
+                # Limited-time offers should be very recent or upcoming
+                days_offset = self.random.randint(-5, 15)
+                start_date = datetime.now() + timedelta(days=days_offset)
+                end_date = start_date + timedelta(days=duration_days)
+
+                # Determine if promotion is active
+                is_active = start_date <= datetime.now() <= end_date
+
+                # Add to data
+                data.append(
+                    (
+                        promo_id,
+                        promo_name,
+                        discount_type,
+                        float(discount_value),
+                        start_date.date(),
+                        end_date.date(),
+                        description,
+                        is_active,
+                    )
+                )
+
+                # Skip the rest of the loop for limited-time offers as we've already set dates
+                continue
             else:
                 start_month = current_month
 

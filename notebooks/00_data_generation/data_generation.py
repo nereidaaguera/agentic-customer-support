@@ -32,7 +32,7 @@ from telco_support_agent.data.generators.products import ProductGenerator
 
 # COMMAND ----------
 
-env = "prod"
+env = "dev"
 print(f"Running data generation for {env} environment")
 
 # Configure which tables to generate (set to True for tables to generate)
