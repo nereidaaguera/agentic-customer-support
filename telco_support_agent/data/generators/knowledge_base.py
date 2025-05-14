@@ -249,27 +249,30 @@ class KnowledgeGenerator(BaseGenerator):
 
         self.ticket_prompt = (
             "Generate a realistic telecom customer support ticket description for the category: {category}. "
-            "The ticket should be about: {topic} and has been assigned the ticket number {ticket_id}. "
-            "Begin the description with 'Re: Ticket {ticket_id}' and then continue with the customer's message. "
+            "The ticket was created on {created_date} and has been assigned the ticket number {ticket_id}. "
+            "Begin the description with 'Re: Ticket {ticket_id} (Created: {created_date})' and then continue with the customer's message. "
             "Make it reference specific device models (like iPhone 15, Galaxy S24), "
             "plan names, or specific error messages a customer might see. Include realistic customer sentiment "
             "(frustrated, confused, angry, etc.) and convey the urgency level. Make it sound like something a "
             "customer would actually say when contacting support, including specific details and context. "
-            "Avoid generic descriptions and include realistic timestamps, locations, or service details "
-            "when appropriate for the issue. DO NOT create any additional ticket numbers or reference numbers."
+            "Avoid generic descriptions and include realistic locations or service details "
+            "when appropriate for the issue. DO NOT create or reference any dates, timestamps, or specific days "
+            "other than the provided creation date {created_date}. DO NOT create any additional ticket numbers or reference numbers."
         )
 
         self.resolution_prompt = (
             "Generate a realistic resolution response from a customer service agent for support ticket {ticket_id}. "
+            "The ticket was created on {created_date} and resolved on {resolved_date}. "
             "The agent handling this ticket has the ID {agent_id}. "
             "The original customer description was: '{description}'. The ticket category is {category}. "
-            "Begin your resolution with 'Resolution for Ticket {ticket_id} | Agent {agent_id}' and then continue with the agent's response. "
+            "Begin your resolution with 'Resolution for Ticket {ticket_id} | Agent {agent_id} | Resolved on {resolved_date}' "
+            "and then continue with the agent's response. "
             "Include specific actions taken: systems accessed, changes made, credits applied (with exact amounts), "
             "troubleshooting steps performed, or recommendations provided. Reference specific company policies or "
             "procedures where relevant. Make it sound professional yet personable, with appropriate empathy and "
-            "follow-up actions. Include realistic timestamps and appropriate escalation notes if relevant. "
-            "DO NOT create any additional ticket numbers, agent IDs, or reference numbers beyond what has been provided. "
-            "Use only the ticket ID {ticket_id} and agent ID {agent_id} when referencing this case."
+            "follow-up actions. DO NOT create or reference any dates or timestamps other than the provided creation date "
+            "{created_date} and resolution date {resolved_date}. DO NOT create any additional ticket numbers, agent IDs, "
+            "or reference numbers beyond what has been provided."
         )
 
         # common support scenarios for ticket generation
@@ -758,13 +761,22 @@ class KnowledgeGenerator(BaseGenerator):
                 else None
             )
 
+            # Generate created date (within last year)
+            days_ago = self.random.randint(0, 365)
+            created_date = datetime.now() - timedelta(days=days_ago)
+
+            # Format created date for prompt
+            formatted_created_date = created_date.strftime("%Y-%m-%d %H:%M")
+
             # For some tickets, use common scenarios
             if idx < common_scenario_count:
                 # Generate from common scenario
                 scenario = self._generate_common_support_scenario()
                 category = scenario["category"]
                 topic = scenario["topic"]
-                description = scenario["description"]
+
+                # Add ticket_id and created_date at start of description
+                description = f"Re: Ticket {ticket_id} (Created: {formatted_created_date})\n\n{scenario['description']}"
 
                 # Enhance with customer data
                 description = self._enhance_ticket_with_data_references(
@@ -780,9 +792,12 @@ class KnowledgeGenerator(BaseGenerator):
                 else:
                     topic = "general assistance"
 
-                # Generate ticket description using LLM
+                # Generate ticket description using LLM with the created date
                 prompt = self.ticket_prompt.format(
-                    ticket_id=ticket_id, category=category, topic=topic
+                    ticket_id=ticket_id,
+                    category=category,
+                    topic=topic,
+                    created_date=formatted_created_date,
                 )
                 description = self._generate_content_with_llm(prompt)
 
@@ -820,10 +835,6 @@ class KnowledgeGenerator(BaseGenerator):
             # Select status based on distribution
             status = self.select_weighted(ticket_statuses)
 
-            # Generate created date (within last 90 days)
-            days_ago = self.random.randint(0, 90)
-            created_date = datetime.now() - timedelta(days=days_ago)
-
             # Generate resolved date and resolution for resolved or closed tickets
             resolved_date = None
             resolution = None
@@ -846,14 +857,8 @@ class KnowledgeGenerator(BaseGenerator):
                 days_to_resolution = self.random.randint(0, max_days)
                 resolved_date = created_date + timedelta(days=days_to_resolution)
 
-                # Generate resolution using LLM
-                resolution_prompt = self.resolution_prompt.format(
-                    ticket_id=ticket_id,
-                    agent_id=agent_id,
-                    description=description,
-                    category=category,
-                )
-                resolution = self._generate_content_with_llm(resolution_prompt)
+                # Format resolved date for prompt
+                formatted_resolved_date = resolved_date.strftime("%Y-%m-%d %H:%M")
 
                 # Generate agent ID with department code prefix
                 dept_code = {
@@ -864,6 +869,17 @@ class KnowledgeGenerator(BaseGenerator):
                 }.get(category, "SUP")
 
                 agent_id = f"{dept_code}-{self.random.randint(1000, 9999)}"
+
+                # Generate resolution using LLM
+                resolution_prompt = self.resolution_prompt.format(
+                    ticket_id=ticket_id,
+                    agent_id=agent_id,
+                    description=description,
+                    category=category,
+                    created_date=formatted_created_date,
+                    resolved_date=formatted_resolved_date,
+                )
+                resolution = self._generate_content_with_llm(resolution_prompt)
 
             data.append(
                 (
