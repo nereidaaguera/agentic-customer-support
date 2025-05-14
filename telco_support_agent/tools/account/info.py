@@ -48,7 +48,8 @@ class AccountInfoTool(UCTool):
         """Execute the account info query with error handling and retries.
 
         Args:
-            customer: Customer ID to look up
+            **kwargs: Keyword arguments passed to the function, should include:
+                customer: Customer ID to look up
 
         Returns:
             Formatted markdown table with customer information
@@ -108,7 +109,8 @@ class SubscriptionsInfoTool(UCTool):
         """Execute the subscriptions info query with error handling and retries.
 
         Args:
-            customer: Customer ID to look up
+            **kwargs: Keyword arguments passed to the function, should include:
+                customer: Customer ID to look up
 
         Returns:
             Formatted markdown table with subscription information
