@@ -32,13 +32,13 @@ from telco_support_agent.data.generators.products import ProductGenerator
 
 # COMMAND ----------
 
-env = "dev"
+env = "prod"
 
 # Configure which tables to generate (set to True for tables to generate)
 generate_config = {
     
     # Set to True to regenerate all tables
-    "all": False,
+    "all": True,
 
     # Product data
     "plans": True,
