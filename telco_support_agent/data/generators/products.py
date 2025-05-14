@@ -183,37 +183,51 @@ class ProductGenerator(BaseGenerator):
             # Select manufacturer based on market share distribution
             manufacturer = self.select_weighted(manufacturer_distribution)
 
+            model = ""
+
             # Generate device name based on manufacturer and latest models
             if manufacturer == "Apple":
                 if device_type == "Smartphone":
                     model = f"iPhone {self.random.randint(13, 16)} {self.random.choice(['', 'Pro', 'Pro Max'])}"
                 elif device_type == "Tablet":
                     model = f"iPad {self.random.choice(['', 'Air', 'Pro', 'mini'])} {self.random.randint(9, 11)}"
+                elif device_type == "Hotspot":
+                    model = f"MiFi {self.random.randint(1, 5)}"
             elif manufacturer == "Samsung":
                 if device_type == "Smartphone":
                     model = f"Galaxy S{self.random.randint(22, 25)} {self.random.choice(['', 'Plus', 'Ultra', 'Edge'])}"
                 elif device_type == "Tablet":
                     model = f"Galaxy Tab S{self.random.randint(7, 10)}"
+                elif device_type == "Hotspot":
+                    model = f"Mobile Hotspot {self.random.choice(['A', 'B', 'C'])}{self.random.randint(10, 20)}"
             elif manufacturer == "Google":
                 if device_type == "Smartphone":
                     model = f"Pixel {self.random.randint(7, 9)} {self.random.choice(['', 'Pro', 'Pro XL'])}"
                 elif device_type == "Tablet":
                     model = f"Pixel Tablet {self.random.choice(['', 'Pro'])}"
+                elif device_type == "Hotspot":
+                    model = f"Nexus Connect {self.random.randint(1, 5)}"
             elif manufacturer == "Motorola":
                 if device_type == "Smartphone":
                     model = f"Moto G{self.random.randint(10, 15)} {self.random.choice(['', 'Plus', 'Power'])}"
                 elif device_type == "Tablet":
                     model = f"Moto Tab G{self.random.randint(70, 90)}"
+                elif device_type == "Hotspot":
+                    model = f"Motorola MiFi {self.random.randint(100, 500)}"
             elif manufacturer == "OnePlus":
                 if device_type == "Smartphone":
                     model = f"OnePlus {self.random.randint(11, 13)} {self.random.choice(['', 'Pro', 'T'])}"
                 elif device_type == "Tablet":
                     model = f"OnePlus Pad {self.random.choice(['', 'Pro'])}"
-            else:  # Xiaomi
+                elif device_type == "Hotspot":
+                    model = f"OnePlus Connect {self.random.randint(1, 3)}"
+            else:
                 if device_type == "Smartphone":
                     model = f"Xiaomi {self.random.choice(['Redmi', 'POCO', 'Mi'])} {self.random.randint(12, 14)}"
                 elif device_type == "Tablet":
                     model = f"Xiaomi Pad {self.random.randint(6, 8)}"
+                elif device_type == "Hotspot":
+                    model = f"Mi WiFi {self.random.randint(3, 6)}"
 
             device_name = f"{manufacturer} {model}"
 

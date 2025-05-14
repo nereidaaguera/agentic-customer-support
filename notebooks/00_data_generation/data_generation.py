@@ -12,6 +12,18 @@
 
 # COMMAND ----------
 
+import os
+import sys
+
+root_path = os.path.abspath(os.path.join(os.getcwd(), "../.."))
+print(f"Root path: {root_path}")
+
+if root_path:
+    sys.path.append(root_path)
+    print(f"Added {root_path} to Python path")
+
+# COMMAND ----------
+
 from telco_support_agent.data.config import CONFIG
 from telco_support_agent.data.generators.billing import BillingGenerator
 from telco_support_agent.data.generators.customers import CustomerGenerator
