@@ -156,3 +156,49 @@ class PythonTool(Tool):
     def get_tool_info(self) -> ToolInfo:
         """Return tool info for agent consumption."""
         return ToolInfo(name=self.name, spec=self.spec, exec_fn=self.exec_fn)
+    
+
+class ToolRegistry:
+    """Registry for tool discovery and management."""
+    
+    _tools = {}
+    
+    @classmethod
+    def register_tool(cls, agent_type: str, tool: Tool) -> None:
+        """Register a tool for a specific agent type.
+        
+        Args:
+            agent_type: Type of agent (e.g., "account", "billing")
+            tool: Tool instance to register
+        """
+        if agent_type not in cls._tools:
+            cls._tools[agent_type] = []
+        cls._tools[agent_type].append(tool)
+    
+    @classmethod
+    def get_tools(cls, agent_type: str) -> list[Tool]:
+        """Get all tools for a specific agent type.
+        
+        Args:
+            agent_type: Type of agent (e.g., "account", "billing")
+            
+        Returns:
+            List of registered tools for the agent type
+        """
+        return cls._tools.get(agent_type, [])
+        
+    @classmethod
+    def register_tool_for_multiple_agents(cls, agent_types: list[str], tool: Tool) -> None:
+        """Register a tool for multiple agent types.
+        
+        Args:
+            agent_types: List of agent types
+            tool: Tool instance to register
+        """
+        for agent_type in agent_types:
+            cls.register_tool(agent_type, tool)
+            
+    @classmethod
+    def clear_registry(cls) -> None:
+        """Clear the registry (primarily for testing)."""
+        cls._tools = {}
