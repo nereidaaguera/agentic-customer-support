@@ -321,13 +321,19 @@ else:
 # COMMAND ----------
 
 if should_generate("support_tickets"):
-    tickets_df = knowledge_gen.generate_tickets(customers_df, subscriptions_df)
-    display(tickets_df)
+    tickets_df = knowledge_gen.generate_tickets(
+        customers_df, 
+        subscriptions_df,
+        plans_df=plans_df,
+        devices_df=devices_df
+    )
     print(f"Generated {tickets_df.count()} support tickets")
     knowledge_gen.save_to_delta(tickets_df, f"telco_customer_support_{env}.bronze.support_tickets")
 else:
     tickets_df = load_existing_table("support_tickets")
     print("Using existing support tickets data")
+
+display(tickets_df)
 
 # COMMAND ----------
 
