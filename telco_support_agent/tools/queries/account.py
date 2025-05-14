@@ -2,15 +2,15 @@
 
 # Query to get basic customer account information
 ACCOUNT_INFO_QUERY = """
-SELECT * 
-FROM {catalog}.{schema}.customers 
+SELECT *
+FROM {catalog}.{schema}.customers
 WHERE customer_id = customer
 LIMIT 1
 """
 
 # Query to get subscription information for a customer
 SUBSCRIPTIONS_INFO_QUERY = """
-SELECT 
+SELECT
     s.*,
     p.plan_name,
     p.plan_type,
