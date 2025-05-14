@@ -5,14 +5,6 @@ from typing import Any, Optional
 
 from pydantic import BaseModel
 
-from telco_support_agent.tools.base import (
-    FunctionType,
-    PythonTool,
-    Tool,
-    ToolRegistry,
-    UCTool,
-)
-
 
 class ToolParameter(BaseModel):
     """Model for tool parameter configuration."""
@@ -44,3 +36,25 @@ class ToolInfo:
         self.name = name
         self.spec = spec
         self.exec_fn = exec_fn
+
+
+from telco_support_agent.tools.base import (
+    FunctionType,
+    PythonTool,
+    Tool,
+    ToolRegistry,
+    UCTool,
+)
+from telco_support_agent.tools.initialization import initialize_tools
+
+__all__ = [
+    "ToolParameter",
+    "ToolConfig",
+    "ToolInfo",
+    "Tool",
+    "UCTool",
+    "PythonTool",
+    "FunctionType",
+    "ToolRegistry",
+    "initialize_tools",
+]
