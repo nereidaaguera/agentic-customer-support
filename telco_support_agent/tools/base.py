@@ -1,4 +1,4 @@
-"""Base class and interfaces for all tools."""
+"""Base classes and interfaces for all agent tools."""
 
 import logging
 from abc import ABC, abstractmethod
@@ -6,10 +6,8 @@ from collections.abc import Callable
 from enum import Enum
 from typing import Any, Union
 
-from unitycatalog.ai.core.databricks import DatabricksFunctionClient
-
 from telco_support_agent.config import get_uc_config
-from telco_support_agent.tools import ToolInfo
+from telco_support_agent.tools.tool_info import ToolInfo
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +27,8 @@ class Tool(ABC):
 
 
 class FunctionType(Enum):
+    """Enum for function types."""
+
     SQL = 1
     PYTHON = 2
 
@@ -51,6 +51,8 @@ class UCTool(Tool):
             description: Tool description
             env: Environment name (dev, prod)
         """
+        from unitycatalog.ai.core.databricks import DatabricksFunctionClient
+
         uc_config = get_uc_config(env)
         self.client = DatabricksFunctionClient()
         self.catalog = uc_config["catalog"]
@@ -65,11 +67,16 @@ class UCTool(Tool):
             self.spec["function"].pop("strict")
 
     def create_function(self, function_value: Union[str, Callable]) -> dict[str, Any]:
-        """Create tool function in unity catalog."""
+        """Create tool function in unity catalog.
+
+        Args:
+            function_value: SQL or Python function to create
+
+        Returns:
+            Function specification
+        """
         try:
-            from unitycatalog.ai.openai.toolkit import (
-                UCFunctionToolkit,
-            )
+            from unitycatalog.ai.openai.toolkit import UCFunctionToolkit
 
             if self.function_type is FunctionType.SQL:
                 self.client.create_function(sql_function_body=function_value)
@@ -89,7 +96,14 @@ class UCTool(Tool):
         pass
 
     def exec_fn(self, **kwargs: dict[str, Any]) -> Any:
-        """Execute the function in unity catalog."""
+        """Execute the function in unity catalog.
+
+        Args:
+            **kwargs: Parameters to pass to the function
+
+        Returns:
+            Function execution result
+        """
         try:
             output = self.client.execute_function(self.uc_name, parameters=kwargs)
             return output.value
@@ -146,7 +160,14 @@ class PythonTool(Tool):
         }
 
     def exec_fn(self, **kwargs: dict[str, Any]) -> Any:
-        """Execute the Python function."""
+        """Execute the Python function.
+
+        Args:
+            **kwargs: Parameters to pass to the function
+
+        Returns:
+            Function execution result
+        """
         try:
             return self.function(**kwargs)
         except Exception as e:
