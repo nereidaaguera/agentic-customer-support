@@ -42,8 +42,8 @@ generate_config = {
     "usage": True,
     
     # Knowledge base data
-    "kb_articles": False,
-    "support_tickets": False,
+    "kb_articles": True,
+    "support_tickets": True,
     
 }
 
@@ -308,7 +308,7 @@ if should_generate("kb_articles"):
     kb_df = knowledge_gen.generate_kb_articles()
     display(kb_df)
     print(f"Generated {kb_df.count()} knowledge base articles")
-    knowledge_gen.save_to_delta(kb_df, f"telco_customer_support_{env}.bronze.knowledge_base")
+    knowledge_gen.save_to_delta(kb_df, f"telco_customer_support_{env}.bronze.knowledge_base_test")
 else:
     kb_df = load_existing_table("knowledge_base")
     print("Using existing knowledge base data")
@@ -328,7 +328,7 @@ if should_generate("support_tickets"):
         devices_df=devices_df
     )
     print(f"Generated {tickets_df.count()} support tickets")
-    knowledge_gen.save_to_delta(tickets_df, f"telco_customer_support_{env}.bronze.support_tickets")
+    knowledge_gen.save_to_delta(tickets_df, f"telco_customer_support_{env}.bronze.support_tickets_test")
 else:
     tickets_df = load_existing_table("support_tickets")
     print("Using existing support tickets data")
