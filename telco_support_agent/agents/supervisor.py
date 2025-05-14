@@ -1,14 +1,15 @@
 """Supervisor agent to orchestrate specialized sub-agents."""
 
-import logging
 from typing import Optional
 
 import mlflow
 from mlflow.entities import SpanType
 
 from telco_support_agent.agents.base_agent import BaseAgent
+from telco_support_agent.utils.logging_utils import get_logger, setup_logging
 
-logger = logging.getLogger(__name__)
+setup_logging()
+logger = get_logger(__name__)
 
 
 class SupervisorAgent(BaseAgent):

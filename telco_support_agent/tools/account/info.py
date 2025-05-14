@@ -1,6 +1,5 @@
 """Account info tools."""
 
-import logging
 import time
 from io import StringIO
 
@@ -11,8 +10,10 @@ from telco_support_agent.tools.queries.account import (
     ACCOUNT_INFO_QUERY,
     SUBSCRIPTIONS_INFO_QUERY,
 )
+from telco_support_agent.utils.logging_utils import get_logger, setup_logging
 
-logger = logging.getLogger(__name__)
+setup_logging()
+logger = get_logger(__name__)
 
 
 class AccountInfoTool(UCTool):
