@@ -69,6 +69,106 @@ class CustomerGenerator(BaseGenerator):
             # Select preferred contact method based on distribution
             preferred_contact_method = self.select_weighted(contact_methods)
 
+            # Calculate days as customer (tenure)
+            days_as_customer = (date.today() - registration_date.date()).days
+            years_as_customer = days_as_customer / 365.0
+
+            # Assign loyalty tier based on segment and tenure
+            loyalty_tier_weights = {
+                "Bronze": 0.4,
+                "Silver": 0.3,
+                "Gold": 0.2,
+                "Platinum": 0.1,
+            }
+
+            # Adjust weights based on customer segment and tenure
+            if customer_segment in ["Premium", "Business"]:
+                # Premium/Business customers more likely to be Gold/Platinum
+                loyalty_tier_weights["Bronze"] -= 0.2
+                loyalty_tier_weights["Silver"] -= 0.1
+                loyalty_tier_weights["Gold"] += 0.1
+                loyalty_tier_weights["Platinum"] += 0.2
+
+            # Longer tenure increases tier probabilities
+            if years_as_customer > 3:
+                loyalty_tier_weights["Bronze"] -= min(
+                    0.2, loyalty_tier_weights["Bronze"]
+                )
+                loyalty_tier_weights["Silver"] -= min(
+                    0.1, loyalty_tier_weights["Silver"]
+                )
+                loyalty_tier_weights["Gold"] += 0.1
+                loyalty_tier_weights["Platinum"] += 0.2
+
+            # normalize
+            total = sum(loyalty_tier_weights.values())
+            loyalty_tier_weights = {
+                k: v / total for k, v in loyalty_tier_weights.items()
+            }
+
+            loyalty_tier = self.select_weighted(loyalty_tier_weights)
+
+            # Calculate churn risk score (0-100)
+            # Base churn risk - random
+            churn_risk_score = self.random.randint(20, 80)
+
+            # Factors that decrease churn risk
+            if customer_segment in ["Premium", "Business"]:
+                churn_risk_score -= 15
+            if years_as_customer > 2:
+                churn_risk_score -= min(20, int(years_as_customer * 5))
+            if loyalty_tier in ["Gold", "Platinum"]:
+                churn_risk_score -= 10
+
+            # Factors that increase churn risk
+            if customer_status == "Inactive":
+                churn_risk_score += 30
+            elif customer_status == "Suspended":
+                churn_risk_score += 40
+
+            # Ensure range 1-100
+            churn_risk_score = max(1, min(100, churn_risk_score))
+
+            # Calculate customer value score (0-100)
+            # Base value tied to segment
+            segment_values = {
+                "Individual": 40,
+                "Family": 60,
+                "Business": 75,
+                "Premium": 85,
+                "Student": 30,
+            }
+            customer_value_score = segment_values.get(customer_segment, 50)
+
+            # Adjust based on loyalty tier
+            tier_adjustments = {"Bronze": 0, "Silver": 10, "Gold": 20, "Platinum": 30}
+            customer_value_score += tier_adjustments.get(loyalty_tier, 0)
+
+            # Longer relationships tend to be more valuable
+            customer_value_score += min(15, int(years_as_customer * 3))
+
+            # Random factor
+            customer_value_score += self.random.randint(-10, 10)
+
+            # Ensure range 1-100
+            customer_value_score = max(1, min(100, customer_value_score))
+
+            # Calculate satisfaction score (0-100)
+            # Base satisfaction
+            satisfaction_score = self.random.randint(50, 90)
+
+            # Factors affecting satisfaction
+            if loyalty_tier in ["Gold", "Platinum"]:
+                satisfaction_score += 10
+            if customer_status == "Suspended":
+                satisfaction_score -= 30
+
+            # Inverse correlation with churn risk (but not perfect)
+            satisfaction_score -= (churn_risk_score - 50) // 5
+
+            # Ensure range 1-100
+            satisfaction_score = max(1, min(100, satisfaction_score))
+
             data.append(
                 (
                     customer_id,
@@ -78,6 +178,10 @@ class CustomerGenerator(BaseGenerator):
                     registration_date.date(),  # convert datetime to date
                     customer_status,
                     preferred_contact_method,
+                    loyalty_tier,
+                    churn_risk_score,
+                    customer_value_score,
+                    satisfaction_score,
                 )
             )
 
@@ -90,6 +194,10 @@ class CustomerGenerator(BaseGenerator):
                 StructField("registration_date", DateType(), False),
                 StructField("customer_status", StringType(), False),
                 StructField("preferred_contact_method", StringType(), False),
+                StructField("loyalty_tier", StringType(), False),
+                StructField("churn_risk_score", IntegerType(), False),
+                StructField("customer_value_score", IntegerType(), False),
+                StructField("satisfaction_score", IntegerType(), False),
             ]
         )
 

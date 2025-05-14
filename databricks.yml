@@ -1,1 +1,21 @@
-# TODO
+bundle:
+  name: telco-support-agent
+
+permissions:
+  - level: CAN_MANAGE
+    group_name: telco-customer-support-dev
+  - level: CAN_VIEW
+    group_name: users
+
+include:
+  - ./resources/*.yml
+
+targets:
+  dev:
+    default: true
+    workspace:
+      host: https://db-ml-models-prod-us-west.cloud.databricks.com   
+  # prod:
+  #   default: false
+  #   workspace:
+  #     host: https://db-ml-models-prod-us-west.cloud.databricks.com

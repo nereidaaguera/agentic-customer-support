@@ -111,8 +111,10 @@ class BillingGenerator(BaseGenerator):
 
                 # Set payment status based on distribution (weighted)
                 # But make older bills more likely to be paid
-                months_ago = (date.today().year - billing_cycle_date.year) * 12 + (
-                    date.today().month - billing_cycle_date.month
+                months_ago = max(
+                    0,
+                    (date.today().year - billing_cycle_date.year) * 12
+                    + (date.today().month - billing_cycle_date.month),
                 )
                 paid_boost = min(
                     0.5, months_ago * 0.1
@@ -121,9 +123,13 @@ class BillingGenerator(BaseGenerator):
                 # Adjust probabilities based on age of bill
                 adj_payment_statuses = {
                     "Paid": payment_statuses["Paid"] + paid_boost,
-                    "Unpaid": payment_statuses["Unpaid"] - (paid_boost * 0.7),
-                    "Late": payment_statuses["Late"] - (paid_boost * 0.2),
-                    "Partial": payment_statuses["Partial"] - (paid_boost * 0.1),
+                    "Unpaid": max(
+                        0.01, payment_statuses["Unpaid"] - (paid_boost * 0.7)
+                    ),
+                    "Late": max(0.01, payment_statuses["Late"] - (paid_boost * 0.2)),
+                    "Partial": max(
+                        0.01, payment_statuses["Partial"] - (paid_boost * 0.1)
+                    ),
                 }
 
                 # Normalize probabilities
