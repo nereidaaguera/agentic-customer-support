@@ -5,6 +5,7 @@
 # COMMAND ----------
 
 # MAGIC %pip install -r ../../../requirements.txt -q
+# MAGIC %pip install --upgrade "databricks-connect==16.3.*"
 
 # COMMAND ----------
 
