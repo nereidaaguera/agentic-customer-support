@@ -259,12 +259,16 @@ class KnowledgeGenerator(BaseGenerator):
         )
 
         self.resolution_prompt = (
-            "Generate a realistic resolution response from a customer service agent for this support ticket: "
-            "'{description}'. The ticket category is {category}. Include specific actions taken: systems accessed, "
-            "changes made, credits applied (with exact amounts), troubleshooting steps performed, or recommendations "
-            "provided. Reference specific company policies or procedures where relevant. Make it sound professional "
-            "yet personable, with appropriate empathy and follow-up actions. Include realistic timestamps and "
-            "appropriate escalation notes if relevant."
+            "Generate a realistic resolution response from a customer service agent for support ticket {ticket_id}. "
+            "The agent handling this ticket has the ID {agent_id}. "
+            "The original customer description was: '{description}'. The ticket category is {category}. "
+            "Begin your resolution with 'Resolution for Ticket {ticket_id} | Agent {agent_id}' and then continue with the agent's response. "
+            "Include specific actions taken: systems accessed, changes made, credits applied (with exact amounts), "
+            "troubleshooting steps performed, or recommendations provided. Reference specific company policies or "
+            "procedures where relevant. Make it sound professional yet personable, with appropriate empathy and "
+            "follow-up actions. Include realistic timestamps and appropriate escalation notes if relevant. "
+            "DO NOT create any additional ticket numbers, agent IDs, or reference numbers beyond what has been provided. "
+            "Use only the ticket ID {ticket_id} and agent ID {agent_id} when referencing this case."
         )
 
         # common support scenarios for ticket generation
@@ -843,7 +847,10 @@ class KnowledgeGenerator(BaseGenerator):
 
                 # Generate resolution using LLM
                 resolution_prompt = self.resolution_prompt.format(
-                    description=description, category=category
+                    ticket_id=ticket_id,
+                    agent_id=agent_id,
+                    description=description,
+                    category=category,
                 )
                 resolution = self._generate_content_with_llm(resolution_prompt)
 

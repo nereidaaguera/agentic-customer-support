@@ -124,8 +124,8 @@ CONFIG: ConfigDict = {
         "plans": 12,
         "devices": 35,
         "promotions": 40,
-        "kb_articles": 3,
-        "tickets": 3,
+        "kb_articles": 250,
+        "tickets": 100,
     },
     # Date ranges
     "date_ranges": {
