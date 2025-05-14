@@ -24,8 +24,10 @@ if root_path:
 
 # COMMAND ----------
 
-from mlflow.types.responses import ResponsesRequest
+from telco_support_agent.tools import initialize_tools
+initialize_tools()
 
+from mlflow.types.responses import ResponsesRequest
 from telco_support_agent.agents.account import AccountAgent
 
 # COMMAND ----------
@@ -35,6 +37,8 @@ account_agent = AccountAgent()
 print(f"Agent type: {account_agent.agent_type}")
 print(f"LLM endpoint: {account_agent.llm_endpoint}")
 print(f"LLM parameters: {account_agent.llm_params}")
+print(f"Number of tools: {len(account_agent.tools)}")
+print(f"Available tools: {[tool.name for tool in account_agent.tools]}")
 
 # COMMAND ----------
 
@@ -45,10 +49,10 @@ request = ResponsesRequest(
 # COMMAND ----------
 
 response = account_agent.predict(request)
-
-# COMMAND ----------
-
-response.output[-1].content[0]['text']
+if response and hasattr(response, 'output') and response.output:
+    print(response.output[-1].content[0]['text'])
+else:
+    print("No response or empty response received")
 
 # COMMAND ----------
 
@@ -67,7 +71,11 @@ def test_query(query):
     )
     
     response = account_agent.predict(request)
-    print(response.output[-1].content[0]['text'])
+    if response and hasattr(response, 'output') and response.output:
+        print(response.output[-1].content[0]['text'])
+    else:
+        print("No response or empty response received")
+    
     print("\n" + "="*80)
 
 # COMMAND ----------
