@@ -1,6 +1,26 @@
 # Databricks notebook source
-# MAGIC %pip install -r ../../../requirements.txt --pre -qqqq
-# MAGIC dbutils.library.restartPython()
+# MAGIC %md
+# MAGIC # Test Supervisor Agent Class
+
+# COMMAND ----------
+
+# MAGIC %pip install -r ../../../requirements.txt -q
+
+# COMMAND ----------
+
+# MAGIC %restart_python
+
+# COMMAND ----------
+
+import os
+import sys
+
+root_path = os.path.abspath(os.path.join(os.getcwd(), "../../.."))
+print(f"Root path: {root_path}")
+
+if root_path:
+    sys.path.append(root_path)
+    print(f"Added {root_path} to Python path")
 
 # COMMAND ----------
 

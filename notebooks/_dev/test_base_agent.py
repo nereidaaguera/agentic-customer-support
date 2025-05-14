@@ -1,17 +1,27 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Base Agent Test
+# MAGIC # Test Base Agent Class
 
 # COMMAND ----------
 
-# MAGIC %pip install -r ../../requirements.txt --pre -qqqq
-# MAGIC dbutils.library.restartPython()
+# MAGIC %pip install -r ../../requirements.txt -q
 
 # COMMAND ----------
 
-import logging
-from typing import Any, Dict
-from uuid import uuid4
+# MAGIC %restart_python
+
+# COMMAND ----------
+
+import os
+import sys
+
+root_path = os.path.abspath(os.path.join(os.getcwd(), "../.."))
+print(f"Root path: {root_path}")
+
+if root_path:
+    sys.path.append(root_path)
+    print(f"Added {root_path} to Python path")
+# COMMAND ----------
 
 from mlflow.types.responses import ResponsesRequest
 

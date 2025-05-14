@@ -2,6 +2,7 @@
 
 Pydantic models for plans, devices, and promotions data validation.
 """
+
 import re
 from datetime import date
 from typing import Any

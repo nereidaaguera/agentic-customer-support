@@ -2,6 +2,7 @@
 
 Pydantic models for knowledge base and support ticket data validation.
 """
+
 import re
 from datetime import date, datetime
 from typing import Any

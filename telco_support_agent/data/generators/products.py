@@ -3,6 +3,7 @@
 This module contains the ProductGenerator class for generating plans, devices,
 and promotions data.
 """
+
 from datetime import datetime, timedelta
 from typing import Any
 

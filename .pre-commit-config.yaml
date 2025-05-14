@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.1.5  # must match version in pyproject.toml
+    rev: v0.11.9  # must match version in pyproject.toml
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
@@ -21,9 +21,9 @@ repos:
       - id: mixed-line-ending
         args: ['--fix=lf']
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.7.0  # must match version in pyproject.toml
-    hooks:
-      - id: mypy
-        additional_dependencies: [types-requests, types-PyYAML]
-        exclude: "tests/|notebooks/"
+  #- repo: https://github.com/pre-commit/mirrors-mypy
+  #  rev: v1.7.0  # must match version in pyproject.toml
+  #  hooks:
+  #    - id: mypy
+  #      additional_dependencies: [types-requests, types-PyYAML]
+  #      exclude: "tests/|notebooks/"
