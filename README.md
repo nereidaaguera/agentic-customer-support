@@ -43,10 +43,8 @@ telco_support_agent/
 │   ├── data/                # Data generation and management
 │   │   ├── __init__.py
 │   │   ├── config.py        # Data generation configuration
-│   │   │
 │   │   ├── generators/      # Data generators
-│   │   ├── schemas/         # Pydantic models for data
-│   │   └── loaders/         # Data loaders
+│   │   └── schemas/         # Pydantic models for data
 │   │
 │   ├── evaluation/          # Evaluation framework
 │   │   ├── __init__.py

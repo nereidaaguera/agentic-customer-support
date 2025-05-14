@@ -117,22 +117,21 @@ class ConfigDict(TypedDict):
 
 # Config dictionary for data generation
 CONFIG: ConfigDict = {
-    # Random seed for reproducibility
     "seed": 42,
     # Data volumes
     "volumes": {
-        "customers": 1000,
-        "plans": 10,
-        "devices": 20,
-        "promotions": 5,
-        "kb_articles": 200,
-        "tickets": 500,
+        "customers": 1500,
+        "plans": 12,
+        "devices": 35,
+        "promotions": 40,
+        "kb_articles": 250,
+        "tickets": 150,
     },
     # Date ranges
     "date_ranges": {
-        "customer_registration": ["2020-01-01", "2025-03-01"],
-        "billing_cycles": ["2024-01", "2025-03"],
-        "device_release": ["2019-01-01", "2025-01-01"],
+        "customer_registration": ["2020-01-01", "2025-06-01"],
+        "billing_cycles": ["2024-01", "2025-06"],
+        "device_release": ["2019-01-01", "2025-05-01"],
     },
     # Distributions for categorical variables
     "distributions": {
@@ -150,10 +149,10 @@ CONFIG: ConfigDict = {
         "device_types": {"Smartphone": 0.7, "Tablet": 0.2, "Hotspot": 0.1},
         # Payment statuses
         "payment_statuses": {
-            "Paid": 0.85,
-            "Unpaid": 0.1,
-            "Late": 0.04,
-            "Partial": 0.01,
+            "Paid": 0.65,
+            "Unpaid": 0.2,
+            "Late": 0.1,
+            "Partial": 0.05,
         },
         # Subscription statuses
         "subscription_statuses": {"Active": 0.9, "Paused": 0.05, "Cancelled": 0.05},

@@ -128,7 +128,7 @@ class BaseGenerator:
             mode: Write mode (overwrite, append, etc.).
             partition_by: Columns to partition by.
         """
-        writer = df.write.format("delta").mode(mode)
+        writer = df.write.format("delta").option("overwriteSchema", "true").mode(mode)
 
         if partition_by:
             writer = writer.partitionBy(*partition_by)
