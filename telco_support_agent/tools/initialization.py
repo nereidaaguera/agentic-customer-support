@@ -1,6 +1,5 @@
 """Tool initialization and registration."""
 
-
 from telco_support_agent.utils.logging_utils import get_logger, setup_logging
 
 setup_logging()
