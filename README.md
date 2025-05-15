@@ -96,15 +96,6 @@ poetry env use 3.12.3
 poetry install
 ```
 
-#### Development Installation
-
-For development, install the package in editable mode:
-
-```bash
-# install in development mode
-pip install -e .
-```
-
 ### Generating requirements.txt
 
 We use a `requirements.txt` file to pip install dependencies in notebooks. To generate the `requirements.txt` from `pyproject.toml`:

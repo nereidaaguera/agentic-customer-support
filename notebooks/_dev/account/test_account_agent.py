@@ -1,6 +1,6 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Test Account Agent Class
+# MAGIC # Test Account Agent
 
 # COMMAND ----------
 
@@ -38,7 +38,11 @@ print(f"Agent type: {account_agent.agent_type}")
 print(f"LLM endpoint: {account_agent.llm_endpoint}")
 print(f"LLM parameters: {account_agent.llm_params}")
 print(f"Number of tools: {len(account_agent.tools)}")
-print(f"Available tools: {[tool.name for tool in account_agent.tools]}")
+
+print("\nAvailable tools:")
+for tool in account_agent.tools:
+    if "function" in tool:
+        print(f"- {tool['function']['name']}")
 
 # COMMAND ----------
 
@@ -50,7 +54,13 @@ request = ResponsesRequest(
 
 response = account_agent.predict(request)
 if response and hasattr(response, 'output') and response.output:
-    print(response.output[-1].content[0]['text'])
+    output_item = response.output[-1]
+    if "content" in output_item and isinstance(output_item["content"], list):
+        print(output_item["content"][0]["text"])
+    elif "content" in output_item:
+        print(output_item["content"])
+    else:
+        print("Unexpected response format:", output_item)
 else:
     print("No response or empty response received")
 
@@ -72,12 +82,17 @@ def test_query(query):
     
     response = account_agent.predict(request)
     if response and hasattr(response, 'output') and response.output:
-        print(response.output[-1].content[0]['text'])
+        output_item = response.output[-1]
+        if "content" in output_item and isinstance(output_item["content"], list):
+            print(output_item["content"][0]["text"])
+        elif "content" in output_item:
+            print(output_item["content"])
+        else:
+            print("Unexpected response format:", output_item)
     else:
         print("No response or empty response received")
     
     print("\n" + "="*80)
-
 # COMMAND ----------
 
 for query in test_queries:
