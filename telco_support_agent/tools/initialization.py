@@ -12,8 +12,10 @@ def initialize_tools():
     try:
         # import and register account tools
         from telco_support_agent.tools.account import register_account_tools
+        from telco_support_agent.tools.product import register_product_tools
 
         register_account_tools()
+        register_product_tools()
 
         # TODO: add similar imports for other tool domains as they're implemented
         # from telco_support_agent.tools.billing import register_billing_tools
