@@ -1,4 +1,4 @@
-"""Utils for registering UC functions."""
+"""Utilities for registering UC functions."""
 
 from collections.abc import Callable
 
@@ -22,6 +22,7 @@ _domain_registry: dict[str, list[str]] = {
     "billing": [],
     "tech_support": [],
     "product": [],
+    "supervisor": [],
 }
 
 
@@ -68,7 +69,8 @@ def uc_function(
 
             # add to domain registry
             if domain in _domain_registry:
-                _domain_registry[domain].append(function_name)
+                if function_name not in _domain_registry[domain]:
+                    _domain_registry[domain].append(function_name)
             else:
                 _domain_registry[domain] = [function_name]
 

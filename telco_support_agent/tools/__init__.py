@@ -7,11 +7,16 @@ from telco_support_agent.utils.logging_utils import get_logger
 logger = get_logger(__name__)
 
 TOOL_MODULES = [
+    # Account domain tools
     "telco_support_agent.tools.account.functions",
-    # TODO: add other modules
-    # "telco_support_agent.tools.billing.functions",
-    # "telco_support_agent.tools.tech_support.functions",
-    # "telco_support_agent.tools.product.functions",
+    # Billing domain tools
+    "telco_support_agent.tools.billing.functions",
+    # Tech support domain tools
+    "telco_support_agent.tools.tech_support.functions",
+    # Product domain tools
+    "telco_support_agent.tools.product.functions",
+    # Supervisor tools
+    "telco_support_agent.tools.supervisor.functions",
 ]
 
 
