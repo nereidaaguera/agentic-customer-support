@@ -1,6 +1,6 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Test Account Agent Class
+# MAGIC # Test Product Agent Class
 
 # COMMAND ----------
 
@@ -28,27 +28,27 @@ from telco_support_agent.tools import initialize_tools
 initialize_tools()
 
 from mlflow.types.responses import ResponsesRequest
-from telco_support_agent.agents.account import AccountAgent
+from telco_support_agent.agents.product import ProductAgent
 
 # COMMAND ----------
 
-account_agent = AccountAgent()
+product_agent = ProductAgent()
 
-print(f"Agent type: {account_agent.agent_type}")
-print(f"LLM endpoint: {account_agent.llm_endpoint}")
-print(f"LLM parameters: {account_agent.llm_params}")
-print(f"Number of tools: {len(account_agent.tools)}")
-print(f"Available tools: {[tool.name for tool in account_agent.tools]}")
+print(f"Agent type: {product_agent.agent_type}")
+print(f"LLM endpoint: {product_agent.llm_endpoint}")
+print(f"LLM parameters: {product_agent.llm_params}")
+print(f"Number of tools: {len(product_agent.tools)}")
+print(f"Available tools: {[tool.name for tool in product_agent.tools]}")
 
 # COMMAND ----------
 
 request = ResponsesRequest(
-    input=[{"role": "user", "content": "How many plans do I have on my account? My ID is CUS-10601"}]
+    input=[{"role": "user", "content": "What's the difference between the Standard and Premium plans?"}]
 )
 
 # COMMAND ----------
 
-response = account_agent.predict(request)
+response = product_agent.predict(request)
 if response and hasattr(response, 'output') and response.output:
     print(response.output[-1].content[0]['text'])
 else:
@@ -57,10 +57,7 @@ else:
 # COMMAND ----------
 
 test_queries = [
-    "How many plans do I have on my account? My ID is CUS-10601",
-    "What plan am I currently on? My ID is CUS-10601",
-    "When did I create my account? My ID is CUS-10601",
-    "Is my autopay enabled in my subscriptions? My ID is CUS-10601",
+    "What's the difference between the Standard and Premium plans?",
 ]
 
 def test_query(query):
@@ -70,7 +67,7 @@ def test_query(query):
         input=[{"role": "user", "content": query}]
     )
 
-    response = account_agent.predict(request)
+    response = product_agent.predict(request)
     if response and hasattr(response, 'output') and response.output:
         print(response.output[-1].content[0]['text'])
     else:

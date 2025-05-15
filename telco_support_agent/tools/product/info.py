@@ -22,7 +22,7 @@ class PlansInfoTool(UCTool):
             function_type=FunctionType.SQL,
             description=(
                 "Provides detailed information about the plans available."
-                "Use this tool to address queries about plans information and reasoning about plan comparisons."
+                "Use this tool to address queries about plans and reasoning about plan comparisons."
             ),
             env=env,
         )
@@ -30,7 +30,7 @@ class PlansInfoTool(UCTool):
     def create_function_value(self) -> str:
         """Create the SQL function for account info."""
         return f"""
-        CREATE OR REPLACE FUNCTION {self.uc_name}
+        CREATE OR REPLACE FUNCTION {self.uc_name}()
         RETURNS TABLE
         COMMENT '{self.description}'
         RETURN {PLANS_INFO_QUERY.format(catalog=self.catalog, schema=self.schema)}
