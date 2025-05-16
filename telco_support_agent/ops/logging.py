@@ -3,6 +3,7 @@
 from typing import Optional, Union
 
 import mlflow
+import yaml
 from mlflow.models.resources import (
     DatabricksFunction,
     DatabricksServingEndpoint,
@@ -40,6 +41,21 @@ def log_agent(
     """
     logger.info(f"Logging agent to MLflow with path: {artifact_path}")
 
+    artifacts = {}
+
+    try:
+        from telco_support_agent import PROJECT_ROOT
+
+        # add all agent config files as artifacts
+        config_dir = PROJECT_ROOT / "configs" / "agents"
+        if config_dir.exists() and config_dir.is_dir():
+            for config_file in config_dir.glob("*.yaml"):
+                artifact_path = f"configs/agents/{config_file.name}"
+                artifacts[artifact_path] = str(config_file)
+                logger.info(f"Adding config artifact: {artifact_path}")
+    except Exception as e:
+        logger.warning(f"Error collecting config artifacts: {e}")
+
     if resources is None:
         resources = []
 
@@ -64,6 +80,13 @@ def log_agent(
         }
 
     with mlflow.start_run():
+        # log configs as individual dictionaries
+        if config_dir.exists():
+            for config_file in config_dir.glob("*.yaml"):
+                with open(config_file) as f:
+                    config_dict = yaml.safe_load(f)
+                    mlflow.log_dict(config_dict, f"configs/agents/{config_file.name}")
+
         model_info = mlflow.pyfunc.log_model(
             artifact_path=artifact_path,
             python_model=agent,
@@ -72,6 +95,7 @@ def log_agent(
             conda_env=conda_env,
             pip_requirements=pip_requirements,
             extra_pip_requirements=extra_pip_requirements,
+            artifacts=artifacts,
         )
 
         logger.info(f"Successfully logged model: {model_info.model_uri}")
