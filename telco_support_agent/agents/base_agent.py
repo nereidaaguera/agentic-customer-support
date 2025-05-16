@@ -214,19 +214,46 @@ class BaseAgent(ResponsesAgent, abc.ABC):
     @backoff.on_exception(backoff.expo, Exception)
     @mlflow.trace(span_type=SpanType.LLM)
     def call_llm(self, messages: list[dict[str, Any]]) -> dict[str, Any]:
-        """Call LLM with provided message history.
-
-        Args:
-            messages: List of messages to send to the LLM
-
-        Returns:
-            LLM response message
-        """
+        """Call LLM with provided message history."""
         try:
+            cleaned_tools = []
+            for tool in self.get_tool_specs():
+                if "function" in tool:
+                    cleaned_tool = {
+                        "type": "function",
+                        "function": {
+                            "name": tool["function"]["name"],
+                            "description": tool["function"].get("description", ""),
+                            "parameters": {
+                                "type": "object",
+                                "properties": {},
+                                "required": [],
+                            },
+                        },
+                    }
+
+                    if (
+                        "parameters" in tool["function"]
+                        and "properties" in tool["function"]["parameters"]
+                    ):
+                        cleaned_tool["function"]["parameters"]["properties"] = tool[
+                            "function"
+                        ]["parameters"]["properties"]
+
+                    if (
+                        "parameters" in tool["function"]
+                        and "required" in tool["function"]["parameters"]
+                    ):
+                        cleaned_tool["function"]["parameters"]["required"] = tool[
+                            "function"
+                        ]["parameters"]["required"]
+
+                    cleaned_tools.append(cleaned_tool)
+
             params = {
                 "model": self.llm_endpoint,
                 "messages": self.prepare_messages_for_llm(messages),
-                "tools": self.get_tool_specs(),
+                "tools": cleaned_tools,
                 **self.llm_params,
             }
 
@@ -235,8 +262,6 @@ class BaseAgent(ResponsesAgent, abc.ABC):
                 .choices[0]
                 .message.to_dict()
             )
-
-            logger.debug(f"LLM response: {response}")
 
             return response
 
