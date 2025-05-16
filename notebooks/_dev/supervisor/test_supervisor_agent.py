@@ -1,6 +1,11 @@
 # Databricks notebook source
 # MAGIC %md
 # MAGIC # Test Supervisor Agent Class
+# MAGIC
+# MAGIC This notebook tests the SupervisorAgent's ability to:
+# MAGIC 1. Route queries to the appropriate sub-agent
+# MAGIC 2. Handle account-related queries (currently the only implemented sub-agent)
+# MAGIC 3. Gracefully handle routing to non-implemented sub-agents
 
 # COMMAND ----------
 
@@ -26,7 +31,19 @@ if root_path:
 
 from mlflow.types.responses import ResponsesRequest
 from telco_support_agent.agents.supervisor import SupervisorAgent
+from telco_support_agent.agents.types import AgentType
 from telco_support_agent.agents.config import config_manager
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Check Available Agent Types
+
+# COMMAND ----------
+
+print("Available agent types (enum):")
+for agent_type in AgentType:
+    print(f"  - {agent_type.name}: {agent_type.value}")
 
 # COMMAND ----------
 
@@ -35,7 +52,7 @@ from telco_support_agent.agents.config import config_manager
 
 # COMMAND ----------
 
-print("Available agent types:", config_manager.get_all_agent_types())
+print("Available agent types (configs):", config_manager.get_all_agent_types())
 
 supervisor_config = config_manager.get_config("supervisor")
 print("\nSupervisor LLM endpoint:", supervisor_config["llm"]["endpoint"])
@@ -64,11 +81,10 @@ print(f"LLM parameters: {supervisor.llm_params}")
 
 # COMMAND ----------
 
-# test route_query
 def test_routing(query):
     agent_type = supervisor.route_query(query)
     print(f"Query: '{query}'")
-    print(f"Routed to: {agent_type} agent\n")
+    print(f"Routed to: {agent_type.name} agent ({agent_type.value})\n")
     return agent_type
 
 # test routing with different query types
@@ -125,6 +141,22 @@ account_query = "What plan am I currently on? My customer ID is CUS-10001."
 
 request = ResponsesRequest(
     input=[{"role": "user", "content": account_query}]
+)
+
+response = supervisor.predict(request)
+format_response(response)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Test Billing Query
+
+# COMMAND ----------
+
+billing_query = "Why is my bill higher this month? My customer ID is CUS-10001."
+
+request = ResponsesRequest(
+    input=[{"role": "user", "content": billing_query}]
 )
 
 response = supervisor.predict(request)

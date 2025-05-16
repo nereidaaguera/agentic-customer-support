@@ -1,7 +1,7 @@
 """Supervisor agent to orchestrate specialized sub-agents."""
 
 from collections.abc import Generator
-from typing import Optional
+from typing import Optional, Union
 from uuid import uuid4
 
 import mlflow
@@ -13,6 +13,7 @@ from mlflow.types.responses import (
 )
 
 from telco_support_agent.agents.base_agent import BaseAgent
+from telco_support_agent.agents.types import AgentType
 from telco_support_agent.utils.logging_utils import get_logger, setup_logging
 
 setup_logging()
@@ -54,7 +55,7 @@ class SupervisorAgent(BaseAgent):
         """Return a description of this agent."""
         return "Supervisor agent that routes customer queries to specialized sub-agents"
 
-    def _get_sub_agent(self, agent_type: str) -> BaseAgent:
+    def _get_sub_agent(self, agent_type: Union[AgentType, str]) -> BaseAgent:
         """Get or initialize a sub-agent.
 
         Args:
@@ -63,40 +64,63 @@ class SupervisorAgent(BaseAgent):
         Returns:
             Initialized sub-agent
         """
-        if agent_type in self._sub_agents:
-            return self._sub_agents[agent_type]
+        # convert to string if AgentType enum
+        agent_type_str = (
+            agent_type.value if isinstance(agent_type, AgentType) else agent_type
+        )
+
+        if agent_type_str in self._sub_agents:
+            return self._sub_agents[agent_type_str]
+
+        agent_type_enum = (
+            agent_type
+            if isinstance(agent_type, AgentType)
+            else AgentType.from_string(agent_type)
+        )
 
         # import and initialize sub-agents
         try:
-            if agent_type == "account":
+            if agent_type_enum == AgentType.ACCOUNT:
                 from telco_support_agent.agents.account import AccountAgent
 
                 agent = AccountAgent(llm_endpoint=self.llm_endpoint)
-            # elif agent_type == "billing":
-            #     from telco_support_agent.agents.billing import BillingAgent
+            elif agent_type_enum == AgentType.BILLING:
+                # Billing agent not implemented yet - fallback to account
+                logger.warning(
+                    "Billing agent not implemented yet. Falling back to account agent."
+                )
+                from telco_support_agent.agents.account import AccountAgent
 
-            #     agent = BillingAgent(llm_endpoint=self.llm_endpoint)
-            # elif agent_type == "tech_support":
-            #     from telco_support_agent.agents.tech_support import TechSupportAgent
+                agent = AccountAgent(llm_endpoint=self.llm_endpoint)
+            elif agent_type_enum == AgentType.TECH_SUPPORT:
+                # Tech support agent not implemented yet - fallback to account
+                logger.warning(
+                    "Tech support agent not implemented yet. Falling back to account agent."
+                )
+                from telco_support_agent.agents.account import AccountAgent
 
-            #     agent = TechSupportAgent(llm_endpoint=self.llm_endpoint)
-            # elif agent_type == "product":
-            #     from telco_support_agent.agents.product import ProductAgent
+                agent = AccountAgent(llm_endpoint=self.llm_endpoint)
+            elif agent_type_enum == AgentType.PRODUCT:
+                # Product agent not implemented yet - fallback to account
+                logger.warning(
+                    "Product agent not implemented yet. Falling back to account agent."
+                )
+                from telco_support_agent.agents.account import AccountAgent
 
-            #     agent = ProductAgent(llm_endpoint=self.llm_endpoint)
+                agent = AccountAgent(llm_endpoint=self.llm_endpoint)
             else:
                 raise ValueError(f"Unknown agent type: {agent_type}")
 
-            self._sub_agents[agent_type] = agent
-            logger.info(f"Initialized {agent_type} agent")
+            self._sub_agents[agent_type_str] = agent
+            logger.info(f"Initialized {agent_type_str} agent")
             return agent
 
         except Exception as e:
-            logger.error(f"Error initializing {agent_type} agent: {str(e)}")
+            logger.error(f"Error initializing {agent_type_str} agent: {str(e)}")
             raise
 
     @mlflow.trace(span_type=SpanType.AGENT)
-    def route_query(self, query: str) -> str:
+    def route_query(self, query: str) -> AgentType:
         """Determine which sub-agent should handle the query.
 
         Args:
@@ -112,22 +136,23 @@ class SupervisorAgent(BaseAgent):
 
         try:
             response = self.call_llm(messages)
-            agent_type = response.get("content", "").strip().lower()
+            agent_type_str = response.get("content", "").strip().lower()
 
-            valid_agents = ["account", "billing", "tech_support", "product"]
-            if agent_type not in valid_agents:
+            try:
+                agent_type = AgentType.from_string(agent_type_str)
+                logger.info(f"Routing query to {agent_type.value} agent")
+                return agent_type
+            except ValueError:
                 logger.warning(
-                    f"LLM returned invalid agent type: {agent_type}. Falling back to account agent."
+                    f"LLM returned invalid agent type: {agent_type_str}. Falling back to account agent."
                 )
-                agent_type = "account"
+                return AgentType.ACCOUNT
 
-            logger.info(f"Routing query to {agent_type} agent")
-            return agent_type
         except Exception as e:
             logger.error(
                 f"Error in routing query: {str(e)}. Falling back to account agent."
             )
-            return "account"
+            return AgentType.ACCOUNT
 
     @mlflow.trace(span_type=SpanType.AGENT)
     def predict(self, model_input: ResponsesRequest) -> ResponsesResponse:
@@ -169,7 +194,7 @@ class SupervisorAgent(BaseAgent):
             model_input.custom_inputs.copy() if model_input.custom_inputs else {}
         )
         custom_outputs["routing"] = {
-            "agent_type": agent_type,
+            "agent_type": agent_type.value,
             "decision_time": mlflow.get_run(
                 mlflow.active_run().info.run_id
             ).info.start_time
@@ -235,7 +260,7 @@ class SupervisorAgent(BaseAgent):
             type="response.debug",
             item={
                 "id": str(uuid4()),
-                "routing_decision": f"Query routed to {agent_type} agent",
+                "routing_decision": f"Query routed to {agent_type.value} agent",
             },
         )
 
@@ -245,7 +270,7 @@ class SupervisorAgent(BaseAgent):
             yield from sub_agent.predict_stream(model_input)
 
         except Exception as e:
-            logger.error(f"Error processing with {agent_type} agent: {str(e)}")
+            logger.error(f"Error processing with {agent_type.value} agent: {str(e)}")
             yield ResponsesStreamEvent(
                 type="response.output_item.done",
                 item={
