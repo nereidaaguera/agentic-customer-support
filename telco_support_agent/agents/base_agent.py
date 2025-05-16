@@ -19,9 +19,10 @@ from mlflow.types.responses import (
     ResponsesStreamEvent,
 )
 from pydantic import ValidationError
+from unitycatalog.ai.core.databricks import DatabricksFunctionClient
+from unitycatalog.ai.openai.toolkit import UCFunctionToolkit
 
 from telco_support_agent.agents import AgentConfig
-from telco_support_agent.tools import ToolInfo
 from telco_support_agent.utils.logging_utils import get_logger, setup_logging
 
 setup_logging()
@@ -37,7 +38,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         self,
         agent_type: str,
         llm_endpoint: Optional[str] = None,
-        tools: Optional[list[ToolInfo]] = None,
+        tools: Optional[list[dict]] = None,  # UC function tools format
         system_prompt: Optional[str] = None,
         config_dir: Optional[Path | str] = None,
     ):
@@ -46,7 +47,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         Args:
             agent_type: Type of agent (used for config loading)
             llm_endpoint: Optional override for LLM endpoint
-            tools: Optional list of tools (overrides config)
+            tools: Optional list of UC function tools
             system_prompt: Optional override for system prompt
             config_dir: Optional directory for config files
         """
@@ -61,12 +62,14 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             self.workspace_client.serving_endpoints.get_open_ai_client()
         )
 
+        # init UC function client for tool execution
+        self.uc_client = DatabricksFunctionClient()
+
         # system prompt
         self.system_prompt = system_prompt or self.config.system_prompt
 
         # set up tools
-        self.tools = tools or self._create_tools_from_config()
-        self._tools_dict = {tool.name: tool for tool in self.tools}
+        self.tools = tools or self._load_tools_from_config()
 
         logger.info(f"Initialized {agent_type} agent with {len(self.tools)} tools")
 
@@ -115,63 +118,52 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         except (yaml.YAMLError, ValidationError) as e:
             raise ValueError(f"Invalid configuration for {agent_type}: {e}") from e
 
-    def _create_tools_from_config(self) -> list[ToolInfo]:
-        """Create tool objects from configuration.
+    def _load_tools_from_config(self) -> list[dict]:
+        """Load UC function tools based on the agent's domain.
 
         Returns:
-            List of configured tools
+            List of UC function tool specifications
         """
-        tools = []
+        try:
+            # get UC functions for the agent / sub-agent's domain
+            function_names = (
+                self.config.uc_functions if hasattr(self.config, "uc_functions") else []
+            )
 
-        for tool_config in self.config.tools:
-            # get tool implementation method
-            method_name = f"tool_{tool_config.name}"
-            if not hasattr(self, method_name):
-                logger.warning(f"No implementation found for tool {tool_config.name}")
-                continue
+            if not function_names:
+                logger.warning(
+                    f"No UC functions configured for agent type: {self.agent_type}"
+                )
+                return []
 
-            tool_method = getattr(self, method_name)
+            # toolkit with specified functions
+            toolkit = UCFunctionToolkit(function_names=function_names)
+            return toolkit.tools
 
-            # create tool spec
-            parameters_dict = {"type": "object", "properties": {}, "required": []}
-
-            for param_name, param_config in tool_config.parameters.items():
-                param_dict = {
-                    "type": param_config.type,
-                    "description": param_config.description,
-                }
-
-                if param_config.enum:
-                    param_dict["enum"] = param_config.enum
-
-                parameters_dict["properties"][param_name] = param_dict
-                parameters_dict["required"].append(param_name)
-
-            tool_spec = {
-                "type": "function",
-                "function": {
-                    "name": tool_config.name,
-                    "description": tool_config.description,
-                    "parameters": parameters_dict,
-                },
-            }
-            tool = ToolInfo(name=tool_config.name, spec=tool_spec, exec_fn=tool_method)
-
-            tools.append(tool)
-
-        return tools
+        except Exception as e:
+            logger.error(f"Error loading UC function tools: {str(e)}")
+            return []
 
     def get_tool_specs(self) -> list[dict]:
         """Return tool specifications in the format LLM expects."""
-        return [tool.spec for tool in self.tools]
+        return self.tools
 
     @mlflow.trace(span_type=SpanType.TOOL)
     def execute_tool(self, tool_name: str, args: dict) -> Any:
-        """Execute tool with given args."""
-        if tool_name not in self._tools_dict:
-            return f"Error: Tool '{tool_name}' not found."
+        """Execute UC function tool with given args."""
+        try:
+            # replace any underscores to dots in function name
+            tool_name = tool_name.replace("__", ".")
 
-        return self._tools_dict[tool_name].exec_fn(**args)
+            # execute tool using UC function client
+            result = self.uc_client.execute_function(
+                function_name=tool_name, parameters=args
+            )
+            return result.value
+        except Exception as e:
+            error_msg = f"Error executing tool {tool_name}: {str(e)}"
+            logger.error(error_msg)
+            return error_msg
 
     def convert_to_chat_completion_format(
         self, message: dict[str, Any]
@@ -225,19 +217,46 @@ class BaseAgent(ResponsesAgent, abc.ABC):
     @backoff.on_exception(backoff.expo, Exception)
     @mlflow.trace(span_type=SpanType.LLM)
     def call_llm(self, messages: list[dict[str, Any]]) -> dict[str, Any]:
-        """Call LLM with provided message history.
-
-        Args:
-            messages: List of messages to send to the LLM
-
-        Returns:
-            LLM response message
-        """
+        """Call LLM with provided message history."""
         try:
+            cleaned_tools = []
+            for tool in self.get_tool_specs():
+                if "function" in tool:
+                    cleaned_tool = {
+                        "type": "function",
+                        "function": {
+                            "name": tool["function"]["name"],
+                            "description": tool["function"].get("description", ""),
+                            "parameters": {
+                                "type": "object",
+                                "properties": {},
+                                "required": [],
+                            },
+                        },
+                    }
+
+                    if (
+                        "parameters" in tool["function"]
+                        and "properties" in tool["function"]["parameters"]
+                    ):
+                        cleaned_tool["function"]["parameters"]["properties"] = tool[
+                            "function"
+                        ]["parameters"]["properties"]
+
+                    if (
+                        "parameters" in tool["function"]
+                        and "required" in tool["function"]["parameters"]
+                    ):
+                        cleaned_tool["function"]["parameters"]["required"] = tool[
+                            "function"
+                        ]["parameters"]["required"]
+
+                    cleaned_tools.append(cleaned_tool)
+
             params = {
                 "model": self.llm_endpoint,
                 "messages": self.prepare_messages_for_llm(messages),
-                "tools": self.get_tool_specs(),
+                "tools": cleaned_tools,
                 **self.llm_params,
             }
 
@@ -246,8 +265,6 @@ class BaseAgent(ResponsesAgent, abc.ABC):
                 .choices[0]
                 .message.to_dict()
             )
-
-            logger.debug(f"LLM response: {response}")
 
             return response
 

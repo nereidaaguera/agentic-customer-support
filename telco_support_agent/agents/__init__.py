@@ -4,8 +4,6 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from telco_support_agent.tools import ToolConfig
-
 
 class LLMConfig(BaseModel):
     """Model for LLM configuration from YAML."""
@@ -21,4 +19,4 @@ class AgentConfig(BaseModel):
     description: str
     llm: LLMConfig
     system_prompt: str
-    tools: list[ToolConfig] = Field(default_factory=list)
+    uc_functions: list[str] = Field(default_factory=list)
