@@ -105,22 +105,8 @@ class SupervisorAgent(BaseAgent):
         Returns:
             The agent type that should handle this query
         """
-        routing_prompt = """
-        You are a query router for a telecom customer support system. Your job is to
-        determine which specialized agent should handle the customer's query.
-
-        AVAILABLE AGENTS:
-        - account: For questions about account information, profile details, subscriptions
-        - billing: For questions about bills, payments, charges, and usage details
-        - tech_support: For technical issues, troubleshooting, and device setup
-        - product: For product information, plans, and promotions
-
-        Respond with ONLY the agent type (account, billing, tech_support, or product)
-        that should handle this query.
-        """
-
         messages = [
-            {"role": "system", "content": routing_prompt},
+            {"role": "system", "content": self.system_prompt},
             {"role": "user", "content": query},
         ]
 

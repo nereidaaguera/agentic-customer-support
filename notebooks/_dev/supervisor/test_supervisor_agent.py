@@ -25,8 +25,29 @@ if root_path:
 # COMMAND ----------
 
 from mlflow.types.responses import ResponsesRequest
-
 from telco_support_agent.agents.supervisor import SupervisorAgent
+from telco_support_agent.agents.config import config_manager
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Check Agent Configs
+
+# COMMAND ----------
+
+print("Available agent types:", config_manager.get_all_agent_types())
+
+supervisor_config = config_manager.get_config("supervisor")
+print("\nSupervisor LLM endpoint:", supervisor_config["llm"]["endpoint"])
+print("Supervisor system prompt:", supervisor_config["system_prompt"][:200], "...\n")
+
+account_config = config_manager.get_config("account")
+print("\nAccount agent functions:", account_config["uc_functions"])
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Init Supervisor Agent
 
 # COMMAND ----------
 
@@ -38,34 +59,119 @@ print(f"LLM parameters: {supervisor.llm_params}")
 
 # COMMAND ----------
 
-test_queries = [
-    "What plan am I currently on?",
-    "Why is my bill higher this month?",
-    "My phone won't connect to the network",
-    "What's the difference between the Standard and Premium plans?"
-]
-
-def test_query(query):
-    print(f"\n=== TESTING QUERY: \"{query}\" ===\n")
-    
-    request = ResponsesRequest(
-        input=[{"role": "user", "content": query}]
-    )
-    
-    response = supervisor.predict(request)
-    
-    for output_item in response.output:
-        if hasattr(output_item, "type"):
-            if output_item.type == "message" and hasattr(output_item, "content"):
-                for content_item in output_item.content:
-                    if hasattr(content_item, "type") and content_item.type == "output_text":
-                        print(content_item.text)
-            elif output_item.type == "function_call_output" and hasattr(output_item, "output"):
-                print(output_item.output)
-    
-    print("\n" + "="*80)
+# MAGIC %md
+# MAGIC ## Test Routing Logic
 
 # COMMAND ----------
 
+# test route_query
+def test_routing(query):
+    agent_type = supervisor.route_query(query)
+    print(f"Query: '{query}'")
+    print(f"Routed to: {agent_type} agent\n")
+    return agent_type
+
+# test routing with different query types
+test_queries = [
+    "What plan am I currently on?",  # account
+    "Why is my bill higher this month?",  # billing
+    "My phone won't connect to the network",  # tech_support
+    "What's the difference between the Standard and Premium plans?"  # product
+]
+
+routing_results = {}
 for query in test_queries:
-    test_query(query)
+    routing_results[query] = test_routing(query)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Test End-to-End Query Processing
+
+# COMMAND ----------
+
+def format_response(response):
+    """Format and print a response for better readability."""
+    print("\n=== RESPONSE ===")
+    
+    for output_item in response.output:
+        if output_item.get("type") == "message" and "content" in output_item:
+            for content_item in output_item["content"]:
+                if content_item.get("type") == "output_text":
+                    print("\n" + content_item["text"])
+        
+        elif output_item.get("type") == "function_call_output":
+            print("\nFunction Output:", output_item.get("output"))
+            
+        elif output_item.get("type") == "function_call":
+            print(f"\nFunction Call: {output_item.get('name')}")
+            print(f"Arguments: {output_item.get('arguments')}")
+    
+    if response.custom_outputs:
+        print("\n=== CUSTOM OUTPUTS ===")
+        for key, value in response.custom_outputs.items():
+            print(f"{key}: {value}")
+    
+    print("\n" + "="*50)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Test Account Query
+
+# COMMAND ----------
+
+account_query = "What plan am I currently on? My customer ID is CUS-10001."
+
+request = ResponsesRequest(
+    input=[{"role": "user", "content": account_query}]
+)
+
+response = supervisor.predict(request)
+format_response(response)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Test Streaming Response
+
+# COMMAND ----------
+
+def display_streaming_response(model_input):
+    """Display a streaming response as it comes in."""
+    print("=== STREAMING RESPONSE ===\n")
+    
+    full_text = ""
+    
+    for i, event in enumerate(supervisor.predict_stream(model_input)):
+        if event.type == "response.output_item.done":
+            item = event.item
+            
+            if item.get("type") == "message" and "content" in item:
+                for content_item in item["content"]:
+                    if content_item.get("type") == "output_text":
+                        # Print the chunk
+                        text = content_item["text"]
+                        print(f"Chunk {i}: {text}")
+                        full_text += text
+            
+            elif item.get("type") == "function_call":
+                print(f"Function Call: {item.get('name')}")
+                print(f"Arguments: {item.get('arguments')}")
+            
+            elif item.get("type") == "function_call_output":
+                print(f"Function Output: {item.get('output')}")
+    
+    print("\n=== FULL RESPONSE ===\n")
+    print(full_text)
+    print("\n" + "="*50)
+
+# COMMAND ----------
+
+streaming_query = "What are the details of my account? I'm customer CUS-10001."
+
+streaming_request = ResponsesRequest(
+    input=[{"role": "user", "content": streaming_query}]
+)
+
+display_streaming_response(streaming_request)

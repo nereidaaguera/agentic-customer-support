@@ -64,7 +64,7 @@ def list_model_versions(
 def get_latest_model_version(
     uc_model_name: str,
 ) -> Optional[ModelVersion]:
-    """Get the latest version of a model in Unity Catalog.
+    """Get latest version of a model in Unity Catalog.
 
     Args:
         uc_model_name: Fully qualified name in Unity Catalog (catalog.schema.model)
@@ -78,7 +78,7 @@ def get_latest_model_version(
         logger.warning(f"No versions found for model: {uc_model_name}")
         return None
 
-    # Sort by version number (descending)
+    # sort by version number (descending)
     versions.sort(key=lambda v: int(v.version), reverse=True)
 
     latest = versions[0]
