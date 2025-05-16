@@ -152,6 +152,9 @@ class BaseAgent(ResponsesAgent, abc.ABC):
     def execute_tool(self, tool_name: str, args: dict) -> Any:
         """Execute UC function tool with given args."""
         try:
+            # replace any underscores to dots in function name
+            tool_name = tool_name.replace("__", ".")
+
             # execute tool using UC function client
             result = self.uc_client.execute_function(
                 function_name=tool_name, parameters=args

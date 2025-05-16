@@ -51,33 +51,36 @@ def register_customer_subscriptions():
         RETURNS STRING
         COMMENT 'Retrieves all active subscriptions for a customer including plan details, status, and device information'
         RETURN
-        SELECT to_json(
-          named_struct(
-            'customer_id', s.customer_id,
-            'subscriptions', collect_list(
-              named_struct(
-                'subscription_id', s.subscription_id,
-                'status', s.status,
-                'start_date', cast(s.subscription_start_date as string),
-                'contract_length_months', cast(s.contract_length_months as string),
-                'monthly_charge', cast(s.monthly_charge as string),
-                'autopay_enabled', cast(s.autopay_enabled as string),
-                'plan', named_struct(
-                  'plan_id', p.plan_id,
-                  'plan_name', p.plan_name,
-                  'plan_type', p.plan_type,
-                  'data_limit_gb', cast(p.data_limit_gb as string),
-                  'unlimited_calls', cast(p.unlimited_calls as string),
-                  'unlimited_texts', cast(p.unlimited_texts as string)
+        (
+          SELECT to_json(
+            named_struct(
+              'customer_id', s.customer_id,
+              'subscriptions', collect_list(
+                named_struct(
+                  'subscription_id', s.subscription_id,
+                  'status', s.status,
+                  'start_date', cast(s.subscription_start_date as string),
+                  'contract_length_months', cast(s.contract_length_months as string),
+                  'monthly_charge', cast(s.monthly_charge as string),
+                  'autopay_enabled', cast(s.autopay_enabled as string),
+                  'plan', named_struct(
+                    'plan_id', p.plan_id,
+                    'plan_name', p.plan_name,
+                    'plan_type', p.plan_type,
+                    'data_limit_gb', cast(p.data_limit_gb as string),
+                    'unlimited_calls', cast(p.unlimited_calls as string),
+                    'unlimited_texts', cast(p.unlimited_texts as string)
+                  )
                 )
               )
             )
           )
+          FROM telco_customer_support_dev.bronze.subscriptions s
+          JOIN telco_customer_support_dev.bronze.plans p ON s.plan_id = p.plan_id
+          WHERE s.customer_id = customer_id
+          GROUP BY s.customer_id
+          LIMIT 1
         )
-        FROM telco_customer_support_dev.bronze.subscriptions s
-        JOIN telco_customer_support_dev.bronze.plans p ON s.plan_id = p.plan_id
-        WHERE s.customer_id = customer_id
-        GROUP BY s.customer_id
         """
         client.create_function(sql_function_body=sql)
         print("Registered get_customer_subscriptions UC function")
