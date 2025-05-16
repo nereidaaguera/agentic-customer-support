@@ -9,6 +9,8 @@ from telco_support_agent.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 
+mlflow.set_registry_uri("databricks-uc")
+
 
 def register_agent_to_uc(
     model_uri: str,
@@ -24,8 +26,6 @@ def register_agent_to_uc(
         ModelVersion object containing details of the registered model
     """
     logger.info(f"Registering agent model to Unity Catalog: {uc_model_name}")
-
-    mlflow.set_registry_uri("databricks-uc")
 
     model_version = mlflow.register_model(
         model_uri=model_uri,
@@ -51,17 +51,9 @@ def list_model_versions(
     Returns:
         List of ModelVersion objects
     """
-    import mlflow
-
     logger.info(f"Listing versions for model: {uc_model_name}")
-
-    # Set registry URI to Unity Catalog
-    mlflow.set_registry_uri("databricks-uc")
-
-    # List model versions
     versions = mlflow.search_model_versions(f"name='{uc_model_name}'")
 
-    # Limit results if specified
     if max_results is not None:
         versions = versions[:max_results]
 

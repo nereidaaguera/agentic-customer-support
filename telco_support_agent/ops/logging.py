@@ -76,33 +76,3 @@ def log_agent(
 
         logger.info(f"Successfully logged model: {model_info.model_uri}")
         return model_info
-
-
-def register_agent_to_uc(
-    model_uri: str,
-    uc_model_name: str,
-) -> mlflow.entities.model.ModelVersion:
-    """Register an agent model to Unity Catalog.
-
-    Args:
-        model_uri: URI of the MLflow model to register
-        uc_model_name: Fully qualified name in Unity Catalog (catalog.schema.model)
-
-    Returns:
-        ModelVersion object containing details of the registered model
-    """
-    logger.info(f"Registering agent model to Unity Catalog: {uc_model_name}")
-
-    # Set registry URI to Unity Catalog
-    mlflow.set_registry_uri("databricks-uc")
-
-    # Register the model
-    model_version = mlflow.register_model(
-        model_uri=model_uri,
-        name=uc_model_name,
-    )
-
-    logger.info(
-        f"Successfully registered model: {uc_model_name} version {model_version.version}"
-    )
-    return model_version
