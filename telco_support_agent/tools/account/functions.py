@@ -2,10 +2,6 @@
 
 from unitycatalog.ai.core.databricks import DatabricksFunctionClient
 
-from telco_support_agent.utils.logging_utils import get_logger
-
-logger = get_logger(__name__)
-
 client = DatabricksFunctionClient()
 
 
@@ -40,9 +36,9 @@ def register_customer_info():
         LIMIT 1
         """
         client.create_function(sql_function_body=sql)
-        logger.info("Registered get_customer_info UC function")
+        print("Registered get_customer_info UC function")
     except Exception as e:
-        logger.error(f"Error registering get_customer_info: {str(e)}")
+        print(f"Error registering get_customer_info: {str(e)}")
 
 
 def register_customer_subscriptions():
@@ -84,12 +80,11 @@ def register_customer_subscriptions():
         GROUP BY s.customer_id
         """
         client.create_function(sql_function_body=sql)
-        logger.info("Registered get_customer_subscriptions UC function")
+        print("Registered get_customer_subscriptions UC function")
     except Exception as e:
-        logger.error(f"Error registering get_customer_subscriptions: {str(e)}")
+        print(f"Error registering get_customer_subscriptions: {str(e)}")
 
 
+# call registration functions
 register_customer_info()
 register_customer_subscriptions()
-
-__all__ = ["register_customer_info", "register_customer_subscriptions"]

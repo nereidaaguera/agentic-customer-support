@@ -27,19 +27,13 @@ class AccountAgent(BaseAgent):
             config_dir: Optional directory for config files
         """
         # get toolkit for account domain
-        try:
-            toolkit = get_toolkit_for_domain("account")
-            tools = toolkit.tools
-            logger.info(
-                f"Account agent initialized with {len(tools)} UC function tools"
-            )
-        except Exception as e:
-            logger.error(f"Error initializing UC function tools: {str(e)}")
-            tools = []
+        toolkit = get_toolkit_for_domain("account")
+
+        logger.info(f"Account agent initialized with {len(toolkit.tools)} tools")
 
         super().__init__(
             agent_type="account",
             llm_endpoint=llm_endpoint,
             config_dir=config_dir,
-            tools=tools,
+            tools=toolkit.tools,
         )
