@@ -90,7 +90,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
 
         try:
             # Use the ConfigManager to get the config
-            from telco_support_agent.config import config_manager
+            from telco_support_agent.agents.config import config_manager
 
             config_dict = config_manager.get_config(agent_type)
 
