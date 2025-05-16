@@ -105,3 +105,40 @@ def get_toolkit_for_domain(domain: str) -> UCFunctionToolkit:
     except Exception as e:
         logger.error(f"Error creating toolkit for domain {domain}: {str(e)}")
         return UCFunctionToolkit(function_names=[])
+
+
+def register_sql_function(
+    sql_function_body: str, domain: str, replace: bool = True
+) -> None:
+    """Register SQL function with Unity Catalog.
+
+    Args:
+        sql_function_body: SQL function body (CREATE OR REPLACE FUNCTION statement)
+        domain: Domain the function belongs to
+        replace: Whether to replace an existing function
+    """
+    client = get_uc_client()
+
+    try:
+        # register function
+        client.create_function(sql_function_body=sql_function_body)
+
+        # Extract function name from SQL body
+        import re
+
+        name_match = re.search(r"FUNCTION\s+([^\s(]+)", sql_function_body)
+        if name_match:
+            function_name = name_match.group(1)
+            logger.info(f"Registered SQL function {function_name}")
+
+            # add to domain registry
+            if domain in _domain_registry:
+                if function_name not in _domain_registry[domain]:
+                    _domain_registry[domain].append(function_name)
+            else:
+                _domain_registry[domain] = [function_name]
+        else:
+            logger.warning("Could not extract function name from SQL body")
+
+    except Exception as e:
+        logger.error(f"Failed to register SQL function: {str(e)}")
