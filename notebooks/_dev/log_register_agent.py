@@ -107,12 +107,12 @@ for output in response.get("output", []):
 
 # COMMAND ----------
 
-# uc_config = config["uc_registration"]
-# uc_model_name = f"{uc_config['catalog']}.{uc_config['schema']}.{uc_config['model_name']}"
+uc_config = config["uc_registration"]
+uc_model_name = f"{uc_config['catalog']}.{uc_config['schema']}.{uc_config['model_name']}"
 
-# model_version = register_agent_to_uc(
-#     model_uri=logged_model_info.model_uri,
-#     uc_model_name=uc_model_name,
-# )
+model_version = register_agent_to_uc(
+    model_uri=logged_model_info.model_uri,
+    uc_model_name=uc_model_name,
+)
 
-# print(f"Successfully registered agent to Unity Catalog: {uc_model_name} version {model_version.version}")
+print(f"Successfully registered agent to Unity Catalog: {uc_model_name} version {model_version.version}")
