@@ -66,10 +66,7 @@ print(f"Initialized supervisor agent using LLM endpoint: {supervisor.llm_endpoin
 
 # COMMAND ----------
 
-# get path to supervisor.py
-agent_path = inspect.getfile(SupervisorAgent)
-print(f"Using supervisor agent file: {agent_path}")
-
+# collect resources (if any specified in config)
 resources = []
 if "additional_resources" in config:
     for resource_config in config["additional_resources"]:
@@ -79,13 +76,12 @@ if "additional_resources" in config:
         elif resource_type == "DatabricksFunction":
             resources.append(DatabricksFunction(**resource_config))
 
-with mlflow.start_run():
-    logged_model_info = mlflow.pyfunc.log_model(
-        python_model=agent_path,
-        artifact_path=config["artifact_path"],
-        input_example=config["input_example"],
-        resources=resources if resources else None,
-    )
+logged_model_info = log_agent(
+    agent_class=SupervisorAgent,
+    name=config["name"],
+    input_example=config["input_example"],
+    resources=resources if resources else None,
+)
 
 print(f"Successfully logged agent to MLflow: {logged_model_info.model_uri}")
 

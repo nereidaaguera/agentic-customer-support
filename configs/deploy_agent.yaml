@@ -4,11 +4,11 @@
 uc_model:
   catalog: "telco_customer_support_dev"
   schema: "agent"
-  model_name: "supervisor_agent"
+  model_name: "telco_customer_support_agent"
 
 # Deployment parparamsameters
 deployment:
-  endpoint_name: "telco-support-agent"
+  endpoint_name: "telco-customer-support-agent"
   scale_to_zero_enabled: true
   workload_size: "Small"
   workload_type: "CPU"

@@ -309,6 +309,7 @@ class SupervisorAgent(BaseAgent):
         }
 
 
-if __name__ == "__main__":
-    agent = SupervisorAgent()
-    set_model(agent)
+# Create an instance and set the model
+# This will be executed when the module is imported by MLflow
+agent = SupervisorAgent()
+set_model(agent)
