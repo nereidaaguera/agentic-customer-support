@@ -78,6 +78,31 @@ print(f"Successfully logged agent to MLflow: {logged_model_info.model_uri}")
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC ## Verify Logged Model
+# MAGIC Test that the logged model can be loaded and run in an isolated environment
+
+# COMMAND ----------
+
+loaded_model = mlflow.pyfunc.load_model(logged_model_info.model_uri)
+print(f"Successfully loaded the model from: {logged_model_info.model_uri}")
+
+test_input = {
+    "input": [{"role": "user", "content": "What plan am I currently on? My customer ID is CUS-10001."}]
+}
+
+print("\nSending test query to the loaded model...")
+response = loaded_model.predict(test_input)
+
+print("\nModel Response:")
+for output in response.get("output", []):
+    if output.get("type") == "message" and output.get("content"):
+        for content in output.get("content", []):
+            if content.get("type") == "output_text":
+                print(content.get("text", ""))
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC ## Register Agent to Unity Catalog
 
 # COMMAND ----------
