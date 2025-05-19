@@ -1,6 +1,6 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Log / Register Agent
+# MAGIC # Log & Register Agent
 # MAGIC
 
 # COMMAND ----------
