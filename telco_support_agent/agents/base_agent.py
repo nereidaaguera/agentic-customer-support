@@ -12,9 +12,11 @@ import mlflow
 from databricks.sdk import WorkspaceClient
 from mlflow.entities import SpanType
 from mlflow.pyfunc import ResponsesAgent
-from mlflow.types.responses import (ResponsesAgentResponse,
-                                    ResponsesAgentRequest,
-                                    ResponsesStreamEvent)
+from mlflow.types.responses import (
+    ResponsesAgentRequest,
+    ResponsesAgentResponse,
+    ResponsesAgentStreamEvent,
+)
 from unitycatalog.ai.core.databricks import DatabricksFunctionClient
 from unitycatalog.ai.openai.toolkit import UCFunctionToolkit
 
@@ -257,7 +259,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
 
     def handle_tool_call(
         self, messages: list[dict[str, Any]], tool_calls: list[dict[str, Any]]
-    ) -> tuple[list[dict[str, Any]], list[ResponsesStreamEvent]]:
+    ) -> tuple[list[dict[str, Any]], list[ResponsesAgentStreamEvent]]:
         """Execute tool calls and return updated messages and response events.
 
         Args:
@@ -295,7 +297,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             }
 
             events.append(
-                ResponsesStreamEvent(
+                ResponsesAgentStreamEvent(
                     type="response.output_item.done", item=responses_tool_call_output
                 )
             )
@@ -304,7 +306,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
 
     def call_and_run_tools(
         self, messages: list[dict[str, Any]], max_iter: int = 10
-    ) -> Generator[ResponsesStreamEvent, None, None]:
+    ) -> Generator[ResponsesAgentStreamEvent, None, None]:
         """Run the call-tool-response loop up to max_iter times.
 
         Args:
@@ -312,7 +314,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             max_iter: Maximum number of iterations
 
         Yields:
-            ResponsesStreamEvent objects
+            ResponsesAgentStreamEvent objects
         """
         current_messages = messages.copy()
 
@@ -333,7 +335,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
                 current_messages.append(llm_output)
                 if tool_calls := llm_output.get("tool_calls", None):
                     for tool_call in tool_calls:
-                        yield ResponsesStreamEvent(
+                        yield ResponsesAgentStreamEvent(
                             type="response.output_item.done",
                             item={
                                 "type": "function_call",
@@ -344,7 +346,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
                             },
                         )
                 else:
-                    yield ResponsesStreamEvent(
+                    yield ResponsesAgentStreamEvent(
                         type="response.output_item.done",
                         item={
                             "role": llm_output["role"],
@@ -359,7 +361,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
                         },
                     )
 
-        yield ResponsesStreamEvent(
+        yield ResponsesAgentStreamEvent(
             type="response.output_item.done",
             item={
                 "id": str(uuid4()),
@@ -389,7 +391,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
     @mlflow.trace(span_type=SpanType.AGENT)
     def predict_stream(
         self, model_input: ResponsesAgentRequest
-    ) -> Generator[ResponsesStreamEvent, None, None]:
+    ) -> Generator[ResponsesAgentStreamEvent, None, None]:
         """Stream predictions."""
         messages = [{"role": "system", "content": self.system_prompt}] + [
             i.model_dump() for i in model_input.input

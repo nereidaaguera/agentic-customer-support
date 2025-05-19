@@ -7,9 +7,11 @@ from uuid import uuid4
 import mlflow
 from mlflow.entities import SpanType
 from mlflow.models import set_model
-from mlflow.types.responses import (ResponsesAgentRequest,
-                                    ResponsesAgentResponse,
-                                    ResponsesStreamEvent)
+from mlflow.types.responses import (
+    ResponsesAgentRequest,
+    ResponsesAgentResponse,
+    ResponsesAgentStreamEvent,
+)
 
 from telco_support_agent.agents.account import AccountAgent
 from telco_support_agent.agents.base_agent import BaseAgent
@@ -199,20 +201,20 @@ class SupervisorAgent(BaseAgent):
     @mlflow.trace(span_type=SpanType.AGENT)
     def predict_stream(
         self, model_input: ResponsesAgentRequest
-    ) -> Generator[ResponsesStreamEvent, None, None]:
+    ) -> Generator[ResponsesAgentStreamEvent, None, None]:
         """Stream the response from the appropriate sub-agent.
 
         Args:
             model_input: The request containing user messages
 
         Yields:
-            ResponsesStreamEvent objects from the sub-agent
+            ResponsesAgentStreamEvent objects from the sub-agent
         """
         # extract the user query from the input
         user_messages = [msg for msg in model_input.input if msg.role == "user"]
         if not user_messages:
             # no user messages found, return an error response
-            yield ResponsesStreamEvent(
+            yield ResponsesAgentStreamEvent(
                 type="response.output_item.done",
                 item={
                     "id": str(uuid4()),
@@ -235,7 +237,7 @@ class SupervisorAgent(BaseAgent):
         agent_type = self.route_query(query)
 
         # emit debug event (visible in traces but not UI)
-        yield ResponsesStreamEvent(
+        yield ResponsesAgentStreamEvent(
             type="response.debug",
             item={
                 "id": str(uuid4()),
@@ -249,7 +251,7 @@ class SupervisorAgent(BaseAgent):
         # if sub-agent not implemented generate non-response
         if sub_agent is None:
             non_response = self.generate_non_response(agent_type, query)
-            yield ResponsesStreamEvent(
+            yield ResponsesAgentStreamEvent(
                 type="response.output_item.done", item=non_response
             )
             return
@@ -260,7 +262,7 @@ class SupervisorAgent(BaseAgent):
 
         except Exception as e:
             logger.error(f"Error processing with {agent_type.value} agent: {str(e)}")
-            yield ResponsesStreamEvent(
+            yield ResponsesAgentStreamEvent(
                 type="response.output_item.done",
                 item={
                     "id": str(uuid4()),
