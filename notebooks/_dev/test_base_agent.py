@@ -129,7 +129,7 @@ class BasicTestAgent(BaseAgent):
 
 # COMMAND ----------
 
-LLM_ENDPOINT = "gpt-4o"
+LLM_ENDPOINT = "databricks-claude-3-7-sonnet"
 
 basic_agent = BasicTestAgent(llm_endpoint=LLM_ENDPOINT)
 

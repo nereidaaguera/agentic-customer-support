@@ -55,13 +55,12 @@ class BaseAgent(ResponsesAgent, abc.ABC):
 
         self.llm_endpoint = llm_endpoint or self.config.llm.endpoint
         self.llm_params = self.config.llm.params
-        self.workspace_client = WorkspaceClient()
-        self.model_serving_client = (
-            self.workspace_client.serving_endpoints.get_open_ai_client()
-        )
 
-        # init UC function client for tool execution
-        self.uc_client = DatabricksFunctionClient()
+        # Lazy initialization of clients
+        # These clients are not serializable and should not be pickled
+        self._workspace_client = None
+        self._model_serving_client = None
+        self._uc_client = None
 
         # system prompt
         self.system_prompt = system_prompt or self.config.system_prompt
@@ -70,6 +69,53 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         self.tools = tools or self._load_tools_from_config()
 
         logger.info(f"Initialized {agent_type} agent with {len(self.tools)} tools")
+
+    def __getstate__(self):
+        """Custom pickling method to handle non-serializable components. Required for logging to MLflow."""
+        state = self.__dict__.copy()
+
+        # remove non-pickleable resources
+        state["workspace_client"] = None
+        state["model_serving_client"] = None
+        state["uc_client"] = None
+        state["_init_params"] = {
+            "agent_type": self.agent_type,
+            "llm_endpoint": self.llm_endpoint,
+            "tools": self.tools,
+            "system_prompt": self.system_prompt,
+            "config_dir": None,  # will be loaded from artifacts
+        }
+
+        return state
+
+    def __setstate__(self, state):
+        """Custom unpickling method."""
+        self.__dict__.update(state)
+        # don't initialize resources here as they will be
+        # initialized on-demand through property getters
+
+    @property
+    def workspace_client(self):
+        """Lazy initialization of workspace client."""
+        if self._workspace_client is None:
+            self._workspace_client = WorkspaceClient()
+        return self._workspace_client
+
+    @property
+    def model_serving_client(self):
+        """Lazy initialization of model serving client."""
+        if self._model_serving_client is None:
+            self._model_serving_client = (
+                self.workspace_client.serving_endpoints.get_open_ai_client()
+            )
+        return self._model_serving_client
+
+    @property
+    def uc_client(self):
+        """Lazy initialization of UC function client."""
+        if self._uc_client is None:
+            self._uc_client = DatabricksFunctionClient()
+        return self._uc_client
 
     @classmethod
     def _load_config(
