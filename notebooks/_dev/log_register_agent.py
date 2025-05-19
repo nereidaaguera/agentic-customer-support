@@ -5,7 +5,7 @@
 
 # COMMAND ----------
 
-# MAGIC %pip install -r ../requirements.txt -q
+# MAGIC %pip install -r ../../requirements.txt -q
 
 # COMMAND ----------
 
