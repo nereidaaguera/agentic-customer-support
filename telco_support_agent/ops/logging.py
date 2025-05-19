@@ -51,13 +51,19 @@ def log_agent(
         from telco_support_agent import PROJECT_ROOT
 
         config_dir = PROJECT_ROOT / "configs" / "agents"
+        logger.debug(f"Looking for config files in: {config_dir}")
+
         if config_dir.exists() and config_dir.is_dir():
             for config_file in config_dir.glob("*.yaml"):
                 artifact_key = f"configs/agents/{config_file.name}"
                 artifacts[artifact_key] = str(config_file)
                 logger.info(f"Adding config artifact: {artifact_key}")
+        else:
+            logger.warning(
+                f"Config directory doesn't exist or isn't a directory: {config_dir}"
+            )
     except Exception as e:
-        logger.warning(f"Error collecting config artifacts: {e}")
+        logger.warning(f"Error collecting config artifacts: {e}", exc_info=True)
 
     if resources is None:
         agent_instance = agent_class()

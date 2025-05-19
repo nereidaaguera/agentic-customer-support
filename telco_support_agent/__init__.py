@@ -2,4 +2,5 @@
 
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).parent
+PACKAGE_DIR = Path(__file__).parent
+PROJECT_ROOT = PACKAGE_DIR.parent
