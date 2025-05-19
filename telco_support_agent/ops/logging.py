@@ -23,7 +23,7 @@ def log_agent(
     pip_requirements: Optional[list[str]] = None,
     input_example: Optional[dict] = None,
     extra_pip_requirements: Optional[list[str]] = None,
-) -> mlflow.entities.model.ModelInfo:
+) -> mlflow.models.model.ModelInfo:
     """Log any ResponsesAgent as an MLflow model.
 
     Args:
