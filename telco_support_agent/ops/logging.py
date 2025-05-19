@@ -4,6 +4,7 @@ from typing import Optional, Union
 
 import mlflow
 import yaml
+from mlflow.models.model import ModelInfo
 from mlflow.models.resources import (
     DatabricksFunction,
     DatabricksServingEndpoint,
@@ -23,7 +24,7 @@ def log_agent(
     pip_requirements: Optional[list[str]] = None,
     input_example: Optional[dict] = None,
     extra_pip_requirements: Optional[list[str]] = None,
-) -> mlflow.models.model.ModelInfo:
+) -> ModelInfo:
     """Log any ResponsesAgent as an MLflow model.
 
     Args:
