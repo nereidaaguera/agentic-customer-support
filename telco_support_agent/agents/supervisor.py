@@ -52,6 +52,13 @@ class SupervisorAgent(BaseAgent):
 
         logger.info("Supervisor agent initialized")
 
+    def __getstate__(self):
+        """Custom pickling method extending BaseAgent's implementation."""
+        state = super().__getstate__()
+        # clear sub-agents during serialization
+        state['_sub_agents'] = {}
+        return state        
+
     def get_description(self) -> str:
         """Return a description of this agent."""
         return "Supervisor agent that routes customer queries to specialized sub-agents"
