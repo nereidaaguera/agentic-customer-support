@@ -12,6 +12,7 @@ from mlflow.types.responses import (
     ResponsesStreamEvent,
 )
 
+from telco_support_agent.agents.account import AccountAgent
 from telco_support_agent.agents.base_agent import BaseAgent
 from telco_support_agent.agents.types import AgentType
 from telco_support_agent.utils.logging_utils import get_logger, setup_logging
@@ -55,16 +56,15 @@ class SupervisorAgent(BaseAgent):
         """Return a description of this agent."""
         return "Supervisor agent that routes customer queries to specialized sub-agents"
 
-    def _get_sub_agent(self, agent_type: Union[AgentType, str]) -> BaseAgent:
-        """Get or initialize a sub-agent.
+    def _get_sub_agent(self, agent_type: Union[AgentType, str]) -> Optional[BaseAgent]:
+        """Get or initialize a sub-agent if implemented.
 
         Args:
             agent_type: Type of sub-agent to get
 
         Returns:
-            Initialized sub-agent
+            Initialized sub-agent or None if not implemented
         """
-        # convert to string if AgentType enum
         agent_type_str = (
             agent_type.value if isinstance(agent_type, AgentType) else agent_type
         )
@@ -78,46 +78,19 @@ class SupervisorAgent(BaseAgent):
             else AgentType.from_string(agent_type)
         )
 
-        # import and initialize sub-agents
-        try:
-            if agent_type_enum == AgentType.ACCOUNT:
-                from telco_support_agent.agents.account import AccountAgent
-
+        if agent_type_enum == AgentType.ACCOUNT:
+            try:
                 agent = AccountAgent(llm_endpoint=self.llm_endpoint)
-            elif agent_type_enum == AgentType.BILLING:
-                # Billing agent not implemented yet - fallback to account
-                logger.warning(
-                    "Billing agent not implemented yet. Falling back to account agent."
-                )
-                from telco_support_agent.agents.account import AccountAgent
+                self._sub_agents[agent_type_str] = agent
+                logger.info(f"Initialized {agent_type_str} agent")
+                return agent
+            except Exception as e:
+                logger.error(f"Error initializing {agent_type_str} agent: {str(e)}")
+                raise
 
-                agent = AccountAgent(llm_endpoint=self.llm_endpoint)
-            elif agent_type_enum == AgentType.TECH_SUPPORT:
-                # Tech support agent not implemented yet - fallback to account
-                logger.warning(
-                    "Tech support agent not implemented yet. Falling back to account agent."
-                )
-                from telco_support_agent.agents.account import AccountAgent
-
-                agent = AccountAgent(llm_endpoint=self.llm_endpoint)
-            elif agent_type_enum == AgentType.PRODUCT:
-                # Product agent not implemented yet - fallback to account
-                logger.warning(
-                    "Product agent not implemented yet. Falling back to account agent."
-                )
-                from telco_support_agent.agents.account import AccountAgent
-
-                agent = AccountAgent(llm_endpoint=self.llm_endpoint)
-            else:
-                raise ValueError(f"Unknown agent type: {agent_type}")
-
-            self._sub_agents[agent_type_str] = agent
-            logger.info(f"Initialized {agent_type_str} agent")
-            return agent
-
-        except Exception as e:
-            logger.error(f"Error initializing {agent_type_str} agent: {str(e)}")
-            raise
+        # TODO: other agent types' not implemented
+        logger.warning(f"{agent_type_str.capitalize()} agent not implemented yet.")
+        return None
 
     @mlflow.trace(span_type=SpanType.AGENT)
     def route_query(self, query: str) -> AgentType:
@@ -205,6 +178,13 @@ class SupervisorAgent(BaseAgent):
         # get sub-agent
         sub_agent = self._get_sub_agent(agent_type)
 
+        # if sub-agent not implemented generate non-response
+        if sub_agent is None:
+            not_implemented_response = self.generate_non_response(agent_type, query)
+            return ResponsesResponse(
+                output=[not_implemented_response], custom_outputs=custom_outputs
+            )
+
         # let sub-agent handle query
         sub_response = sub_agent.predict(model_input)
 
@@ -264,9 +244,21 @@ class SupervisorAgent(BaseAgent):
             },
         )
 
-        # get sub-agent
+        # get sub-agent if implemented
+        sub_agent = self._get_sub_agent(agent_type)
+
+        # if sub-agent not implemented generate non-response
+        if sub_agent is None:
+            not_implemented_response = self.generate_not_implemented_response(
+                agent_type, query
+            )
+            yield ResponsesStreamEvent(
+                type="response.output_item.done", item=not_implemented_response
+            )
+            return
+
         try:
-            sub_agent = self._get_sub_agent(agent_type)
+            # stream response from sub-agent
             yield from sub_agent.predict_stream(model_input)
 
         except Exception as e:
@@ -285,3 +277,59 @@ class SupervisorAgent(BaseAgent):
                     "type": "message",
                 },
             )
+
+    def generate_non_response(
+        self, agent_type: Union[AgentType, str], query: str
+    ) -> dict:
+        """Generate a graceful response when an agent type is not implemented.
+
+        Args:
+            agent_type: The agent type that isn't implemented
+            query: The original user query
+
+        Returns:
+            A response item dictionary
+        """
+        agent_type_str = (
+            agent_type.value if isinstance(agent_type, AgentType) else agent_type
+        )
+
+        prompt = f"""
+    You are a telecom customer support system. The user has asked a question related to {agent_type_str}:
+
+    "{query}"
+
+    Unfortunately, our {agent_type_str} support system is currently being upgraded and isn't available yet.
+
+    Generate a polite, helpful response explaining that we can't answer {agent_type_str}-related questions right now,
+    when the feature will be available (in the next few weeks), and what types of questions we can answer
+    (account information, profiles, subscription details).
+        """
+
+        messages = [{"role": "system", "content": prompt}]
+
+        try:
+            response = self.call_llm(messages)
+            return {
+                "role": "assistant",
+                "type": "message",
+                "content": [
+                    {"type": "output_text", "text": response.get("content", "")}
+                ],
+                "id": str(uuid4()),
+            }
+        except Exception as e:
+            logger.error(f"Error generating not-implemented response: {str(e)}")
+            return {
+                "role": "assistant",
+                "type": "message",
+                "content": [
+                    {
+                        "type": "output_text",
+                        "text": f"I apologize, but our {agent_type_str} support system is currently being upgraded and isn't available yet. "
+                        f"We expect this feature to be available in the next few weeks. "
+                        f"In the meantime, I can help with account information, profiles, and subscription details.",
+                    }
+                ],
+                "id": str(uuid4()),
+            }
