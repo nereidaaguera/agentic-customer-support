@@ -12,11 +12,9 @@ import mlflow
 from databricks.sdk import WorkspaceClient
 from mlflow.entities import SpanType
 from mlflow.pyfunc import ResponsesAgent
-from mlflow.types.responses import (
-    ResponsesRequest,
-    ResponsesResponse,
-    ResponsesStreamEvent,
-)
+from mlflow.types.responses import (ResponsesAgentResponse,
+                                    ResponsesAgentRequest,
+                                    ResponsesStreamEvent)
 from unitycatalog.ai.core.databricks import DatabricksFunctionClient
 from unitycatalog.ai.openai.toolkit import UCFunctionToolkit
 
@@ -377,20 +375,20 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         )
 
     @mlflow.trace(span_type=SpanType.AGENT)
-    def predict(self, model_input: ResponsesRequest) -> ResponsesResponse:
+    def predict(self, model_input: ResponsesAgentRequest) -> ResponsesAgentResponse:
         """Make prediction based on input request."""
         outputs = [
             event.item
             for event in self.predict_stream(model_input)
             if event.type == "response.output_item.done"
         ]
-        return ResponsesResponse(
+        return ResponsesAgentResponse(
             output=outputs, custom_outputs=model_input.custom_inputs
         )
 
     @mlflow.trace(span_type=SpanType.AGENT)
     def predict_stream(
-        self, model_input: ResponsesRequest
+        self, model_input: ResponsesAgentRequest
     ) -> Generator[ResponsesStreamEvent, None, None]:
         """Stream predictions."""
         messages = [{"role": "system", "content": self.system_prompt}] + [

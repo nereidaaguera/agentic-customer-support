@@ -26,9 +26,11 @@ if root_path:
 
 # init tools - will register UC functions if needed
 from telco_support_agent.tools import initialize_tools
+
 initialize_tools()
 
-from mlflow.types.responses import ResponsesRequest
+from mlflow.types.responses import ResponsesAgentRequest
+
 from telco_support_agent.agents.account import AccountAgent
 
 # COMMAND ----------
@@ -51,7 +53,7 @@ for tool in account_agent.tools:
 def test_query(query):
     print(f"\n=== TESTING QUERY: \"{query}\" ===\n")
     
-    request = ResponsesRequest(
+    request = ResponsesAgentRequest(
         input=[{"role": "user", "content": query}]
     )
     

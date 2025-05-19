@@ -5,7 +5,7 @@
 
 # COMMAND ----------
 
-# MAGIC %pip install -r ../../requirements.txt -q
+# MAGIC %pip install -r ../../requirements.txt
 
 # COMMAND ----------
 
@@ -21,6 +21,8 @@ import yaml
 project_root = os.path.abspath(os.path.join(os.getcwd(), "../.."))
 sys.path.append(project_root)
 print(f"Added {project_root} to Python path")
+
+print(mlflow.__version__)
 
 # COMMAND ----------
 
