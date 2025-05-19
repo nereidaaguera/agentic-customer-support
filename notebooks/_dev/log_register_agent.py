@@ -39,7 +39,7 @@ from telco_support_agent.ops.registry import register_agent_to_uc
 
 # COMMAND ----------
 
-CONFIG_PATH = "../configs/log_register_agent.yaml"
+CONFIG_PATH = "../../configs/log_register_agent.yaml"
 
 with open(CONFIG_PATH) as f:
     config = yaml.safe_load(f)
