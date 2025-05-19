@@ -180,9 +180,9 @@ class SupervisorAgent(BaseAgent):
 
         # if sub-agent not implemented generate non-response
         if sub_agent is None:
-            not_implemented_response = self.generate_non_response(agent_type, query)
+            non_response = self.generate_non_response(agent_type, query)
             return ResponsesResponse(
-                output=[not_implemented_response], custom_outputs=custom_outputs
+                output=[non_response], custom_outputs=custom_outputs
             )
 
         # let sub-agent handle query
@@ -249,11 +249,9 @@ class SupervisorAgent(BaseAgent):
 
         # if sub-agent not implemented generate non-response
         if sub_agent is None:
-            not_implemented_response = self.generate_not_implemented_response(
-                agent_type, query
-            )
+            non_response = self.generate_non_response(agent_type, query)
             yield ResponsesStreamEvent(
-                type="response.output_item.done", item=not_implemented_response
+                type="response.output_item.done", item=non_response
             )
             return
 
@@ -294,42 +292,17 @@ class SupervisorAgent(BaseAgent):
             agent_type.value if isinstance(agent_type, AgentType) else agent_type
         )
 
-        prompt = f"""
-    You are a telecom customer support system. The user has asked a question related to {agent_type_str}:
-
-    "{query}"
-
-    Unfortunately, our {agent_type_str} support system is currently being upgraded and isn't available yet.
-
-    Generate a polite, helpful response explaining that we can't answer {agent_type_str}-related questions right now,
-    when the feature will be available (in the next few weeks), and what types of questions we can answer
-    (account information, profiles, subscription details).
-        """
-
-        messages = [{"role": "system", "content": prompt}]
-
-        try:
-            response = self.call_llm(messages)
-            return {
-                "role": "assistant",
-                "type": "message",
-                "content": [
-                    {"type": "output_text", "text": response.get("content", "")}
-                ],
-                "id": str(uuid4()),
-            }
-        except Exception as e:
-            logger.error(f"Error generating not-implemented response: {str(e)}")
-            return {
-                "role": "assistant",
-                "type": "message",
-                "content": [
-                    {
-                        "type": "output_text",
-                        "text": f"I apologize, but our {agent_type_str} support system is currently being upgraded and isn't available yet. "
-                        f"We expect this feature to be available in the next few weeks. "
-                        f"In the meantime, I can help with account information, profiles, and subscription details.",
-                    }
-                ],
-                "id": str(uuid4()),
-            }
+        return {
+            "role": "assistant",
+            "type": "message",
+            "content": [
+                {
+                    "type": "output_text",
+                    "text": f"I apologize, but our {agent_type_str} support system is currently being upgraded and isn't available yet. "
+                    f"We expect this feature to be available in the next few weeks. "
+                    f"In the meantime, I can help with account information, profiles, and subscription details. "
+                    f"Would you like me to help you with any account-related questions?",
+                }
+            ],
+            "id": str(uuid4()),
+        }

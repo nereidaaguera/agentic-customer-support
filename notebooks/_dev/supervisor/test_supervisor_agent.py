@@ -42,7 +42,6 @@ print("Available agent types (configs):", config_manager.get_all_agent_types())
 
 supervisor_config = config_manager.get_config("supervisor")
 print("\nSupervisor LLM endpoint:", supervisor_config["llm"]["endpoint"])
-print("Supervisor system prompt:", supervisor_config["system_prompt"][:200], "...\n")
 
 account_config = config_manager.get_config("account")
 print("\nAccount agent functions:", account_config["uc_functions"])
