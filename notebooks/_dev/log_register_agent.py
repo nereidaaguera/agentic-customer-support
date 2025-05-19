@@ -37,7 +37,7 @@ from telco_support_agent.ops.registry import register_agent_to_uc
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Load config
+# MAGIC ## Load log_register_agent config
 
 # COMMAND ----------
 
@@ -52,17 +52,7 @@ print(yaml.dump(config, sort_keys=False, default_flow_style=False))
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Init Supervisor Agent
-
-# COMMAND ----------
-
-supervisor = SupervisorAgent()
-print(f"Initialized supervisor agent using LLM endpoint: {supervisor.llm_endpoint}")
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Log the Agent to MLflow
+# MAGIC ## Log Agent to MLflow
 
 # COMMAND ----------
 
@@ -92,12 +82,12 @@ print(f"Successfully logged agent to MLflow: {logged_model_info.model_uri}")
 
 # COMMAND ----------
 
-uc_config = config["uc_registration"]
-uc_model_name = f"{uc_config['catalog']}.{uc_config['schema']}.{uc_config['model_name']}"
+# uc_config = config["uc_registration"]
+# uc_model_name = f"{uc_config['catalog']}.{uc_config['schema']}.{uc_config['model_name']}"
 
-model_version = register_agent_to_uc(
-    model_uri=logged_model_info.model_uri,
-    uc_model_name=uc_model_name,
-)
+# model_version = register_agent_to_uc(
+#     model_uri=logged_model_info.model_uri,
+#     uc_model_name=uc_model_name,
+# )
 
-print(f"Successfully registered agent to Unity Catalog: {uc_model_name} version {model_version.version}")
+# print(f"Successfully registered agent to Unity Catalog: {uc_model_name} version {model_version.version}")
