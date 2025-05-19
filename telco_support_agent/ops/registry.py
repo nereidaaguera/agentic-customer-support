@@ -3,7 +3,7 @@
 from typing import Optional
 
 import mlflow
-from mlflow.entities.model import ModelVersion
+from mlflow.entities.model_registry import ModelVersion
 
 from telco_support_agent.utils.logging_utils import get_logger
 
@@ -15,7 +15,7 @@ mlflow.set_registry_uri("databricks-uc")
 def register_agent_to_uc(
     model_uri: str,
     uc_model_name: str,
-) -> mlflow.entities.model.ModelVersion:
+) -> ModelVersion:
     """Register an agent model to Unity Catalog.
 
     Args:
