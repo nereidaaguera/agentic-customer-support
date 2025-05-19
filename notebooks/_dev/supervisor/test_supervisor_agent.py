@@ -111,17 +111,18 @@ def format_response(response):
     print("\n=== RESPONSE ===")
     
     for output_item in response.output:
-        if output_item.get("type") == "message" and "content" in output_item:
-            for content_item in output_item["content"]:
-                if content_item.get("type") == "output_text":
-                    print("\n" + content_item["text"])
+        if hasattr(output_item, "type") and output_item.type == "message":
+            if hasattr(output_item, "content"):
+                for content_item in output_item.content:
+                    if hasattr(content_item, "type") and content_item.type == "output_text":
+                        print("\n" + content_item.text)
         
-        elif output_item.get("type") == "function_call_output":
-            print("\nFunction Output:", output_item.get("output"))
+        elif hasattr(output_item, "type") and output_item.type == "function_call_output":
+            print("\nFunction Output:", output_item.output)
             
-        elif output_item.get("type") == "function_call":
-            print(f"\nFunction Call: {output_item.get('name')}")
-            print(f"Arguments: {output_item.get('arguments')}")
+        elif hasattr(output_item, "type") and output_item.type == "function_call":
+            print(f"\nFunction Call: {output_item.name}")
+            print(f"Arguments: {output_item.arguments}")
     
     if response.custom_outputs:
         print("\n=== CUSTOM OUTPUTS ===")
@@ -179,20 +180,20 @@ def display_streaming_response(model_input):
         if event.type == "response.output_item.done":
             item = event.item
             
-            if item.get("type") == "message" and "content" in item:
-                for content_item in item["content"]:
-                    if content_item.get("type") == "output_text":
-                        # Print the chunk
-                        text = content_item["text"]
-                        print(f"Chunk {i}: {text}")
-                        full_text += text
+            if hasattr(item, "type") and item.type == "message":
+                if hasattr(item, "content"):
+                    for content_item in item.content:
+                        if hasattr(content_item, "type") and content_item.type == "output_text":
+                            text = content_item.text
+                            print(f"Chunk {i}: {text}")
+                            full_text += text
             
-            elif item.get("type") == "function_call":
-                print(f"Function Call: {item.get('name')}")
-                print(f"Arguments: {item.get('arguments')}")
+            elif hasattr(item, "type") and item.type == "function_call":
+                print(f"Function Call: {item.name}")
+                print(f"Arguments: {item.arguments}")
             
-            elif item.get("type") == "function_call_output":
-                print(f"Function Output: {item.get('output')}")
+            elif hasattr(item, "type") and item.type == "function_call_output":
+                print(f"Function Output: {item.output}")
     
     print("\n=== FULL RESPONSE ===\n")
     print(full_text)
