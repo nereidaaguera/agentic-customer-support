@@ -13,7 +13,6 @@
 
 # COMMAND ----------
 
-import inspect
 import os
 import sys
 import mlflow
@@ -55,6 +54,8 @@ print(yaml.dump(config, sort_keys=False, default_flow_style=False))
 # MAGIC ## Log Agent to MLflow
 
 # COMMAND ----------
+
+# TODO: add functionality to register tools / check tools exist
 
 # collect resources (if any specified in config)
 resources = []
