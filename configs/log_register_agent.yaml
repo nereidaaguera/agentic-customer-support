@@ -1,0 +1,17 @@
+# Config for logging and registering agent
+name: supervisor_agent
+description: "Multi-agent telco customer support system supervisor"
+
+# MLflow logging params
+artifact_path: "telco_support_agent"
+input_example:
+  input:
+    - role: "user"
+      content: "What plan am I currently on? My customer ID is CUS-10001."
+
+# Unity Catalog registration params
+uc_registration:
+  catalog: "telco_customer_support_dev"
+  schema: "agent"
+  model_name: "supervisor_agent"
+  #alias: "prod"

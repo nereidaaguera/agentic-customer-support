@@ -2,6 +2,11 @@
 
 from unitycatalog.ai.openai.toolkit import UCFunctionToolkit
 
+from telco_support_agent.agents.types import AgentType
+from telco_support_agent.utils.logging_utils import get_logger
+
+logger = get_logger(__name__)
+
 # default catalog and schema
 DEFAULT_CATALOG = "telco_customer_support_dev"
 DEFAULT_SCHEMA = "agent"
@@ -16,23 +21,26 @@ def get_toolkit_for_domain(domain: str) -> UCFunctionToolkit:
     Returns:
         UCFunctionToolkit: Toolkit containing the appropriate functions
     """
+    try:
+        # validate against known agent types
+        AgentType.from_string(domain)
+    except ValueError:
+        logger.warning(f"Requested toolkit for non-standard domain: {domain}")
+
     # map domains to function names
     function_map = {
-        "account": [
+        AgentType.ACCOUNT.value: [
             f"{DEFAULT_CATALOG}.{DEFAULT_SCHEMA}.get_customer_info",
             f"{DEFAULT_CATALOG}.{DEFAULT_SCHEMA}.get_customer_subscriptions",
         ],
-        "billing": [
+        AgentType.BILLING.value: [
             # TODO: add billing functions
         ],
-        "tech_support": [
+        AgentType.TECH_SUPPORT.value: [
             # TODO: add tech support functions
         ],
-        "product": [
+        AgentType.PRODUCT.value: [
             # TODO: add product functions
-        ],
-        "supervisor": [
-            f"{DEFAULT_CATALOG}.{DEFAULT_SCHEMA}.route_to_specialized_agent"
         ],
     }
 

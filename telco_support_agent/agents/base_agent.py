@@ -9,7 +9,6 @@ from uuid import uuid4
 
 import backoff
 import mlflow
-import yaml
 from databricks.sdk import WorkspaceClient
 from mlflow.entities import SpanType
 from mlflow.pyfunc import ResponsesAgent
@@ -18,7 +17,6 @@ from mlflow.types.responses import (
     ResponsesResponse,
     ResponsesStreamEvent,
 )
-from pydantic import ValidationError
 from unitycatalog.ai.core.databricks import DatabricksFunctionClient
 from unitycatalog.ai.openai.toolkit import UCFunctionToolkit
 
@@ -90,32 +88,19 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         if agent_type in cls._config_cache:
             return cls._config_cache[agent_type]
 
-        # get config file
-        if config_dir is None:
-            package_dir = Path(__file__).parent.parent
-            project_root = package_dir.parent
-            config_dir = project_root / "configs" / "agents"
-        else:
-            config_dir = Path(config_dir)
-
-        config_path = config_dir / f"{agent_type}.yaml"
-
-        if not config_path.exists():
-            raise FileNotFoundError(
-                f"No config file found for agent type: {agent_type} at {config_path}"
-            )
-
-        # load and validate
         try:
-            with open(config_path) as f:
-                config_dict = yaml.safe_load(f)
+            # Use the ConfigManager to get the config
+            from telco_support_agent.agents.config import config_manager
 
+            config_dict = config_manager.get_config(agent_type)
+
+            # Validate the config with Pydantic
             config = AgentConfig(**config_dict)
             cls._config_cache[agent_type] = config
 
             return config
 
-        except (yaml.YAMLError, ValidationError) as e:
+        except (FileNotFoundError, ValueError) as e:
             raise ValueError(f"Invalid configuration for {agent_type}: {e}") from e
 
     def _load_tools_from_config(self) -> list[dict]:

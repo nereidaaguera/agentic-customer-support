@@ -9,8 +9,6 @@ logger = get_logger(__name__)
 TOOL_MODULES = [
     # Account domain tools
     "telco_support_agent.tools.account.functions",
-    # Supervisor domain tools
-    "telco_support_agent.tools.supervisor.functions",
     # TODO: add when implemented
     # "telco_support_agent.tools.billing.functions",
     # "telco_support_agent.tools.tech_support.functions",
