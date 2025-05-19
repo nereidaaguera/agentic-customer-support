@@ -2,10 +2,6 @@
 # MAGIC %md
 # MAGIC # Test Supervisor Agent Class
 # MAGIC
-# MAGIC This notebook tests the SupervisorAgent's ability to:
-# MAGIC 1. Route queries to the appropriate sub-agent
-# MAGIC 2. Handle account-related queries (currently the only implemented sub-agent)
-# MAGIC 3. Gracefully handle routing to non-implemented sub-agents
 
 # COMMAND ----------
 
@@ -36,19 +32,9 @@ from telco_support_agent.agents.config import config_manager
 
 # COMMAND ----------
 
-# MAGIC %md
-# MAGIC ## Check Available Agent Types
-
-# COMMAND ----------
-
 print("Available agent types (enum):")
 for agent_type in AgentType:
     print(f"  - {agent_type.name}: {agent_type.value}")
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Check Agent Configs
 
 # COMMAND ----------
 
