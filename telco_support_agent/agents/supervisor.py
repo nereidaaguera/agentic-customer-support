@@ -56,8 +56,8 @@ class SupervisorAgent(BaseAgent):
         """Custom pickling method extending BaseAgent's implementation."""
         state = super().__getstate__()
         # clear sub-agents during serialization
-        state['_sub_agents'] = {}
-        return state        
+        state["_sub_agents"] = {}
+        return state
 
     def get_description(self) -> str:
         """Return a description of this agent."""
