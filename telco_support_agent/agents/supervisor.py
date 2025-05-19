@@ -6,6 +6,7 @@ from uuid import uuid4
 
 import mlflow
 from mlflow.entities import SpanType
+from mlflow.models import set_model
 from mlflow.types.responses import (
     ResponsesRequest,
     ResponsesResponse,
@@ -306,3 +307,8 @@ class SupervisorAgent(BaseAgent):
             ],
             "id": str(uuid4()),
         }
+
+
+if __name__ == "__main__":
+    agent = SupervisorAgent()
+    set_model(agent)
