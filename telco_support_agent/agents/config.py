@@ -7,6 +7,7 @@ from typing import Any, Optional
 import yaml
 from mlflow.artifacts import download_artifacts
 
+from telco_support_agent import PROJECT_ROOT
 from telco_support_agent.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
@@ -56,25 +57,8 @@ class ConfigManager:
             return
 
         self._configs = {}
-        self._project_root = self._find_project_root()
+        self._project_root = PROJECT_ROOT
         self._initialized = True
-
-    def _find_project_root(self) -> Path:
-        """Find the project root directory."""
-        current_dir = Path(__file__).resolve().parent
-
-        search_dir = current_dir
-        for _ in range(10):
-            if (search_dir / "telco_support_agent").exists() and (
-                search_dir / "pyproject.toml"
-            ).exists():
-                return search_dir
-            parent_dir = search_dir.parent
-            if parent_dir == search_dir:  # reached root directory
-                break
-            search_dir = parent_dir
-
-        return current_dir.parent
 
     def _find_config_file(self, agent_type: str) -> Optional[Path]:
         """Find the configuration file for the given agent type.
