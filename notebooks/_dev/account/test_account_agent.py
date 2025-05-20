@@ -26,9 +26,9 @@ if root_path:
 
 # init tools - will register UC functions if needed
 from telco_support_agent.tools import initialize_tools
-initialize_tools()
 
-from mlflow.types.responses import ResponsesRequest
+from mlflow.types.responses import ResponsesAgentRequest
+
 from telco_support_agent.agents.account import AccountAgent
 
 # COMMAND ----------
@@ -48,10 +48,28 @@ for tool in account_agent.tools:
 
 # COMMAND ----------
 
+print("Initializing tools for account agent...")
+results = initialize_tools(domains=["account"])
+
+print("\nFunction initialization status:")
+for domain, functions in results.items():
+    print(f"\nDomain: {domain}")
+    for func_name, status in functions.items():
+        status_str = "✅ Available" if status else "❌ Unavailable"
+        print(f"  - {func_name}: {status_str}")
+
+if any(not all(functions.values()) for functions in results.values()):
+    print("\nWARNING: Some functions could not be initialized")
+    print("Tests might fail without the necessary UC functions")
+else:
+    print("\nAll required functions are available")
+
+# COMMAND ----------
+
 def test_query(query):
     print(f"\n=== TESTING QUERY: \"{query}\" ===\n")
     
-    request = ResponsesRequest(
+    request = ResponsesAgentRequest(
         input=[{"role": "user", "content": query}]
     )
     

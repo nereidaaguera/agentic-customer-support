@@ -91,21 +91,21 @@ print(f"Model: {uc_model_name} (version {model_version})")
 
 # COMMAND ----------
 
-# from mlflow.deployments import get_deploy_client
-#
-# client = get_deploy_client()
-# test_query = "What plan am I currently on? My customer ID is CUS-10001."
-#
-# response = client.predict(
-#     endpoint=deployment_result.endpoint_name,
-#     inputs={
-#         "input": [{"role": "user", "content": test_query}],
-#         "databricks_options": {"return_trace": True}
-#     }
-# )
-#
-# print("Test Query Response:")
-# for output in response["output"]:
-#     if "content" in output:
-#         for content in output["content"]:
-#             print(content.get("text", ""))
+from mlflow.deployments import get_deploy_client
+
+client = get_deploy_client()
+test_query = "What plan am I currently on? My customer ID is CUS-10001."
+
+response = client.predict(
+    endpoint=deployment_result.endpoint_name,
+    inputs={
+        "input": [{"role": "user", "content": test_query}],
+        "databricks_options": {"return_trace": True}
+    }
+)
+
+print("Test Query Response:")
+for output in response["output"]:
+    if "content" in output:
+        for content in output["content"]:
+            print(content.get("text", ""))

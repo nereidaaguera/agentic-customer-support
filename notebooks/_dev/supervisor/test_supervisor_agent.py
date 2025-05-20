@@ -25,10 +25,12 @@ if root_path:
 
 # COMMAND ----------
 
-from mlflow.types.responses import ResponsesRequest
-from telco_support_agent.agents.supervisor import SupervisorAgent
-from telco_support_agent.agents.types import AgentType
+from mlflow.types.responses import ResponsesAgentRequest
+
 from telco_support_agent.agents.config import config_manager
+from telco_support_agent.agents.supervisor import SupervisorAgent
+from telco_support_agent.tools import initialize_tools
+from telco_support_agent.agents.types import AgentType
 
 # COMMAND ----------
 
@@ -58,6 +60,30 @@ supervisor = SupervisorAgent()
 print(f"Agent type: {supervisor.agent_type}")
 print(f"LLM endpoint: {supervisor.llm_endpoint}")
 print(f"LLM parameters: {supervisor.llm_params}")
+
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Initialize Required UC Functions
+
+# COMMAND ----------
+
+print("Initializing UC functions...")
+results = initialize_tools(agent_config=account_config)
+
+print("\nFunction initialization status:")
+for domain, functions in results.items():
+    print(f"\nDomain: {domain}")
+    for func_name, status in functions.items():
+        status_str = "✅ Available" if status else "❌ Unavailable"
+        print(f"  - {func_name}: {status_str}")
+
+if any(not all(functions.values()) for functions in results.values()):
+    print("\nWARNING: Some functions could not be initialized")
+    print("Tests might fail without the necessary UC functions")
+else:
+    print("\nAll required functions are available")
 
 # COMMAND ----------
 
@@ -125,7 +151,7 @@ def format_response(response):
 
 account_query = "What plan am I currently on? My customer ID is CUS-10001."
 
-request = ResponsesRequest(
+request = ResponsesAgentRequest(
     input=[{"role": "user", "content": account_query}]
 )
 
@@ -141,7 +167,7 @@ format_response(response)
 
 billing_query = "Why is my bill higher this month? My customer ID is CUS-10001."
 
-request = ResponsesRequest(
+request = ResponsesAgentRequest(
     input=[{"role": "user", "content": billing_query}]
 )
 
@@ -188,7 +214,7 @@ def display_streaming_response(model_input):
 
 streaming_query = "What are the details of my account? I'm customer CUS-10001."
 
-streaming_request = ResponsesRequest(
+streaming_request = ResponsesAgentRequest(
     input=[{"role": "user", "content": streaming_query}]
 )
 
