@@ -29,8 +29,8 @@ from mlflow.types.responses import ResponsesAgentRequest
 
 from telco_support_agent.agents.config import config_manager
 from telco_support_agent.agents.supervisor import SupervisorAgent
+from telco_support_agent.tools import initialize_tools
 from telco_support_agent.agents.types import AgentType
-from telco_support_agent.tools.registry import register_functions_for_agent_config
 
 # COMMAND ----------
 
@@ -65,24 +65,25 @@ print(f"LLM parameters: {supervisor.llm_params}")
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Register Required UC Functions
+# MAGIC ## Initialize Required UC Functions
 
 # COMMAND ----------
 
-# Register functions required by account agent
-print("Registering UC functions for account agent...")
-function_status = register_functions_for_agent_config(account_config)
+print("Initializing UC functions...")
+results = initialize_tools(agent_config=account_config)
 
-print("\nFunction registration status:")
-for func_name, status in function_status.items():
-    status_str = "✅ Registered" if status else "❌ Failed"
-    print(f"  - {func_name}: {status_str}")
+print("\nFunction initialization status:")
+for domain, functions in results.items():
+    print(f"\nDomain: {domain}")
+    for func_name, status in functions.items():
+        status_str = "✅ Available" if status else "❌ Unavailable"
+        print(f"  - {func_name}: {status_str}")
 
-if not all(function_status.values()):
-    print("\n WARNING: Some UC functions could not be registered!")
-    print("Tests might fail unless you have the necessary permissions to create UC functions.")
+if any(not all(functions.values()) for functions in results.values()):
+    print("\nWARNING: Some functions could not be initialized")
+    print("Tests might fail without the necessary UC functions")
 else:
-    print("\nAll required functions were successfully registered.")
+    print("\nAll required functions are available")
 
 # COMMAND ----------
 
