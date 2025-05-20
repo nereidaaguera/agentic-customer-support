@@ -157,7 +157,7 @@ for output in response.get("output", []):
 
 # COMMAND ----------
 
-uc_config = config["uc_registration"]
+uc_config = log_register_agent_config["uc_registration"]
 uc_model_name = f"{uc_config['catalog']}.{uc_config['schema']}.{uc_config['model_name']}"
 
 model_version = register_agent_to_uc(
