@@ -30,6 +30,7 @@ from mlflow.types.responses import ResponsesAgentRequest
 from telco_support_agent.agents.config import config_manager
 from telco_support_agent.agents.supervisor import SupervisorAgent
 from telco_support_agent.agents.types import AgentType
+from telco_support_agent.tools.registry import register_functions_for_agent_config
 
 # COMMAND ----------
 
@@ -59,6 +60,29 @@ supervisor = SupervisorAgent()
 print(f"Agent type: {supervisor.agent_type}")
 print(f"LLM endpoint: {supervisor.llm_endpoint}")
 print(f"LLM parameters: {supervisor.llm_params}")
+
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Register Required UC Functions
+
+# COMMAND ----------
+
+# Register functions required by account agent
+print("Registering UC functions for account agent...")
+function_status = register_functions_for_agent_config(account_config)
+
+print("\nFunction registration status:")
+for func_name, status in function_status.items():
+    status_str = "✅ Registered" if status else "❌ Failed"
+    print(f"  - {func_name}: {status_str}")
+
+if not all(function_status.values()):
+    print("\n WARNING: Some UC functions could not be registered!")
+    print("Tests might fail unless you have the necessary permissions to create UC functions.")
+else:
+    print("\nAll required functions were successfully registered.")
 
 # COMMAND ----------
 
