@@ -33,7 +33,7 @@ from telco_support_agent.ops.registry import get_latest_model_version
 
 # COMMAND ----------
 
-CONFIG_PATH = "../configs/deploy_agent.yaml"
+CONFIG_PATH = "../../configs/deploy_agent.yaml"
 
 with open(CONFIG_PATH) as f:
     deploy_agent_config = yaml.safe_load(f)
