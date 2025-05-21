@@ -1,6 +1,6 @@
 """Functions for deploying Telco Support Agent models."""
 
-from typing import Optional, Union
+from typing import Any, Optional, Union
 
 from databricks import agents
 from mlflow.entities.model_registry import ModelVersion
@@ -17,7 +17,7 @@ def deploy_agent(
     tags: Optional[dict[str, str]] = None,
     scale_to_zero_enabled: bool = False,
     environment_vars: Optional[dict[str, str]] = None,
-) -> agents.Deployment:
+) -> Any:
     """Deploy a registered agent model to a Model Serving endpoint.
 
     Args:
