@@ -45,10 +45,10 @@ from telco_support_agent.ops.registry import register_agent_to_uc
 CONFIG_PATH = "../../configs/log_register_agent.yaml"
 
 with open(CONFIG_PATH) as f:
-    config = yaml.safe_load(f)
+    log_register_agent_config = yaml.safe_load(f)
 
 print("Loaded config:")
-print(yaml.dump(config, sort_keys=False, default_flow_style=False))
+print(yaml.dump(log_register_agent_config, sort_keys=False, default_flow_style=False))
 
 # COMMAND ----------
 
@@ -58,8 +58,8 @@ print(yaml.dump(config, sort_keys=False, default_flow_style=False))
 # COMMAND ----------
 
 resources = []
-if "additional_resources" in config:
-    for resource_config in config["additional_resources"]:
+if "additional_resources" in log_register_agent_config:
+    for resource_config in log_register_agent_config["additional_resources"]:
         resource_type = resource_config.pop("type")
         if resource_type == "DatabricksServingEndpoint":
             resources.append(DatabricksServingEndpoint(**resource_config))
@@ -67,26 +67,23 @@ if "additional_resources" in config:
             resources.append(DatabricksFunction(**resource_config))
 
 # COMMAND ----------
-# COMMAND ----------
-
-# COMMAND ----------
 
 from telco_support_agent.tools import initialize_tools
 from telco_support_agent.agents.config import config_manager
 
 print("Initializing tools for agent...")
-agent_configs = {}
+domain_configs = {}
 for agent_type in ["supervisor", "account"]:
     try:
-        agent_configs[agent_type] = config_manager.get_config(agent_type)
+        domain_configs[agent_type] = config_manager.get_config(agent_type)
     except Exception as e:
         print(f"Error getting config for {agent_type}: {e}")
 
 # extract all required UC functions
 required_functions = []
-for config in agent_configs.values():
-    if "uc_functions" in config:
-        required_functions.extend(config["uc_functions"])
+for domain_config in domain_configs.values():
+    if "uc_functions" in domain_config:
+        required_functions.extend(domain_config["uc_functions"])
 
 required_functions = list(set(required_functions))
 print(f"Found {len(required_functions)} required UC functions:")
@@ -95,9 +92,9 @@ for func in required_functions:
 
 print("\nInitializing UC functions...")
 all_results = {}
-for agent_type, config in agent_configs.items():
-    if "uc_functions" in config and config["uc_functions"]:
-        results = initialize_tools(agent_config=config)
+for agent_type, domain_config in domain_configs.items():
+    if "uc_functions" in domain_config and domain_config["uc_functions"]:
+        results = initialize_tools(agent_config=domain_config)
         all_results.update(results)
 
 print("\nFunction initialization status:")
@@ -121,8 +118,8 @@ for func_name in required_functions:
 
 logged_model_info = log_agent(
     agent_class=SupervisorAgent,
-    name=config["name"],
-    input_example=config["input_example"],
+    name=log_register_agent_config["name"],
+    input_example=log_register_agent_config["input_example"],
     resources=resources if resources else None,
 )
 
@@ -160,7 +157,7 @@ for output in response.get("output", []):
 
 # COMMAND ----------
 
-uc_config = config["uc_registration"]
+uc_config = log_register_agent_config["uc_registration"]
 uc_model_name = f"{uc_config['catalog']}.{uc_config['schema']}.{uc_config['model_name']}"
 
 model_version = register_agent_to_uc(
