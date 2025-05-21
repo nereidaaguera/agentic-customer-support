@@ -61,26 +61,20 @@ def list_model_versions(
     return versions
 
 
-def get_latest_model_version(
-    uc_model_name: str,
-) -> Optional[ModelVersion]:
-    """Get latest version of a model in Unity Catalog.
+def get_latest_model_version(model_name):
+    """Get latest version of a model.
 
     Args:
-        uc_model_name: Fully qualified name in Unity Catalog (catalog.schema.model)
+        model_name: Fully qualified name in Unity Catalog (catalog.schema.model)
 
     Returns:
-        Latest ModelVersion object or None if no versions exist
+        Latest version number or None if no versions exist
     """
-    versions = list_model_versions(uc_model_name)
+    client = mlflow.MlflowClient()
+    versions = client.search_model_versions(f"name='{model_name}'")
 
     if not versions:
-        logger.warning(f"No versions found for model: {uc_model_name}")
         return None
 
-    # sort by version number (descending)
-    versions.sort(key=lambda v: int(v.version), reverse=True)
-
-    latest = versions[0]
-    logger.info(f"Latest version for {uc_model_name} is {latest.version}")
-    return latest
+    latest_version = max(versions, key=lambda x: int(x.version))
+    return latest_version.version

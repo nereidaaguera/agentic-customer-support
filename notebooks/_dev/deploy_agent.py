@@ -17,6 +17,8 @@ import os
 import sys
 import yaml
 
+from telco_support_agent.ops.registry import get_latest_model_version
+
 project_root = os.path.abspath(os.path.join(os.getcwd(), "../.."))
 sys.path.append(project_root)
 print(f"Added {project_root} to Python path")
@@ -24,7 +26,6 @@ print(f"Added {project_root} to Python path")
 # COMMAND ----------
 
 from telco_support_agent.ops.deployment import deploy_agent
-from telco_support_agent.ops.registry import get_latest_model_version
 
 # COMMAND ----------
 
@@ -50,10 +51,9 @@ if "version" in uc_config:
     model_version = uc_config["version"]
     print(f"Using specified model version: {model_version}")
 else:
-    model_version_obj = get_latest_model_version(uc_model_name)
-    if model_version_obj is None:
+    model_version = get_latest_model_version(uc_model_name)
+    if model_version is None:
         raise ValueError(f"No versions found for model: {uc_model_name}")
-    model_version = model_version_obj.version
     print(f"Using latest model version: {model_version}")
 
 # COMMAND ----------
