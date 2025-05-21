@@ -17,8 +17,6 @@ import os
 import sys
 import yaml
 
-from telco_support_agent.ops.registry import get_latest_model_version
-
 project_root = os.path.abspath(os.path.join(os.getcwd(), "../.."))
 sys.path.append(project_root)
 print(f"Added {project_root} to Python path")
@@ -26,6 +24,7 @@ print(f"Added {project_root} to Python path")
 # COMMAND ----------
 
 from telco_support_agent.ops.deployment import deploy_agent
+from telco_support_agent.ops.registry import get_latest_model_version
 
 # COMMAND ----------
 
