@@ -77,11 +77,9 @@ deployment_result = deploy_agent(
 
 print("== Deployment Summary ==")
 print(f"Endpoint Name: {deployment_result.endpoint_name}")
-print(f"Status: {deployment_result.status}")
-print(f"Query Endpoint: {deployment_result.query_endpoint}")
+print(f"Model: {uc_model_name} (version {model_version})")
 print(f"Workload Size: {deployment_config.get('workload_size', 'Default')}")
 print(f"Scale-to-zero: {'Enabled' if deployment_config.get('scale_to_zero_enabled', False) else 'Disabled'}")
-print(f"Model: {uc_model_name} (version {model_version})")
 
 # COMMAND ----------
 
