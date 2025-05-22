@@ -9,16 +9,14 @@ from uuid import uuid4
 
 import backoff
 import mlflow
-import yaml
 from databricks.sdk import WorkspaceClient
 from mlflow.entities import SpanType
 from mlflow.pyfunc import ResponsesAgent
 from mlflow.types.responses import (
-    ResponsesRequest,
-    ResponsesResponse,
-    ResponsesStreamEvent,
+    ResponsesAgentRequest,
+    ResponsesAgentResponse,
+    ResponsesAgentStreamEvent,
 )
-from pydantic import ValidationError
 from unitycatalog.ai.core.databricks import DatabricksFunctionClient
 from unitycatalog.ai.openai.toolkit import UCFunctionToolkit
 
@@ -90,32 +88,19 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         if agent_type in cls._config_cache:
             return cls._config_cache[agent_type]
 
-        # get config file
-        if config_dir is None:
-            package_dir = Path(__file__).parent.parent
-            project_root = package_dir.parent
-            config_dir = project_root / "configs" / "agents"
-        else:
-            config_dir = Path(config_dir)
-
-        config_path = config_dir / f"{agent_type}.yaml"
-
-        if not config_path.exists():
-            raise FileNotFoundError(
-                f"No config file found for agent type: {agent_type} at {config_path}"
-            )
-
-        # load and validate
         try:
-            with open(config_path) as f:
-                config_dict = yaml.safe_load(f)
+            # Use the ConfigManager to get the config
+            from telco_support_agent.agents.config import config_manager
 
+            config_dict = config_manager.get_config(agent_type)
+
+            # Validate the config with Pydantic
             config = AgentConfig(**config_dict)
             cls._config_cache[agent_type] = config
 
             return config
 
-        except (yaml.YAMLError, ValidationError) as e:
+        except (FileNotFoundError, ValueError) as e:
             raise ValueError(f"Invalid configuration for {agent_type}: {e}") from e
 
     def _load_tools_from_config(self) -> list[dict]:
@@ -274,7 +259,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
 
     def handle_tool_call(
         self, messages: list[dict[str, Any]], tool_calls: list[dict[str, Any]]
-    ) -> tuple[list[dict[str, Any]], list[ResponsesStreamEvent]]:
+    ) -> tuple[list[dict[str, Any]], list[ResponsesAgentStreamEvent]]:
         """Execute tool calls and return updated messages and response events.
 
         Args:
@@ -312,7 +297,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             }
 
             events.append(
-                ResponsesStreamEvent(
+                ResponsesAgentStreamEvent(
                     type="response.output_item.done", item=responses_tool_call_output
                 )
             )
@@ -321,7 +306,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
 
     def call_and_run_tools(
         self, messages: list[dict[str, Any]], max_iter: int = 10
-    ) -> Generator[ResponsesStreamEvent, None, None]:
+    ) -> Generator[ResponsesAgentStreamEvent, None, None]:
         """Run the call-tool-response loop up to max_iter times.
 
         Args:
@@ -329,7 +314,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             max_iter: Maximum number of iterations
 
         Yields:
-            ResponsesStreamEvent objects
+            ResponsesAgentStreamEvent objects
         """
         current_messages = messages.copy()
 
@@ -350,7 +335,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
                 current_messages.append(llm_output)
                 if tool_calls := llm_output.get("tool_calls", None):
                     for tool_call in tool_calls:
-                        yield ResponsesStreamEvent(
+                        yield ResponsesAgentStreamEvent(
                             type="response.output_item.done",
                             item={
                                 "type": "function_call",
@@ -361,7 +346,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
                             },
                         )
                 else:
-                    yield ResponsesStreamEvent(
+                    yield ResponsesAgentStreamEvent(
                         type="response.output_item.done",
                         item={
                             "role": llm_output["role"],
@@ -376,7 +361,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
                         },
                     )
 
-        yield ResponsesStreamEvent(
+        yield ResponsesAgentStreamEvent(
             type="response.output_item.done",
             item={
                 "id": str(uuid4()),
@@ -392,21 +377,21 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         )
 
     @mlflow.trace(span_type=SpanType.AGENT)
-    def predict(self, model_input: ResponsesRequest) -> ResponsesResponse:
+    def predict(self, model_input: ResponsesAgentRequest) -> ResponsesAgentResponse:
         """Make prediction based on input request."""
         outputs = [
             event.item
             for event in self.predict_stream(model_input)
             if event.type == "response.output_item.done"
         ]
-        return ResponsesResponse(
+        return ResponsesAgentResponse(
             output=outputs, custom_outputs=model_input.custom_inputs
         )
 
     @mlflow.trace(span_type=SpanType.AGENT)
     def predict_stream(
-        self, model_input: ResponsesRequest
-    ) -> Generator[ResponsesStreamEvent, None, None]:
+        self, model_input: ResponsesAgentRequest
+    ) -> Generator[ResponsesAgentStreamEvent, None, None]:
         """Stream predictions."""
         messages = [{"role": "system", "content": self.system_prompt}] + [
             i.model_dump() for i in model_input.input
