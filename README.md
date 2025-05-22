@@ -66,12 +66,12 @@ telco_support_agent/
 
 ## Development Environment
 
-This project is designed to run on [Databricks Runtime 16.4 ML LTS](https://docs.databricks.com/aws/en/release-notes/runtime/16.4lts-ml), which uses **Python 3.12.3**. For consistency between development and production environments, we recommend using the same Python version locally.
+This project is designed to run on [Databricks Runtime 16.3](https://docs.databricks.com/aws/en/release-notes/runtime/16.3), which uses **Python 3.12.3**. For consistency between development and production environments, we recommend using the same Python version locally.
 
 ### Environment Setup
 
 #### Prerequisites
-- Python 3.12.3 (matches Databricks Runtime 16.4 ML LTS)
+- Python 3.12.3 (matches Databricks Runtime 16.3)
 - Poetry (2.1.2 and above) for dependency management
 
 #### Local Development
@@ -96,15 +96,6 @@ poetry env use 3.12.3
 poetry install
 ```
 
-#### Development Installation
-
-For development, install the package in editable mode:
-
-```bash
-# install in development mode
-pip install -e .
-```
-
 ### Generating requirements.txt
 
 We use a `requirements.txt` file to pip install dependencies in notebooks. To generate the `requirements.txt` from `pyproject.toml`:
@@ -114,13 +105,13 @@ We use a `requirements.txt` file to pip install dependencies in notebooks. To ge
 poetry export -f requirements.txt --output requirements.txt --without-hashes
 ```
 
-The generated `requirements.txt` will include all dependencies specified in `pyproject.toml`. When running on Databricks Runtime 16.4 ML LTS, many of these dependencies are already pre-installed, but this approach ensures compatibility with both local development and Databricks environments.
+The generated `requirements.txt` will include all dependencies specified in `pyproject.toml`. When running on Databricks Runtime 16.3, many of these dependencies are already pre-installed, but this approach ensures compatibility with both local development and Databricks environments.
 
 ### Databricks Development
 
 When running on Databricks:
 
-1. Use Databricks Runtime 16.4 ML LTS
+1. Use Databricks Runtime 16.3
 2. Install project-specific dependencies at the start of your notebook:
 
 ```python

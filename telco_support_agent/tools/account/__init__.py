@@ -1,7 +1,3 @@
-"""Account domain tools."""
+"""Account tools for the telecom support agent."""
 
-from telco_support_agent.tools.account.info import (
-    AccountInfoTool,
-    SubscriptionsInfoTool,
-    register_account_tools,
-)
+__all__ = []

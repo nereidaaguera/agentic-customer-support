@@ -15,8 +15,10 @@ mlflow = "^3.0.0rc0"
 openai = "^1.78.0"
 backoff = "^2.2.1"
 six = "1.16.0"
+unitycatalog-ai = {extras = ["databricks"], version = "^0.3.0"}
 unitycatalog-openai = {extras = ["databricks"], version = "^0.2.0"}
 databricks-connect = ">=16.3.0,<16.4.0"
+databricks-agents = "^1.0.0rc0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"

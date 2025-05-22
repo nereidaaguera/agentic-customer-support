@@ -23,7 +23,7 @@ if root_path:
     print(f"Added {root_path} to Python path")
 # COMMAND ----------
 
-from mlflow.types.responses import ResponsesRequest
+from mlflow.types.responses import ResponsesAgentRequest
 
 from telco_support_agent.agents.base_agent import BaseAgent, ToolInfo
 
@@ -138,7 +138,7 @@ print(f"LLM endpoint: {basic_agent.llm_endpoint}")
 
 # COMMAND ----------
 
-test_input = ResponsesRequest(
+test_input = ResponsesAgentRequest(
     input=[
         {"role": "user", "content": "What is 42 multiplied by 7?"}
     ]

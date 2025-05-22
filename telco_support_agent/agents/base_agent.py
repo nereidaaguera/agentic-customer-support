@@ -2,7 +2,6 @@
 
 import abc
 import json
-import logging
 from collections.abc import Generator
 from pathlib import Path
 from typing import Any, Optional, Union
@@ -10,21 +9,22 @@ from uuid import uuid4
 
 import backoff
 import mlflow
-import yaml
 from databricks.sdk import WorkspaceClient
 from mlflow.entities import SpanType
 from mlflow.pyfunc import ResponsesAgent
 from mlflow.types.responses import (
-    ResponsesRequest,
-    ResponsesResponse,
-    ResponsesStreamEvent,
+    ResponsesAgentRequest,
+    ResponsesAgentResponse,
+    ResponsesAgentStreamEvent,
 )
-from pydantic import ValidationError
+from unitycatalog.ai.core.databricks import DatabricksFunctionClient
+from unitycatalog.ai.openai.toolkit import UCFunctionToolkit
 
 from telco_support_agent.agents import AgentConfig
-from telco_support_agent.tools import ToolInfo
+from telco_support_agent.utils.logging_utils import get_logger, setup_logging
 
-logger = logging.getLogger(__name__)
+setup_logging()
+logger = get_logger(__name__)
 
 
 class BaseAgent(ResponsesAgent, abc.ABC):
@@ -36,7 +36,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         self,
         agent_type: str,
         llm_endpoint: Optional[str] = None,
-        tools: Optional[list[ToolInfo]] = None,
+        tools: Optional[list[dict]] = None,  # UC function tools format
         system_prompt: Optional[str] = None,
         config_dir: Optional[Path | str] = None,
     ):
@@ -45,7 +45,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         Args:
             agent_type: Type of agent (used for config loading)
             llm_endpoint: Optional override for LLM endpoint
-            tools: Optional list of tools (overrides config)
+            tools: Optional list of UC function tools
             system_prompt: Optional override for system prompt
             config_dir: Optional directory for config files
         """
@@ -60,12 +60,14 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             self.workspace_client.serving_endpoints.get_open_ai_client()
         )
 
+        # init UC function client for tool execution
+        self.uc_client = DatabricksFunctionClient()
+
         # system prompt
         self.system_prompt = system_prompt or self.config.system_prompt
 
         # set up tools
-        self.tools = tools or self._create_tools_from_config()
-        self._tools_dict = {tool.name: tool for tool in self.tools}
+        self.tools = tools or self._load_tools_from_config()
 
         logger.info(f"Initialized {agent_type} agent with {len(self.tools)} tools")
 
@@ -86,91 +88,67 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         if agent_type in cls._config_cache:
             return cls._config_cache[agent_type]
 
-        # get config file
-        if config_dir is None:
-            package_dir = Path(__file__).parent.parent
-            project_root = package_dir.parent
-            config_dir = project_root / "configs" / "agents"
-        else:
-            config_dir = Path(config_dir)
-
-        config_path = config_dir / f"{agent_type}.yaml"
-
-        if not config_path.exists():
-            raise FileNotFoundError(
-                f"No config file found for agent type: {agent_type} at {config_path}"
-            )
-
-        # load and validate
         try:
-            with open(config_path) as f:
-                config_dict = yaml.safe_load(f)
+            # Use the ConfigManager to get the config
+            from telco_support_agent.agents.config import config_manager
 
+            config_dict = config_manager.get_config(agent_type)
+
+            # Validate the config with Pydantic
             config = AgentConfig(**config_dict)
             cls._config_cache[agent_type] = config
 
             return config
 
-        except (yaml.YAMLError, ValidationError) as e:
+        except (FileNotFoundError, ValueError) as e:
             raise ValueError(f"Invalid configuration for {agent_type}: {e}") from e
 
-    def _create_tools_from_config(self) -> list[ToolInfo]:
-        """Create tool objects from configuration.
+    def _load_tools_from_config(self) -> list[dict]:
+        """Load UC function tools based on the agent's domain.
 
         Returns:
-            List of configured tools
+            List of UC function tool specifications
         """
-        tools = []
+        try:
+            # get UC functions for the agent / sub-agent's domain
+            function_names = (
+                self.config.uc_functions if hasattr(self.config, "uc_functions") else []
+            )
 
-        for tool_config in self.config.tools:
-            # get tool implementation method
-            method_name = f"tool_{tool_config.name}"
-            if not hasattr(self, method_name):
-                logger.warning(f"No implementation found for tool {tool_config.name}")
-                continue
+            if not function_names:
+                logger.warning(
+                    f"No UC functions configured for agent type: {self.agent_type}"
+                )
+                return []
 
-            tool_method = getattr(self, method_name)
+            # toolkit with specified functions
+            toolkit = UCFunctionToolkit(function_names=function_names)
+            return toolkit.tools
 
-            # create tool spec
-            parameters_dict = {"type": "object", "properties": {}, "required": []}
-
-            for param_name, param_config in tool_config.parameters.items():
-                param_dict = {
-                    "type": param_config.type,
-                    "description": param_config.description,
-                }
-
-                if param_config.enum:
-                    param_dict["enum"] = param_config.enum
-
-                parameters_dict["properties"][param_name] = param_dict
-                parameters_dict["required"].append(param_name)
-
-            tool_spec = {
-                "type": "function",
-                "function": {
-                    "name": tool_config.name,
-                    "description": tool_config.description,
-                    "parameters": parameters_dict,
-                },
-            }
-            tool = ToolInfo(name=tool_config.name, spec=tool_spec, exec_fn=tool_method)
-
-            tools.append(tool)
-
-        return tools
+        except Exception as e:
+            logger.error(f"Error loading UC function tools: {str(e)}")
+            return []
 
     def get_tool_specs(self) -> list[dict]:
         """Return tool specifications in the format LLM expects."""
-        return [tool.spec for tool in self.tools]
+        return self.tools
 
     @mlflow.trace(span_type=SpanType.TOOL)
     def execute_tool(self, tool_name: str, args: dict) -> Any:
-        """Execute tool with given args."""
-        if tool_name not in self._tools_dict:
-            return f"Error: Tool '{tool_name}' not found."
+        """Execute UC function tool with given args."""
+        try:
+            # replace any underscores to dots in function name
+            tool_name = tool_name.replace("__", ".")
 
-        return self._tools_dict[tool_name].exec_fn(**args)
+            # execute tool using UC function client
+            result = self.uc_client.execute_function(
+                function_name=tool_name, parameters=args
+            )
+            return result.value
+        except Exception as e:
+            error_msg = f"Error executing tool {tool_name}: {str(e)}"
+            logger.error(error_msg)
+            return error_msg
 
     def convert_to_chat_completion_format(
         self, message: dict[str, Any]
@@ -224,19 +202,46 @@ class BaseAgent(ResponsesAgent, abc.ABC):
     @backoff.on_exception(backoff.expo, Exception)
     @mlflow.trace(span_type=SpanType.LLM)
     def call_llm(self, messages: list[dict[str, Any]]) -> dict[str, Any]:
-        """Call LLM with provided message history.
-
-        Args:
-            messages: List of messages to send to the LLM
-
-        Returns:
-            LLM response message
-        """
+        """Call LLM with provided message history."""
         try:
+            cleaned_tools = []
+            for tool in self.get_tool_specs():
+                if "function" in tool:
+                    cleaned_tool = {
+                        "type": "function",
+                        "function": {
+                            "name": tool["function"]["name"],
+                            "description": tool["function"].get("description", ""),
+                            "parameters": {
+                                "type": "object",
+                                "properties": {},
+                                "required": [],
+                            },
+                        },
+                    }
+
+                    if (
+                        "parameters" in tool["function"]
+                        and "properties" in tool["function"]["parameters"]
+                    ):
+                        cleaned_tool["function"]["parameters"]["properties"] = tool[
+                            "function"
+                        ]["parameters"]["properties"]
+
+                    if (
+                        "parameters" in tool["function"]
+                        and "required" in tool["function"]["parameters"]
+                    ):
+                        cleaned_tool["function"]["parameters"]["required"] = tool[
+                            "function"
+                        ]["parameters"]["required"]
+
+                    cleaned_tools.append(cleaned_tool)
+
             params = {
                 "model": self.llm_endpoint,
                 "messages": self.prepare_messages_for_llm(messages),
-                "tools": self.get_tool_specs(),
+                "tools": cleaned_tools,
                 **self.llm_params,
             }
 
@@ -246,8 +251,6 @@ class BaseAgent(ResponsesAgent, abc.ABC):
                 .message.to_dict()
             )
 
-            logger.debug(f"LLM response: {response}")
-
             return response
 
         except Exception as e:
@@ -256,7 +259,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
 
     def handle_tool_call(
         self, messages: list[dict[str, Any]], tool_calls: list[dict[str, Any]]
-    ) -> tuple[list[dict[str, Any]], list[ResponsesStreamEvent]]:
+    ) -> tuple[list[dict[str, Any]], list[ResponsesAgentStreamEvent]]:
         """Execute tool calls and return updated messages and response events.
 
         Args:
@@ -294,7 +297,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             }
 
             events.append(
-                ResponsesStreamEvent(
+                ResponsesAgentStreamEvent(
                     type="response.output_item.done", item=responses_tool_call_output
                 )
             )
@@ -303,7 +306,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
 
     def call_and_run_tools(
         self, messages: list[dict[str, Any]], max_iter: int = 10
-    ) -> Generator[ResponsesStreamEvent, None, None]:
+    ) -> Generator[ResponsesAgentStreamEvent, None, None]:
         """Run the call-tool-response loop up to max_iter times.
 
         Args:
@@ -311,7 +314,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             max_iter: Maximum number of iterations
 
         Yields:
-            ResponsesStreamEvent objects
+            ResponsesAgentStreamEvent objects
         """
         current_messages = messages.copy()
 
@@ -332,7 +335,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
                 current_messages.append(llm_output)
                 if tool_calls := llm_output.get("tool_calls", None):
                     for tool_call in tool_calls:
-                        yield ResponsesStreamEvent(
+                        yield ResponsesAgentStreamEvent(
                             type="response.output_item.done",
                             item={
                                 "type": "function_call",
@@ -343,7 +346,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
                             },
                         )
                 else:
-                    yield ResponsesStreamEvent(
+                    yield ResponsesAgentStreamEvent(
                         type="response.output_item.done",
                         item={
                             "role": llm_output["role"],
@@ -358,7 +361,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
                         },
                     )
 
-        yield ResponsesStreamEvent(
+        yield ResponsesAgentStreamEvent(
             type="response.output_item.done",
             item={
                 "id": str(uuid4()),
@@ -374,21 +377,21 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         )
 
     @mlflow.trace(span_type=SpanType.AGENT)
-    def predict(self, model_input: ResponsesRequest) -> ResponsesResponse:
+    def predict(self, model_input: ResponsesAgentRequest) -> ResponsesAgentResponse:
         """Make prediction based on input request."""
         outputs = [
             event.item
             for event in self.predict_stream(model_input)
             if event.type == "response.output_item.done"
         ]
-        return ResponsesResponse(
+        return ResponsesAgentResponse(
             output=outputs, custom_outputs=model_input.custom_inputs
         )
 
     @mlflow.trace(span_type=SpanType.AGENT)
     def predict_stream(
-        self, model_input: ResponsesRequest
-    ) -> Generator[ResponsesStreamEvent, None, None]:
+        self, model_input: ResponsesAgentRequest
+    ) -> Generator[ResponsesAgentStreamEvent, None, None]:
         """Stream predictions."""
         messages = [{"role": "system", "content": self.system_prompt}] + [
             i.model_dump() for i in model_input.input
