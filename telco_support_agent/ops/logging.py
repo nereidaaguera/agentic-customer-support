@@ -58,7 +58,7 @@ def log_agent(
         current_path = Path(module_path).parent
         package_dir = None
 
-        for _ in range(10):
+        for _ in range(10):  # limit search depth
             if current_path.name == "telco_support_agent":
                 package_dir = current_path
                 break
@@ -127,17 +127,31 @@ def log_agent(
 
     # default extra_pip_requirements to include project requirements.txt
     if extra_pip_requirements is None:
+        extra_pip_requirements = []
         try:
             requirements_path = package_dir.parent / "requirements.txt"
             if requirements_path.exists():
-                extra_pip_requirements = [str(requirements_path)]
-                logger.info(f"Using requirements.txt: {requirements_path}")
+                with requirements_path.open("r") as f:
+                    file_requirements = [
+                        line.strip()
+                        for line in f
+                        if line.strip() and not line.startswith("#")
+                    ]
+                    if file_requirements:
+                        extra_pip_requirements.extend(file_requirements)
+                        logger.info(
+                            f"Found {len(file_requirements)} requirements in requirements.txt"
+                        )
+                    else:
+                        logger.warning(
+                            "requirements.txt exists but is empty or contains only comments"
+                        )
             else:
                 logger.warning(
                     "requirements.txt not found, no extra pip requirements specified"
                 )
         except Exception as e:
-            logger.warning(f"Error finding requirements.txt: {e}")
+            logger.warning(f"Error reading requirements.txt: {e}")
     elif isinstance(extra_pip_requirements, str):
         extra_pip_requirements = [extra_pip_requirements]
 
