@@ -45,17 +45,18 @@ def log_agent(
     # get path to the agent's module file
     module_path = inspect.getfile(agent_class)
     logger.info(f"Using agent file: {module_path}")
-    
+
     # get package directory
     try:
         from telco_support_agent import PROJECT_ROOT
+
         package_dir = PROJECT_ROOT / "telco_support_agent"
         logger.info(f"Using package directory: {package_dir}")
     except ImportError:
         # fallback: find package directory by walking up from module path
         current_path = Path(module_path).parent
         package_dir = None
-        
+
         for _ in range(10):
             if current_path.name == "telco_support_agent":
                 package_dir = current_path
@@ -64,12 +65,14 @@ def log_agent(
             if parent == current_path:
                 break
             current_path = parent
-            
+
         if package_dir is None:
-            raise ValueError("Could not find telco_support_agent package directory") from None
-        
+            raise ValueError(
+                "Could not find telco_support_agent package directory"
+            ) from None
+
         logger.info(f"Using fallback package directory: {package_dir}")
-    
+
     package_dir_str = str(package_dir)
     logger.info(f"Package directory path: {package_dir_str}")
 
