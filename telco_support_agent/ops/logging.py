@@ -37,7 +37,8 @@ def log_agent(
         resources: Databricks resources needed for automatic authentication
         pip_requirements: List of pip requirements
         input_example: Optional input example for MLflow signature inference
-        extra_pip_requirements: Additional pip requirements
+        extra_pip_requirements: Additional pip requirements. If None, automatically
+            includes the project's requirements.txt file if it exists.
 
     Returns:
         ModelInfo object containing details of the logged model
@@ -73,6 +74,7 @@ def log_agent(
 
         logger.info(f"Using fallback package directory: {package_dir}")
 
+    # convert to string for MLflow
     package_dir_str = str(package_dir)
     logger.info(f"Package directory path: {package_dir_str}")
 
@@ -122,6 +124,22 @@ def log_agent(
         input_example = {
             "input": [{"role": "user", "content": "Hello, how can you help me today?"}]
         }
+
+    # default extra_pip_requirements to include project requirements.txt
+    if extra_pip_requirements is None:
+        try:
+            requirements_path = package_dir.parent / "requirements.txt"
+            if requirements_path.exists():
+                extra_pip_requirements = [str(requirements_path)]
+                logger.info(f"Using requirements.txt: {requirements_path}")
+            else:
+                logger.warning(
+                    "requirements.txt not found, no extra pip requirements specified"
+                )
+        except Exception as e:
+            logger.warning(f"Error finding requirements.txt: {e}")
+    elif isinstance(extra_pip_requirements, str):
+        extra_pip_requirements = [extra_pip_requirements]
 
     with mlflow.start_run():
         try:
