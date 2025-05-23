@@ -1,7 +1,7 @@
 # Vector Search Config
 
 environment:
-  catalog: telco_customer_support_dev
+  catalog: telco_customer_support_prod
   source_schema: bronze
   agent_schema: agent
 
