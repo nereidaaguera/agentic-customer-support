@@ -1,5 +1,17 @@
-"""Tech support tools."""
+"""Tech support tools.
 
-from .retrieval import KnowledgeBaseRetriever, SupportTicketsRetriever, TechSupportRetriever
+Provides retrieval tools for accessing knowledge base articles
+and historical support tickets to answer technical support queries.
+"""
 
-__all__ = ["KnowledgeBaseRetriever", "SupportTicketsRetriever", "TechSupportRetriever"]
+from .retrieval import (
+    KnowledgeBaseRetriever,
+    SupportTicketsRetriever,
+    TechSupportRetriever,
+)
+
+__all__ = [
+    "KnowledgeBaseRetriever",
+    "SupportTicketsRetriever",
+    "TechSupportRetriever",
+]
