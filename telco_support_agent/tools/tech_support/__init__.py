@@ -1,5 +1,5 @@
-"""Tech support tools for the telecom support agent."""
+"""Tech support tools."""
 
-from .retrieval import KnowledgeBaseRetriever, SupportTicketsRetriever
+from .retrieval import KnowledgeBaseRetriever, SupportTicketsRetriever, TechSupportRetriever
 
-__all__ = ["KnowledgeBaseRetriever", "SupportTicketsRetriever"]
+__all__ = ["KnowledgeBaseRetriever", "SupportTicketsRetriever", "TechSupportRetriever"]
