@@ -1,6 +1,7 @@
 """Log Agent models to MLflow using Models from Code approach."""
 
 import inspect
+from pathlib import Path
 from typing import Optional
 
 import mlflow
@@ -36,7 +37,8 @@ def log_agent(
         resources: Databricks resources needed for automatic authentication
         pip_requirements: List of pip requirements
         input_example: Optional input example for MLflow signature inference
-        extra_pip_requirements: Additional pip requirements
+        extra_pip_requirements: Additional pip requirements. If None, automatically
+            includes the project's requirements.txt file if it exists.
 
     Returns:
         ModelInfo object containing details of the logged model
@@ -45,12 +47,41 @@ def log_agent(
     module_path = inspect.getfile(agent_class)
     logger.info(f"Using agent file: {module_path}")
 
-    # collect config files as artifacts
-    artifacts = {}
+    # get package directory
     try:
         from telco_support_agent import PROJECT_ROOT
 
-        config_dir = PROJECT_ROOT / "configs" / "agents"
+        package_dir = PROJECT_ROOT / "telco_support_agent"
+        logger.info(f"Using package directory: {package_dir}")
+    except ImportError:
+        # fallback: find package directory by walking up from module path
+        current_path = Path(module_path).parent
+        package_dir = None
+
+        for _ in range(10):  # limit search depth
+            if current_path.name == "telco_support_agent":
+                package_dir = current_path
+                break
+            parent = current_path.parent
+            if parent == current_path:
+                break
+            current_path = parent
+
+        if package_dir is None:
+            raise ValueError(
+                "Could not find telco_support_agent package directory"
+            ) from None
+
+        logger.info(f"Using fallback package directory: {package_dir}")
+
+    # convert to string for MLflow
+    package_dir_str = str(package_dir)
+    logger.info(f"Package directory path: {package_dir_str}")
+
+    # collect config files as artifacts
+    artifacts = {}
+    try:
+        config_dir = package_dir.parent / "configs" / "agents"
         logger.debug(f"Looking for config files in: {config_dir}")
 
         if config_dir.exists() and config_dir.is_dir():
@@ -94,9 +125,40 @@ def log_agent(
             "input": [{"role": "user", "content": "Hello, how can you help me today?"}]
         }
 
+    # default extra_pip_requirements to include project requirements.txt
+    if extra_pip_requirements is None:
+        extra_pip_requirements = []
+        try:
+            requirements_path = package_dir.parent / "requirements.txt"
+            if requirements_path.exists():
+                with requirements_path.open("r") as f:
+                    file_requirements = [
+                        line.strip()
+                        for line in f
+                        if line.strip() and not line.startswith("#")
+                    ]
+                    if file_requirements:
+                        extra_pip_requirements.extend(file_requirements)
+                        logger.info(
+                            f"Found {len(file_requirements)} requirements in requirements.txt"
+                        )
+                    else:
+                        logger.warning(
+                            "requirements.txt exists but is empty or contains only comments"
+                        )
+            else:
+                logger.warning(
+                    "requirements.txt not found, no extra pip requirements specified"
+                )
+        except Exception as e:
+            logger.warning(f"Error reading requirements.txt: {e}")
+    elif isinstance(extra_pip_requirements, str):
+        extra_pip_requirements = [extra_pip_requirements]
+
     with mlflow.start_run():
         try:
-            if "config_dir" in locals() and config_dir.exists():
+            config_dir = package_dir.parent / "configs" / "agents"
+            if config_dir.exists():
                 for config_file in config_dir.glob("*.yaml"):
                     with open(config_file) as f:
                         config_dict = yaml.safe_load(f)
@@ -108,6 +170,7 @@ def log_agent(
 
         model_info = mlflow.pyfunc.log_model(
             python_model=module_path,  # path to the module file
+            code_paths=[package_dir_str],  # include only the package directory
             name=name,
             input_example=input_example,
             resources=resources,
