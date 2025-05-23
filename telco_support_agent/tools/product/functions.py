@@ -28,9 +28,9 @@ def register_plans_info():
             FROM telco_customer_support_dev.bronze.plans
             """
         client.create_function(sql_function_body=sql)
-        print("Registered get_customer_info UC function")
+        print("Registered get_plans_info UC function")
     except Exception as e:
-        print(f"Error registering get_customer_info: {str(e)}")
+        print(f"Error registering get_plans_info: {str(e)}")
 
 
 # call registration functions

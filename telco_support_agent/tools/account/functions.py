@@ -31,7 +31,7 @@ def register_customer_info():
             )
           )
         )
-        FROM telco_customer_support_prod.bronze.customers
+        FROM telco_customer_support_dev.bronze.customers
         WHERE customer_id = customer_id
         LIMIT 1
         """
@@ -75,8 +75,8 @@ def register_customer_subscriptions():
               )
             )
           )
-          FROM telco_customer_support_prod.bronze.subscriptions s
-          JOIN telco_customer_support_prod.bronze.plans p ON s.plan_id = p.plan_id
+          FROM telco_customer_support_dev.bronze.subscriptions s
+          JOIN telco_customer_support_dev.bronze.plans p ON s.plan_id = p.plan_id
           WHERE s.customer_id = customer_id
           GROUP BY s.customer_id
           LIMIT 1
