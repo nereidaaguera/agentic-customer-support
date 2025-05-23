@@ -20,7 +20,7 @@ deployment:
   # Optional: Additional deployment tags beyond defaults
   tags:
     project: "telco_support_agent"
-    team: "databricks"
+    team: "databricks-agents"
     environment: "dev"
 
 # Environment variables for the deployed agent
