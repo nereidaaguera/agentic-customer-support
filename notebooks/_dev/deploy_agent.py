@@ -143,7 +143,6 @@ except Exception as e:
 
 # COMMAND ----------
 
-print("\n" + "="*50)
 print("DEPLOYMENT SUMMARY")
 print("="*50)
 print(f"Endpoint Name: {deployment_result.endpoint_name}")
@@ -155,14 +154,12 @@ print(f"Query Endpoint: {deployment_result.query_endpoint}")
 if hasattr(deployment_result, 'review_app_url'):
     print(f"Review App: {deployment_result.review_app_url}")
 
-print("="*50)
-
 # COMMAND ----------
 
 # MAGIC %md
 # MAGIC ## Test Deployed Endpoint
 # MAGIC 
-# MAGIC Verify the deployed endpoint works correctly.
+# MAGIC Verify the deployed endpoint works correctly
 
 # COMMAND ----------
 
