@@ -45,40 +45,38 @@ def log_agent(
     # get path to the agent's module file
     module_path = inspect.getfile(agent_class)
     logger.info(f"Using agent file: {module_path}")
-
-    # get package root directory
+    
+    # get package directory
     try:
         from telco_support_agent import PROJECT_ROOT
-
-        package_root = PROJECT_ROOT
-        logger.info(f"Using package root: {package_root}")
+        package_dir = PROJECT_ROOT / "telco_support_agent"
+        logger.info(f"Using package directory: {package_dir}")
     except ImportError:
+        # fallback: find package directory by walking up from module path
         current_path = Path(module_path).parent
-        package_root = None
-
+        package_dir = None
+        
         for _ in range(10):
-            if (current_path / "telco_support_agent").exists():
-                package_root = current_path
+            if current_path.name == "telco_support_agent":
+                package_dir = current_path
                 break
             parent = current_path.parent
             if parent == current_path:
                 break
             current_path = parent
-
-        if package_root is None:
-            raise ValueError(
-                "Could not find telco_support_agent package root"
-            ) from None
-
-        logger.info(f"Using fallback package root: {package_root}")
-
-    package_root_str = str(package_root)
-    logger.info(f"Package root path: {package_root_str}")
+            
+        if package_dir is None:
+            raise ValueError("Could not find telco_support_agent package directory") from None
+        
+        logger.info(f"Using fallback package directory: {package_dir}")
+    
+    package_dir_str = str(package_dir)
+    logger.info(f"Package directory path: {package_dir_str}")
 
     # collect config files as artifacts
     artifacts = {}
     try:
-        config_dir = package_root / "configs" / "agents"
+        config_dir = package_dir.parent / "configs" / "agents"
         logger.debug(f"Looking for config files in: {config_dir}")
 
         if config_dir.exists() and config_dir.is_dir():
@@ -124,7 +122,7 @@ def log_agent(
 
     with mlflow.start_run():
         try:
-            config_dir = package_root / "configs" / "agents"
+            config_dir = package_dir.parent / "configs" / "agents"
             if config_dir.exists():
                 for config_file in config_dir.glob("*.yaml"):
                     with open(config_file) as f:
@@ -137,7 +135,7 @@ def log_agent(
 
         model_info = mlflow.pyfunc.log_model(
             python_model=module_path,  # path to the module file
-            code_paths=[package_root_str],  # include entire package for imports
+            code_paths=[package_dir_str],  # include only the package directory
             name=name,
             input_example=input_example,
             resources=resources,
