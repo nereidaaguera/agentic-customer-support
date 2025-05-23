@@ -33,27 +33,26 @@ from telco_support_agent.ops.registry import get_latest_model_version
 
 # COMMAND ----------
 
-CONFIG_PATH = "../configs/deploy_agent.yaml"
+CONFIG_PATH = "../../configs/deploy_agent.yaml"
 
 with open(CONFIG_PATH) as f:
-    config = yaml.safe_load(f)
+    deploy_agent_config = yaml.safe_load(f)
 
 print("Loaded deployment configuration:")
-print(yaml.dump(config, sort_keys=False, default_flow_style=False))
+print(yaml.dump(deploy_agent_config, sort_keys=False, default_flow_style=False))
 
 # COMMAND ----------
 
-uc_config = config["uc_model"]
+uc_config = deploy_agent_config["uc_model"]
 uc_model_name = f"{uc_config['catalog']}.{uc_config['schema']}.{uc_config['model_name']}"
 
 if "version" in uc_config:
     model_version = uc_config["version"]
     print(f"Using specified model version: {model_version}")
 else:
-    model_version_obj = get_latest_model_version(uc_model_name)
-    if model_version_obj is None:
+    model_version = get_latest_model_version(uc_model_name)
+    if model_version is None:
         raise ValueError(f"No versions found for model: {uc_model_name}")
-    model_version = model_version_obj.version
     print(f"Using latest model version: {model_version}")
 
 # COMMAND ----------
@@ -63,8 +62,8 @@ else:
 
 # COMMAND ----------
 
-deployment_config = config.get("deployment", {})
-environment_vars = config.get("environment_vars", {})
+deployment_config = deploy_agent_config.get("deployment", {})
+environment_vars = deploy_agent_config.get("environment_vars", {})
 
 deployment_result = deploy_agent(
     uc_model_name=uc_model_name,
@@ -78,11 +77,9 @@ deployment_result = deploy_agent(
 
 print("== Deployment Summary ==")
 print(f"Endpoint Name: {deployment_result.endpoint_name}")
-print(f"Status: {deployment_result.status}")
-print(f"Query Endpoint: {deployment_result.query_endpoint}")
+print(f"Model: {uc_model_name} (version {model_version})")
 print(f"Workload Size: {deployment_config.get('workload_size', 'Default')}")
 print(f"Scale-to-zero: {'Enabled' if deployment_config.get('scale_to_zero_enabled', False) else 'Disabled'}")
-print(f"Model: {uc_model_name} (version {model_version})")
 
 # COMMAND ----------
 
