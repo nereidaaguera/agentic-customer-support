@@ -57,7 +57,7 @@ class KnowledgeBaseRetriever:
 
         self.retriever = VectorSearchRetrieverTool(
             index_name=self.index_name,
-            tool_name="knowledge_base_vector_search",
+            tool_name="vector_search_knowledge_base",
             tool_description=(
                 "Search the knowledge base articles for policies, procedures, FAQs, "
                 "troubleshooting guides, and setup instructions. Use this for finding "
@@ -82,7 +82,7 @@ class KnowledgeBaseRetriever:
             List of documents
         """
         with mlflow.start_span(
-            name="search_knowledge_base", span_type=SpanType.RETRIEVER
+            name="vector_search_knowledge_base", span_type=SpanType.RETRIEVER
         ) as span:
             span.set_attributes(
                 {
@@ -131,7 +131,7 @@ class KnowledgeBaseRetriever:
             List of documents
         """
         with mlflow.start_span(
-            name="async_search_knowledge_base", span_type=SpanType.RETRIEVER
+            name="vector_search_knowledge_base", span_type=SpanType.RETRIEVER
         ) as span:
             span.set_attributes(
                 {
@@ -209,7 +209,7 @@ class SupportTicketsRetriever:
 
         self.retriever = VectorSearchRetrieverTool(
             index_name=self.index_name,
-            tool_name="support_tickets_vector_search",
+            tool_name="vector_search_support_tickets",
             tool_description=(
                 "Search historical support tickets for similar issues and their resolutions. "
                 "Use this to find how similar technical problems were solved in the past, "
@@ -234,7 +234,7 @@ class SupportTicketsRetriever:
             List of documents
         """
         with mlflow.start_span(
-            name="search_support_tickets", span_type=SpanType.RETRIEVER
+            name="vector_search_support_tickets", span_type=SpanType.RETRIEVER
         ) as span:
             span.set_attributes(
                 {
@@ -284,7 +284,7 @@ class SupportTicketsRetriever:
             List of documents from the vector index
         """
         with mlflow.start_span(
-            name="async_search_support_tickets", span_type=SpanType.RETRIEVER
+            name="vector_search_support_tickets", span_type=SpanType.RETRIEVER
         ) as span:
             span.set_attributes(
                 {
@@ -365,15 +365,7 @@ class TechSupportRetriever:
         Returns:
             Knowledge base search results as list of documents
         """
-        with mlflow.start_span(
-            name="search_knowledge_base", span_type=SpanType.RETRIEVER
-        ) as span:
-            span.set_attributes({"search_scope": "knowledge_base_only"})
-            span.set_inputs({"query": query, "filters": filters})
-
-            result = self.kb_retriever.search(query, filters)
-            span.set_outputs({"result": result})
-            return result
+        return self.kb_retriever.search(query, filters)
 
     def search_tickets(
         self, query: str, filters: Optional[dict[str, Any]] = None
@@ -387,15 +379,7 @@ class TechSupportRetriever:
         Returns:
             Support tickets search results as list of documents
         """
-        with mlflow.start_span(
-            name="search_support_tickets", span_type=SpanType.RETRIEVER
-        ) as span:
-            span.set_attributes({"search_scope": "support_tickets_only"})
-            span.set_inputs({"query": query, "filters": filters})
-
-            result = self.tickets_retriever.search(query, filters)
-            span.set_outputs({"result": result})
-            return result
+        return self.tickets_retriever.search(query, filters)
 
     async def async_search(
         self,
@@ -417,7 +401,7 @@ class TechSupportRetriever:
             Dictionary with results from both sources plus metadata
         """
         with mlflow.start_span(
-            name="async_vector_search", span_type=SpanType.RETRIEVER
+            name="vector_search_tech_support", span_type=SpanType.RETRIEVER
         ) as span:
             span.set_inputs(
                 {
