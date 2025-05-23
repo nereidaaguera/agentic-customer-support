@@ -71,7 +71,7 @@ class KnowledgeBaseRetriever:
 
     def search(
         self, query: str, filters: Optional[dict[str, Any]] = None
-    ) -> dict[str, Any]:
+    ) -> list[dict[str, Any]]:
         """Search knowledge base for relevant articles.
 
         Args:
@@ -79,7 +79,7 @@ class KnowledgeBaseRetriever:
             filters: Optional filters to apply (e.g., {"category": "Technical"})
 
         Returns:
-            Search results from the vector index
+            List of documents
         """
         with mlflow.start_span(
             name="search_knowledge_base", span_type=SpanType.RETRIEVER
@@ -99,17 +99,19 @@ class KnowledgeBaseRetriever:
                 results = self.retriever.execute(query=query, filters=filters)
                 search_time = time.time() - start_time
 
+                results_count = len(results) if isinstance(results, list) else 0
+
                 span.set_outputs(
                     {
                         "results": results,
                         "search_duration_ms": round(search_time * 1000, 2),
-                        "results_count": len(
-                            results.get("result", {}).get("data_array", [])
-                        ),
+                        "results_count": results_count,
                     }
                 )
 
-                logger.info(f"Knowledge base search completed in {search_time:.3f}s")
+                logger.info(
+                    f"Knowledge base search completed in {search_time:.3f}s, found {results_count} results"
+                )
                 return results
 
             except Exception as e:
@@ -118,7 +120,7 @@ class KnowledgeBaseRetriever:
 
     async def search_async(
         self, query: str, filters: Optional[dict[str, Any]] = None
-    ) -> dict[str, Any]:
+    ) -> list[dict[str, Any]]:
         """Async search knowledge base.
 
         Args:
@@ -126,7 +128,7 @@ class KnowledgeBaseRetriever:
             filters: Optional filters to apply
 
         Returns:
-            Search results from the vector index
+            List of documents
         """
         with mlflow.start_span(
             name="async_search_knowledge_base", span_type=SpanType.RETRIEVER
@@ -149,18 +151,18 @@ class KnowledgeBaseRetriever:
                 )
                 search_time = time.time() - start_time
 
+                results_count = len(results) if isinstance(results, list) else 0
+
                 span.set_outputs(
                     {
                         "results": results,
                         "search_duration_ms": round(search_time * 1000, 2),
-                        "results_count": len(
-                            results.get("result", {}).get("data_array", [])
-                        ),
+                        "results_count": results_count,
                     }
                 )
 
                 logger.info(
-                    f"Knowledge base async search completed in {search_time:.3f}s"
+                    f"Knowledge base async search completed in {search_time:.3f}s, found {results_count} results"
                 )
                 return results
 
@@ -221,7 +223,7 @@ class SupportTicketsRetriever:
 
     def search(
         self, query: str, filters: Optional[dict[str, Any]] = None
-    ) -> dict[str, Any]:
+    ) -> list[dict[str, Any]]:
         """Search historical support tickets for similar issues.
 
         Args:
@@ -229,7 +231,7 @@ class SupportTicketsRetriever:
             filters: Optional filters to apply (e.g., {"priority": "High"})
 
         Returns:
-            Search results from the vector index
+            List of documents
         """
         with mlflow.start_span(
             name="search_support_tickets", span_type=SpanType.RETRIEVER
@@ -250,17 +252,19 @@ class SupportTicketsRetriever:
                 results = self.retriever.execute(query=query, filters=filters)
                 search_time = time.time() - start_time
 
+                results_count = len(results) if isinstance(results, list) else 0
+
                 span.set_outputs(
                     {
                         "results": results,
                         "search_duration_ms": round(search_time * 1000, 2),
-                        "results_count": len(
-                            results.get("result", {}).get("data_array", [])
-                        ),
+                        "results_count": results_count,
                     }
                 )
 
-                logger.info(f"Support tickets search completed in {search_time:.3f}s")
+                logger.info(
+                    f"Support tickets search completed in {search_time:.3f}s, found {results_count} results"
+                )
                 return results
 
             except Exception as e:
@@ -269,7 +273,7 @@ class SupportTicketsRetriever:
 
     async def search_async(
         self, query: str, filters: Optional[dict[str, Any]] = None
-    ) -> dict[str, Any]:
+    ) -> list[dict[str, Any]]:
         """Async search historical support tickets for similar issues.
 
         Args:
@@ -277,7 +281,7 @@ class SupportTicketsRetriever:
             filters: Optional filters to apply
 
         Returns:
-            Search results from the vector index
+            List of documents from the vector index
         """
         with mlflow.start_span(
             name="async_search_support_tickets", span_type=SpanType.RETRIEVER
@@ -300,18 +304,18 @@ class SupportTicketsRetriever:
                 )
                 search_time = time.time() - start_time
 
+                results_count = len(results) if isinstance(results, list) else 0
+
                 span.set_outputs(
                     {
                         "results": results,
                         "search_duration_ms": round(search_time * 1000, 2),
-                        "results_count": len(
-                            results.get("result", {}).get("data_array", [])
-                        ),
+                        "results_count": results_count,
                     }
                 )
 
                 logger.info(
-                    f"Support tickets async search completed in {search_time:.3f}s"
+                    f"Support tickets async search completed in {search_time:.3f}s, found {results_count} results"
                 )
                 return results
 
@@ -351,7 +355,7 @@ class TechSupportRetriever:
 
     def search_knowledge_base(
         self, query: str, filters: Optional[dict[str, Any]] = None
-    ) -> dict[str, Any]:
+    ) -> list[dict[str, Any]]:
         """Search the knowledge base only.
 
         Args:
@@ -359,7 +363,7 @@ class TechSupportRetriever:
             filters: Optional filters to apply
 
         Returns:
-            Knowledge base search results
+            Knowledge base search results as list of documents
         """
         with mlflow.start_span(
             name="search_knowledge_base", span_type=SpanType.RETRIEVER
@@ -373,7 +377,7 @@ class TechSupportRetriever:
 
     def search_tickets(
         self, query: str, filters: Optional[dict[str, Any]] = None
-    ) -> dict[str, Any]:
+    ) -> list[dict[str, Any]]:
         """Search historical support tickets only.
 
         Args:
@@ -381,7 +385,7 @@ class TechSupportRetriever:
             filters: Optional filters to apply
 
         Returns:
-            Support tickets search results
+            Support tickets search results as list of documents
         """
         with mlflow.start_span(
             name="search_support_tickets", span_type=SpanType.RETRIEVER
@@ -393,7 +397,7 @@ class TechSupportRetriever:
             span.set_outputs({"result": result})
             return result
 
-    async def search_async(
+    async def async_search(
         self,
         query: str,
         kb_filters: Optional[dict[str, Any]] = None,
@@ -441,6 +445,7 @@ class TechSupportRetriever:
                     results["knowledge_base"] = {"error": str(kb_results)}
                 else:
                     results["knowledge_base"] = kb_results
+
                 if isinstance(tickets_results, Exception):
                     logger.error(f"Support tickets search failed: {tickets_results}")
                     results["support_tickets"] = {"error": str(tickets_results)}
@@ -457,18 +462,10 @@ class TechSupportRetriever:
                 tickets_success = "error" not in results.get("support_tickets", {})
 
                 total_results = 0
-                if kb_success:
-                    total_results += len(
-                        results.get("knowledge_base", {})
-                        .get("result", {})
-                        .get("data_array", [])
-                    )
-                if tickets_success:
-                    total_results += len(
-                        results.get("support_tickets", {})
-                        .get("result", {})
-                        .get("data_array", [])
-                    )
+                if kb_success and isinstance(results.get("knowledge_base"), list):
+                    total_results += len(results["knowledge_base"])
+                if tickets_success and isinstance(results.get("support_tickets"), list):
+                    total_results += len(results["support_tickets"])
 
                 span.set_outputs(
                     {
@@ -479,7 +476,8 @@ class TechSupportRetriever:
                 )
 
                 logger.info(
-                    f"Async parallel search completed in {total_duration:.3f}s "
+                    f"Async parallel search completed in {total_duration:.3f}s, "
+                    f"found {total_results} total results"
                 )
 
                 return results

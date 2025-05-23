@@ -25,13 +25,16 @@ if root_path:
 
 # COMMAND ----------
 
-import mlflow
 from mlflow.types.responses import ResponsesAgentRequest
 
 from telco_support_agent.agents.tech_support import TechSupportAgent
 from telco_support_agent.utils.logging_utils import setup_logging
 
 setup_logging()
+
+# running async functions in notebook
+import nest_asyncio
+nest_asyncio.apply()
 
 # COMMAND ----------
 
@@ -63,9 +66,9 @@ print(f"   Tickets Index: {tech_agent.retriever.tickets_retriever.index_name}")
 
 # COMMAND ----------
 
-def test_query(query):
+def test_query(query, test_id=""):
     print(f"\n{'='*80}")
-    print(f"TEST QUERY: \"{query}\"")
+    print(f"TEST QUERY{test_id}: \"{query}\"")
     print('='*80)
         
     request = ResponsesAgentRequest(
@@ -103,25 +106,53 @@ def test_query(query):
 
 # COMMAND ----------
 
+print("Knowledge Base Retriever:")
 kb_results = tech_agent.retriever.search_knowledge_base("how to manage multiple lines")
-kb_count = len(kb_results.get("result", {}).get("data_array", []))
+# Now kb_results is a List[Dict] directly
+kb_count = len(kb_results) if isinstance(kb_results, list) else 0
 print(f"   Found {kb_count} knowledge base articles")
 
 print("\nSupport Tickets Retriever:")
 tickets_results = tech_agent.retriever.search_tickets("iPhone connectivity issues")
-tickets_count = len(tickets_results.get("result", {}).get("data_array", []))
+# Now tickets_results is a List[Dict] directly
+tickets_count = len(tickets_results) if isinstance(tickets_results, list) else 0
 print(f"   Found {tickets_count} historical support tickets")
 
-print("Combined Search:")
-combined_results = tech_agent.retriever.search_parallel("network connection problems")
-kb_combined = len(combined_results.get("knowledge_base", {}).get("result", {}).get("data_array", []))
-tickets_combined = len(combined_results.get("support_tickets", {}).get("result", {}).get("data_array", []))
+print("\nCombined Search (Async):")
+import asyncio
+combined_results = asyncio.run(tech_agent.retriever.async_search("network connection problems"))
+
+kb_combined = 0
+tickets_combined = 0
+
+if "knowledge_base" in combined_results:
+    kb_data = combined_results["knowledge_base"]
+    if isinstance(kb_data, list):
+        kb_combined = len(kb_data)
+    elif isinstance(kb_data, dict) and "error" not in kb_data:
+        kb_combined = len(kb_data) if isinstance(kb_data, list) else 0
+
+if "support_tickets" in combined_results:
+    tickets_data = combined_results["support_tickets"]
+    if isinstance(tickets_data, list):
+        tickets_combined = len(tickets_data)
+    elif isinstance(tickets_data, dict) and "error" not in tickets_data:
+        tickets_combined = len(tickets_data) if isinstance(tickets_data, list) else 0
+
 print(f"   Found {kb_combined} KB + {tickets_combined} tickets")
+
+if kb_results and isinstance(kb_results, list) and len(kb_results) > 0:
+    print(f"\nSample KB Result:")
+    sample_kb = kb_results[0]
+    if isinstance(sample_kb, dict):
+        print(f"   Title: {sample_kb.get('metadata', {}).get('title', 'N/A')}")
+        print(f"   Category: {sample_kb.get('metadata', {}).get('category', 'N/A')}")
+        print(f"   Content: {sample_kb.get('page_content', '')}")
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Queires for Testing
+# MAGIC ## Test queries
 
 # COMMAND ----------
 
@@ -132,6 +163,7 @@ roaming_device_queries = [
     "Why does my Galaxy S24 work fine internationally but my iPhone 15 Pro Max doesn't on the same plan?",
     "How long does it take for international roaming features to activate after I add them to my plan?"
 ]
+
 for i, query in enumerate(roaming_device_queries, 1):
     test_query(query, f"_roaming_{i}")
 
@@ -147,6 +179,7 @@ general_tech_queries = [
     "How do I manually select a network when traveling?",
     "What should I do if my phone keeps dropping calls in my area?"
 ]
+
 for i, query in enumerate(general_tech_queries, 1):
     test_query(query, f"_general_{i}")
 

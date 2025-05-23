@@ -27,7 +27,7 @@ class TechSupportAgent(BaseAgent):
         config_dir: Optional[str] = None,
         environment: str = "prod",
     ) -> None:
-        """Init agent
+        """Init agent.
 
         Args:
             llm_endpoint: Optional LLM endpoint override
