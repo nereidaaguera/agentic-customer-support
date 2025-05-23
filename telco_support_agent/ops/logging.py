@@ -1,53 +1,17 @@
 """Log Agent models to MLflow using Models from Code approach."""
 
 import inspect
+from pathlib import Path
 from typing import Optional
 
 import mlflow
+import yaml
 from mlflow.models.model import ModelInfo
 from mlflow.models.resources import Resource
 
 from telco_support_agent.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
-
-
-def collect_dependent_files() -> list[str]:
-    """Collect all Python files that the agent depends on.
-
-    Args:
-        agent_class: The agent class to analyze
-
-    Returns:
-        List of file paths that should be included as code_paths
-    """
-    from telco_support_agent import PROJECT_ROOT
-
-    # core files that supervisor.py depends on
-    dependent_files = [
-        "telco_support_agent/__init__.py",
-        "telco_support_agent/agents/__init__.py",
-        "telco_support_agent/agents/types.py",
-        "telco_support_agent/agents/base_agent.py",
-        "telco_support_agent/agents/account.py",
-        "telco_support_agent/agents/config.py",
-        "telco_support_agent/utils/__init__.py",
-        "telco_support_agent/utils/logging_utils.py",
-        "telco_support_agent/tools/__init__.py",
-        "telco_support_agent/tools/registry.py",
-        "telco_support_agent/config.py",
-    ]
-
-    code_paths = []
-    for file_path in dependent_files:
-        full_path = PROJECT_ROOT / file_path
-        if full_path.exists():
-            code_paths.append(str(full_path))
-            logger.info(f"Adding code dependency: {file_path}")
-        else:
-            logger.warning(f"Dependency file not found: {full_path}")
-
-    return code_paths
 
 
 def log_agent(
@@ -82,20 +46,50 @@ def log_agent(
     module_path = inspect.getfile(agent_class)
     logger.info(f"Using agent file: {module_path}")
 
-    # collect all dependent files
-    code_paths = collect_dependent_files()
+    # get package root directory
+    try:
+        from telco_support_agent import PROJECT_ROOT
+
+        package_root = PROJECT_ROOT
+        logger.info(f"Using package root: {package_root}")
+    except ImportError:
+        current_path = Path(module_path).parent
+        package_root = None
+
+        for _ in range(10):
+            if (current_path / "telco_support_agent").exists():
+                package_root = current_path
+                break
+            parent = current_path.parent
+            if parent == current_path:
+                break
+            current_path = parent
+
+        if package_root is None:
+            raise ValueError(
+                "Could not find telco_support_agent package root"
+            ) from None
+
+        logger.info(f"Using fallback package root: {package_root}")
+
+    package_root_str = str(package_root)
+    logger.info(f"Package root path: {package_root_str}")
 
     # collect config files as artifacts
     artifacts = {}
     try:
-        from telco_support_agent import PROJECT_ROOT
+        config_dir = package_root / "configs" / "agents"
+        logger.debug(f"Looking for config files in: {config_dir}")
 
-        config_dir = PROJECT_ROOT / "configs" / "agents"
         if config_dir.exists() and config_dir.is_dir():
             for config_file in config_dir.glob("*.yaml"):
                 artifact_key = f"configs/agents/{config_file.name}"
                 artifacts[artifact_key] = str(config_file)
                 logger.info(f"Adding config artifact: {artifact_key}")
+        else:
+            logger.warning(
+                f"Config directory doesn't exist or isn't a directory: {config_dir}"
+            )
     except Exception as e:
         logger.warning(f"Error collecting config artifacts: {e}", exc_info=True)
 
@@ -111,7 +105,7 @@ def log_agent(
                 DatabricksServingEndpoint(endpoint_name=agent_instance.llm_endpoint)
             )
 
-        # Registered functions
+        # registered functions
         if hasattr(agent_instance, "get_tool_specs"):
             from mlflow.models.resources import DatabricksFunction
 
@@ -129,14 +123,26 @@ def log_agent(
         }
 
     with mlflow.start_run():
+        try:
+            config_dir = package_root / "configs" / "agents"
+            if config_dir.exists():
+                for config_file in config_dir.glob("*.yaml"):
+                    with open(config_file) as f:
+                        config_dict = yaml.safe_load(f)
+                        mlflow.log_dict(
+                            config_dict, f"configs/agents/{config_file.name}"
+                        )
+        except Exception as e:
+            logger.warning(f"Error logging config dictionaries: {e}")
+
         model_info = mlflow.pyfunc.log_model(
             python_model=module_path,  # path to the module file
+            code_paths=[package_root_str],  # include entire package for imports
             name=name,
             input_example=input_example,
             resources=resources,
             pip_requirements=pip_requirements,
             extra_pip_requirements=extra_pip_requirements,
-            code_paths=code_paths,  # include all dependent files
             artifacts=artifacts,
         )
 
