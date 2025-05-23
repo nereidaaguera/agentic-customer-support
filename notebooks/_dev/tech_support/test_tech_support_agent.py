@@ -108,13 +108,11 @@ def test_query(query, test_id=""):
 
 print("Knowledge Base Retriever:")
 kb_results = tech_agent.retriever.search_knowledge_base("how to manage multiple lines")
-# Now kb_results is a List[Dict] directly
 kb_count = len(kb_results) if isinstance(kb_results, list) else 0
 print(f"   Found {kb_count} knowledge base articles")
 
 print("\nSupport Tickets Retriever:")
 tickets_results = tech_agent.retriever.search_tickets("iPhone connectivity issues")
-# Now tickets_results is a List[Dict] directly
 tickets_count = len(tickets_results) if isinstance(tickets_results, list) else 0
 print(f"   Found {tickets_count} historical support tickets")
 
