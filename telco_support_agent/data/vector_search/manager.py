@@ -5,7 +5,6 @@ indexes for knowledge base and support tickets data.
 """
 
 import time
-from pathlib import Path
 from typing import Any, Optional
 
 import yaml
@@ -104,9 +103,7 @@ class VectorSearchManager:
             logger.info(
                 f"Waiting for endpoint to come online (timeout: {timeout_minutes} minutes)..."
             )
-            self.client.wait_for_endpoint(
-                self.endpoint_name
-            )
+            self.client.wait_for_endpoint(self.endpoint_name)
             logger.info("Endpoint is online")
 
         except Exception as e:
@@ -182,8 +179,8 @@ class VectorSearchManager:
                 )
                 logger.info(f"   Status: {status}")
                 return existing_index
-            except:
-                pass  # index doesn't exist, proceed with creation
+            except Exception as e:
+                logger.debug(f"Index does not exist, proceeding with creation: {e}")
 
             kb_config = self.config["indexes"]["knowledge_base"]
             embedding_config = self.config["embedding"]
@@ -220,7 +217,9 @@ class VectorSearchManager:
                 existing_index = self.client.get_index(
                     index_name=self.tickets_index_name
                 )
-                logger.info(f"WARNING: Index '{self.tickets_index_name}' already exists")
+                logger.info(
+                    f"WARNING: Index '{self.tickets_index_name}' already exists"
+                )
                 status = (
                     existing_index.describe()
                     .get("status", {})
@@ -228,8 +227,8 @@ class VectorSearchManager:
                 )
                 logger.info(f"   Status: {status}")
                 return existing_index
-            except:
-                pass  # index doesn't exist, proceed with creation
+            except Exception as e:
+                logger.debug(f"Index does not exist, proceeding with creation: {e}")
 
             tickets_config = self.config["indexes"]["support_tickets"]
             embedding_config = self.config["embedding"]
@@ -246,7 +245,9 @@ class VectorSearchManager:
                 columns_to_sync=tickets_config["columns_to_sync"],
             )
 
-            logger.info(f"Success! Created support tickets index: {self.tickets_index_name}")
+            logger.info(
+                f"Success! Created support tickets index: {self.tickets_index_name}"
+            )
             return index
 
         except Exception as e:
@@ -267,9 +268,7 @@ class VectorSearchManager:
             index.sync()
 
             timeout_minutes = self.config["timeouts"]["index_sync"]
-            check_interval = (
-                self.config["timeouts"]["status_check_interval"] * 60
-            )
+            check_interval = self.config["timeouts"]["status_check_interval"] * 60
 
             logger.info(
                 f"Waiting for {index_name} to be ready (timeout: {timeout_minutes} minutes)..."
