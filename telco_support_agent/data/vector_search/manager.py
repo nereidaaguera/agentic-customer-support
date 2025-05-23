@@ -105,7 +105,7 @@ class VectorSearchManager:
                 f"Waiting for endpoint to come online (timeout: {timeout_minutes} minutes)..."
             )
             self.client.wait_for_endpoint(
-                self.endpoint_name, timeout=timeout_minutes * 60
+                self.endpoint_name
             )
             logger.info("Endpoint is online")
 
