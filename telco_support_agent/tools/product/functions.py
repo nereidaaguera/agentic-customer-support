@@ -15,18 +15,17 @@ def register_plans_info():
             COMMENT 'Provides detailed information about the plans available. Use this tool to address queries about plans and reasoning about plan comparisons.'
             RETURN
             SELECT to_json(
-              named_struct(
+              collect_list(named_struct(
                 'plan_name', plan_name,
                 'plan_type', plan_type,
                 'monthly_price', monthly_price,
                 'data_limit_gb', data_limit_gb,
-                'customer_status', customer_status,
                 'unlimited_calls', unlimited_calls,
                 'unlimited_texts', unlimited_texts,
                 'plan_description', description
-              )
+              ))
             )
-            FROM telco_customer_support_prod.bronze.plans
+            FROM telco_customer_support_dev.bronze.plans
             """
         client.create_function(sql_function_body=sql)
         print("Registered get_customer_info UC function")

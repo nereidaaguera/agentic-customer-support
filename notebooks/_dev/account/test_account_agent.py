@@ -33,21 +33,6 @@ from telco_support_agent.agents.account import AccountAgent
 
 # COMMAND ----------
 
-# init agent
-account_agent = AccountAgent()
-
-print(f"Agent type: {account_agent.agent_type}")
-print(f"LLM endpoint: {account_agent.llm_endpoint}")
-print(f"LLM parameters: {account_agent.llm_params}")
-print(f"Number of tools: {len(account_agent.tools)}")
-
-print("\nAvailable tools:")
-for tool in account_agent.tools:
-    if "function" in tool:
-        print(f"- {tool['function']['name']}")
-
-# COMMAND ----------
-
 print("Initializing tools for account agent...")
 results = initialize_tools(domains=["account"])
 
@@ -63,6 +48,21 @@ if any(not all(functions.values()) for functions in results.values()):
     print("Tests might fail without the necessary UC functions")
 else:
     print("\nAll required functions are available")
+
+# COMMAND ----------
+
+# init agent
+account_agent = AccountAgent()
+
+print(f"Agent type: {account_agent.agent_type}")
+print(f"LLM endpoint: {account_agent.llm_endpoint}")
+print(f"LLM parameters: {account_agent.llm_params}")
+print(f"Number of tools: {len(account_agent.tools)}")
+
+print("\nAvailable tools:")
+for tool in account_agent.tools:
+    if "function" in tool:
+        print(f"- {tool['function']['name']}")
 
 # COMMAND ----------
 
