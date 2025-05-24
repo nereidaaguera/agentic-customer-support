@@ -1,9 +1,9 @@
 name: supervisor
 description: Routes customer queries to specialized sub-agents
 llm:
-  endpoint: databricks-claude-3-7-sonnet
+  endpoint: gpt-4o
   params:
-    temperature: 0.0
+    temperature: 0.01
     max_tokens: 1024
 system_prompt: |
   You are an intelligent supervisor for a telecom customer support system. Your job is to analyze customer queries and route them to the appropriate specialized agent.

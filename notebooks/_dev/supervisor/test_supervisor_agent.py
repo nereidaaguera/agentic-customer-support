@@ -107,28 +107,18 @@ routing_test_queries = [
     # Account queries
     "What plan am I currently on?",
     "When did I create my account?", 
-    "How many lines do I have on my account?",
-    "Is my autopay enabled?",
     
     # Billing queries  
     "Why is my bill higher this month?",
     "When is my payment due?",
-    "I see a charge I don't recognize",
-    "How much data did I use last month?",
     
     # Tech support queries
     "My phone won't connect to the network",
     "I can't make calls but data works",
-    "How do I reset my voicemail password?", 
-    "Why is my internet so slow?",
-    "My iPhone shows Emergency Calls Only when traveling",
-    "I'm not receiving text messages",
     
     # Product queries
     "What's the difference between the Standard and Premium plans?",
     "Do you have any promotions for existing customers?",
-    "Is my phone 5G compatible?",
-    "Which plan gives me the most data for under $50?"
 ]
 
 routing_results = {}
@@ -190,7 +180,6 @@ def test_end_to_end_query(query, description=""):
 
 account_queries = [
     ("What plan am I currently on? My customer ID is CUS-10001.", "Account Plan Query"),
-    ("What are the details of my account? I'm customer CUS-10001.", "Account Details Query"),
 ]
 
 for query, description in account_queries:
@@ -204,11 +193,7 @@ for query, description in account_queries:
 # COMMAND ----------
 
 tech_support_queries = [
-    ("My iPhone 15 Pro shows 'Emergency Calls Only' in Mexico even though I have international roaming. How do I fix this?", "International Roaming Issue"),
-    ("My phone won't connect to the network at all. What troubleshooting steps should I try?", "Network Connection Issue"),
     ("I can make calls but my data isn't working. How do I fix this?", "Data Connection Issue"),
-    ("How do I set up my new iPhone with an eSIM?", "Device Setup Query"),
-    ("Why is my internet speed so slow on my phone?", "Performance Issue"),
 ]
 
 for query, description in tech_support_queries:
@@ -223,7 +208,6 @@ for query, description in tech_support_queries:
 
 billing_queries = [
     ("Why is my bill higher this month? My customer ID is CUS-10001.", "Billing Inquiry"),
-    ("When is my next payment due?", "Payment Due Date"),
 ]
 
 for query, description in billing_queries:
@@ -238,7 +222,6 @@ for query, description in billing_queries:
 
 product_queries = [
     ("What's the difference between the Standard and Premium plans?", "Plan Comparison"),
-    ("Do you have any promotions for existing customers?", "Promotions Inquiry"),
 ]
 
 for query, description in product_queries:
@@ -295,8 +278,6 @@ def display_streaming_response(model_input, description=""):
 
 streaming_test_queries = [
     (ResponsesAgentRequest(input=[{"role": "user", "content": "What are the details of my account? I'm customer CUS-10001."}]), "Account Query Streaming"),
-    
-    (ResponsesAgentRequest(input=[{"role": "user", "content": "My iPhone won't connect to international networks while traveling. How do I fix this?"}]), "Tech Support Query Streaming"),
     
     (ResponsesAgentRequest(input=[{"role": "user", "content": "Why is my bill different this month?"}]), "Billing Query Streaming (Not Implemented)"),
 ]

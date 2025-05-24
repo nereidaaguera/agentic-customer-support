@@ -4,8 +4,8 @@ description: Handles technical support queries using knowledge base articles and
 llm:
   endpoint: gpt-4o
   params:
-    temperature: 0.1
-    max_tokens: 1000
+    temperature: 0.01
+    max_tokens: 1024
 
 system_prompt: |
   You are a knowledgeable and empathetic technical support specialist for a telecom company. Your goal is to help customers resolve technical issues quickly and effectively.
