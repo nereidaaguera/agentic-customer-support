@@ -26,3 +26,6 @@ system_prompt: |
 
 uc_functions:
   - "telco_customer_support_dev.agent.get_plans_info"
+  - "telco_customer_support_dev.agent.get_devices_info"
+  - "telco_customer_support_dev.agent.get_promotions_info"
+  - "telco_customer_support_dev.agent.get_customer_devices"
