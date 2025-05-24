@@ -66,6 +66,7 @@ print(f"   Tickets Index: {tech_agent.retriever.tickets_retriever.index_name}")
 
 # COMMAND ----------
 
+
 def test_query(query, test_id=""):
     print(f"\n{'='*80}")
     print(f"TEST QUERY{test_id}: \"{query}\"")
@@ -79,16 +80,16 @@ def test_query(query, test_id=""):
     
     if response and hasattr(response, 'output') and response.output:
         for output_item in reversed(response.output):
-            if output_item.get("type") == "message" and "content" in output_item:
-                if isinstance(output_item["content"], list):
-                    for content_item in output_item["content"]:
-                        if content_item.get("type") == "output_text":
+            if hasattr(output_item, 'type') and output_item.type == "message" and hasattr(output_item, 'content'):
+                if isinstance(output_item.content, list):
+                    for content_item in output_item.content:
+                        if hasattr(content_item, 'type') and content_item.type == "output_text":
                             print(f"\nRESPONSE:")
-                            print(content_item["text"])
+                            print(content_item.text)
                             break
                 else:
                     print(f"\nRESPONSE:")
-                    print(output_item["content"])
+                    print(output_item.content)
                 break
         else:
             print(f"\nRESPONSE:")
