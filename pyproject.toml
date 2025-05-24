@@ -8,7 +8,7 @@ packages = [{include = "telco_support_agent"}]
 
 [tool.poetry.dependencies]
 python = ">=3.12,<3.13"
-pydantic = "^2.10.0"
+pydantic = "2.8.2"
 faker = "^20.1.0"
 databricks-sdk = "0.52.0"
 mlflow = "^3.0.0rc0"
@@ -19,9 +19,7 @@ unitycatalog-ai = {extras = ["databricks"], version = "^0.3.0"}
 unitycatalog-openai = {extras = ["databricks"], version = "^0.2.0"}
 databricks-connect = ">=16.3.0,<16.4.0"
 databricks-agents = "^1.0.0rc0"
-databricks-vectorsearch = "^0.56.0"
-databricks-openai = "0.4.1"
-    
+
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"
 ruff = "^0.11.9"

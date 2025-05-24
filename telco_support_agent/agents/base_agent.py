@@ -36,10 +36,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         self,
         agent_type: str,
         llm_endpoint: Optional[str] = None,
-        tools: Optional[list[dict]] = None,  # UC function tools
-        vector_search_tools: Optional[
-            dict[str, Any]
-        ] = None,  # Map of tool name -> VectorSearchRetrieverTool (not UC function)
+        tools: Optional[list[dict]] = None,  # UC function tools format
         system_prompt: Optional[str] = None,
         config_dir: Optional[Path | str] = None,
     ):
@@ -49,7 +46,6 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             agent_type: Type of agent (used for config loading)
             llm_endpoint: Optional override for LLM endpoint
             tools: Optional list of UC function tools
-            vector_search_tools: Optional dict mapping tool names to VectorSearchRetrieverTool objects
             system_prompt: Optional override for system prompt
             config_dir: Optional directory for config files
         """
@@ -72,7 +68,6 @@ class BaseAgent(ResponsesAgent, abc.ABC):
 
         # set up tools
         self.tools = tools or self._load_tools_from_config()
-        self.vector_search_tools = vector_search_tools or {}
 
         logger.info(f"Initialized {agent_type} agent with {len(self.tools)} tools")
 
@@ -94,9 +89,12 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             return cls._config_cache[agent_type]
 
         try:
+            # Use the ConfigManager to get the config
             from telco_support_agent.agents.config import config_manager
 
             config_dict = config_manager.get_config(agent_type)
+
+            # Validate the config with Pydantic
             config = AgentConfig(**config_dict)
             cls._config_cache[agent_type] = config
 
@@ -137,33 +135,16 @@ class BaseAgent(ResponsesAgent, abc.ABC):
 
     @mlflow.trace(span_type=SpanType.TOOL)
     def execute_tool(self, tool_name: str, args: dict) -> Any:
-        """Execute tool.
-
-        Handles both Unity Catalog functions and VectorSearchRetrieverTool objects.
-
-        Args:
-            tool_name: Name of the tool to execute
-            args: Arguments to pass to the tool
-
-        Returns:
-            Tool execution result
-        """
+        """Execute UC function tool with given args."""
         try:
-            # check if vector search tool
-            if tool_name in self.vector_search_tools:
-                vector_tool = self.vector_search_tools[tool_name]
-                return vector_tool.execute(**args)
-
-            # otherwise treat as UC function
             # replace any underscores to dots in function name
-            uc_function_name = tool_name.replace("__", ".")
+            tool_name = tool_name.replace("__", ".")
 
             # execute tool using UC function client
             result = self.uc_client.execute_function(
-                function_name=uc_function_name, parameters=args
+                function_name=tool_name, parameters=args
             )
             return result.value
-
         except Exception as e:
             error_msg = f"Error executing tool {tool_name}: {str(e)}"
             logger.error(error_msg)

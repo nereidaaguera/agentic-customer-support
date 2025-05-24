@@ -1,12 +1,12 @@
 # Config for logging and registering agent
 name: telco_customer_support_agent
-description: "Multi-agent system for telco customer support"
+description: "Multi-agent telco customer support system supervisor"
 
 # MLflow logging params
 input_example:
   input:
     - role: "user"
-      content: "My iPhone won't connect to international networks while traveling. How do I fix this?"
+      content: "What plan am I currently on? My customer ID is CUS-10001."
 
 # Unity Catalog registration params
 uc_registration:

@@ -1,19 +1,14 @@
-"""Log Agent models to MLflow using Models from Code approach - using package constants."""
+"""Log Agent models to MLflow using Models from Code approach."""
 
 import inspect
+from pathlib import Path
 from typing import Optional
 
 import mlflow
 import yaml
 from mlflow.models.model import ModelInfo
-from mlflow.models.resources import (
-    DatabricksFunction,
-    DatabricksServingEndpoint,
-    DatabricksVectorSearchIndex,
-    Resource,
-)
+from mlflow.models.resources import Resource
 
-from telco_support_agent import PACKAGE_DIR, PROJECT_ROOT
 from telco_support_agent.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
@@ -22,155 +17,167 @@ logger = get_logger(__name__)
 def log_agent(
     agent_class: type,
     name: str = "agent",
-    input_example: Optional[dict] = None,
     resources: Optional[list[Resource]] = None,
-    environment: str = "prod",
+    pip_requirements: Optional[list[str]] = None,
+    input_example: Optional[dict] = None,
+    extra_pip_requirements: Optional[list[str]] = None,
 ) -> ModelInfo:
     """Log agent using MLflow Models from Code approach.
 
+    https://mlflow.org/docs/latest/model/models-from-code
+
+    Use Models from Code approach to log the agent,
+    looking up the source file of the agent's class and passing that
+    to MLflow. This requires the agent module to call `set_model()`
+    at the module level.
+
     Args:
         agent_class: The agent class to log (e.g., SupervisorAgent)
-        name: Name for the model in MLflow
+        name: Name for the model in MLflow (replaces deprecated artifact_path)
+        resources: Databricks resources needed for automatic authentication
+        pip_requirements: List of pip requirements
         input_example: Optional input example for MLflow signature inference
-        resources: Optional list of resources (if None, will auto-detect)
-        environment: Environment for resource detection (dev, prod)
+        extra_pip_requirements: Additional pip requirements. If None, automatically
+            includes the project's requirements.txt file if it exists.
 
     Returns:
         ModelInfo object containing details of the logged model
     """
+    # get path to the agent's module file
     module_path = inspect.getfile(agent_class)
-
     logger.info(f"Using agent file: {module_path}")
-    logger.info(f"Using package directory: {PACKAGE_DIR}")
-    logger.info(f"Using project root: {PROJECT_ROOT}")
 
-    # config artifacts
-    artifacts = _collect_config_artifacts()
+    # get package directory
+    try:
+        from telco_support_agent import PROJECT_ROOT
 
-    # auto-detect resources if not provided
+        package_dir = PROJECT_ROOT / "telco_support_agent"
+        logger.info(f"Using package directory: {package_dir}")
+    except ImportError:
+        # fallback: find package directory by walking up from module path
+        current_path = Path(module_path).parent
+        package_dir = None
+
+        for _ in range(10):  # limit search depth
+            if current_path.name == "telco_support_agent":
+                package_dir = current_path
+                break
+            parent = current_path.parent
+            if parent == current_path:
+                break
+            current_path = parent
+
+        if package_dir is None:
+            raise ValueError(
+                "Could not find telco_support_agent package directory"
+            ) from None
+
+        logger.info(f"Using fallback package directory: {package_dir}")
+
+    # convert to string for MLflow
+    package_dir_str = str(package_dir)
+    logger.info(f"Package directory path: {package_dir_str}")
+
+    # collect config files as artifacts
+    artifacts = {}
+    try:
+        config_dir = package_dir.parent / "configs" / "agents"
+        logger.debug(f"Looking for config files in: {config_dir}")
+
+        if config_dir.exists() and config_dir.is_dir():
+            for config_file in config_dir.glob("*.yaml"):
+                artifact_key = f"configs/agents/{config_file.name}"
+                artifacts[artifact_key] = str(config_file)
+                logger.info(f"Adding config artifact: {artifact_key}")
+        else:
+            logger.warning(
+                f"Config directory doesn't exist or isn't a directory: {config_dir}"
+            )
+    except Exception as e:
+        logger.warning(f"Error collecting config artifacts: {e}", exc_info=True)
+
     if resources is None:
-        resources = _get_supervisor_resources(environment)
+        agent_instance = agent_class()
+        resources = []
 
+        # LLM endpoints
+        if hasattr(agent_instance, "llm_endpoint") and agent_instance.llm_endpoint:
+            from mlflow.models.resources import DatabricksServingEndpoint
+
+            resources.append(
+                DatabricksServingEndpoint(endpoint_name=agent_instance.llm_endpoint)
+            )
+
+        # registered functions
+        if hasattr(agent_instance, "get_tool_specs"):
+            from mlflow.models.resources import DatabricksFunction
+
+            for tool in agent_instance.get_tool_specs():
+                if "function" in tool:
+                    function_name = tool["function"]["name"].replace("__", ".")
+                    resources.append(DatabricksFunction(function_name=function_name))
+
+        logger.info(f"Automatically detected {len(resources)} resources")
+
+    # default input example if none provided
     if input_example is None:
         input_example = {
             "input": [{"role": "user", "content": "Hello, how can you help me today?"}]
         }
 
-    extra_pip_requirements = _get_requirements()
+    # default extra_pip_requirements to include project requirements.txt
+    if extra_pip_requirements is None:
+        extra_pip_requirements = []
+        try:
+            requirements_path = package_dir.parent / "requirements.txt"
+            if requirements_path.exists():
+                with requirements_path.open("r") as f:
+                    file_requirements = [
+                        line.strip()
+                        for line in f
+                        if line.strip() and not line.startswith("#")
+                    ]
+                    if file_requirements:
+                        extra_pip_requirements.extend(file_requirements)
+                        logger.info(
+                            f"Found {len(file_requirements)} requirements in requirements.txt"
+                        )
+                    else:
+                        logger.warning(
+                            "requirements.txt exists but is empty or contains only comments"
+                        )
+            else:
+                logger.warning(
+                    "requirements.txt not found, no extra pip requirements specified"
+                )
+        except Exception as e:
+            logger.warning(f"Error reading requirements.txt: {e}")
+    elif isinstance(extra_pip_requirements, str):
+        extra_pip_requirements = [extra_pip_requirements]
 
     with mlflow.start_run():
-        _log_config_dicts()
+        try:
+            config_dir = package_dir.parent / "configs" / "agents"
+            if config_dir.exists():
+                for config_file in config_dir.glob("*.yaml"):
+                    with open(config_file) as f:
+                        config_dict = yaml.safe_load(f)
+                        mlflow.log_dict(
+                            config_dict, f"configs/agents/{config_file.name}"
+                        )
+        except Exception as e:
+            logger.warning(f"Error logging config dictionaries: {e}")
 
         model_info = mlflow.pyfunc.log_model(
-            python_model=module_path,
-            code_paths=[str(PACKAGE_DIR)],
+            python_model=module_path,  # path to the module file
+            code_paths=[package_dir_str],  # include only the package directory
             name=name,
             input_example=input_example,
             resources=resources,
+            pip_requirements=pip_requirements,
             extra_pip_requirements=extra_pip_requirements,
             artifacts=artifacts,
         )
 
         logger.info(f"Successfully logged model: {model_info.model_uri}")
         return model_info
-
-
-def _collect_config_artifacts() -> dict[str, str]:
-    """Collect configuration files as artifacts."""
-    artifacts = {}
-    config_dir = PROJECT_ROOT / "configs" / "agents"
-
-    if config_dir.exists():
-        for config_file in config_dir.glob("*.yaml"):
-            artifact_key = f"configs/agents/{config_file.name}"
-            artifacts[artifact_key] = str(config_file)
-            logger.info(f"Adding config artifact: {artifact_key}")
-
-    return artifacts
-
-
-def _get_supervisor_resources(environment: str) -> list[Resource]:
-    """Get all resources needed by the supervisor agent."""
-    from telco_support_agent.agents.config import config_manager, get_uc_config
-
-    resources = []
-
-    # get configs for all agent types
-    agent_configs = {}
-    for agent_type in ["supervisor", "account", "tech_support"]:
-        try:
-            agent_configs[agent_type] = config_manager.get_config(agent_type)
-        except Exception as e:
-            logger.warning(f"Could not load {agent_type} config: {e}")
-
-    # LLM endpoints
-    llm_endpoints = set()
-    for _, config in agent_configs.items():
-        if "llm" in config and "endpoint" in config["llm"]:
-            endpoint = config["llm"]["endpoint"]
-            if endpoint not in llm_endpoints:
-                resources.append(DatabricksServingEndpoint(endpoint_name=endpoint))
-                llm_endpoints.add(endpoint)
-                logger.info(f"Added LLM endpoint: {endpoint}")
-
-    # UC functions
-    uc_functions = set()
-    for _, config in agent_configs.items():
-        if "uc_functions" in config:
-            for func_name in config["uc_functions"]:
-                if func_name not in uc_functions:
-                    resources.append(DatabricksFunction(function_name=func_name))
-                    uc_functions.add(func_name)
-                    logger.info(f"Added UC function: {func_name}")
-
-    # Vector Search indexes
-    uc_config = get_uc_config(environment)
-    catalog = uc_config["catalog"]
-
-    vector_indexes = [
-        f"{catalog}.agent.knowledge_base_index",
-        f"{catalog}.agent.support_tickets_index",
-    ]
-
-    for index_name in vector_indexes:
-        resources.append(DatabricksVectorSearchIndex(index_name=index_name))
-        logger.info(f"Added vector search index: {index_name}")
-
-    logger.info(f"Total resources: {len(resources)}")
-    return resources
-
-
-def _get_requirements() -> list[str]:
-    """Get pip requirements from requirements.txt."""
-    requirements_path = PROJECT_ROOT / "requirements.txt"
-
-    if not requirements_path.exists():
-        logger.warning("requirements.txt not found")
-        return []
-
-    try:
-        with requirements_path.open("r") as f:
-            requirements = [
-                line.strip() for line in f if line.strip() and not line.startswith("#")
-            ]
-        logger.info(f"Found {len(requirements)} requirements in requirements.txt")
-        return requirements
-    except Exception as e:
-        logger.warning(f"Error reading requirements.txt: {e}")
-        return []
-
-
-def _log_config_dicts() -> None:
-    """Log configuration files as MLflow dictionaries."""
-    config_dir = PROJECT_ROOT / "configs" / "agents"
-
-    if not config_dir.exists():
-        return
-
-    for config_file in config_dir.glob("*.yaml"):
-        try:
-            with open(config_file) as f:
-                config_dict = yaml.safe_load(f)
-                mlflow.log_dict(config_dict, f"configs/agents/{config_file.name}")
-        except Exception as e:
-            logger.warning(f"Error logging config {config_file.name}: {e}")

@@ -475,18 +475,6 @@ class KnowledgeGenerator(BaseGenerator):
             days_ago = self.random.randint(1, 365)
             last_updated = date.today() - timedelta(days=days_ago)
 
-            formatted_content = (
-                f"ID: {kb_id}\n"
-                f"Type: {content_type}\n"
-                f"Category: {category}\n"
-                f"Subcategory: {subcategory}\n"
-                f"Title: {title}\n"
-                f"Tags: {tags}\n"
-                f"Last Updated: {last_updated}\n"
-                f"\n---\n\n"
-                f"{content}"
-            )
-
             data.append(
                 (
                     kb_id,
@@ -497,7 +485,6 @@ class KnowledgeGenerator(BaseGenerator):
                     content,
                     tags,
                     last_updated,
-                    formatted_content,
                 )
             )
 
@@ -511,7 +498,6 @@ class KnowledgeGenerator(BaseGenerator):
                 StructField("content", StringType(), False),
                 StructField("tags", StringType(), False),
                 StructField("last_updated", DateType(), False),
-                StructField("formatted_content", StringType(), False),
             ]
         )
 
@@ -895,28 +881,6 @@ class KnowledgeGenerator(BaseGenerator):
                 )
                 resolution = self._generate_content_with_llm(resolution_prompt)
 
-            formatted_parts = [
-                f"Ticket ID: {ticket_id}",
-                f"Customer ID: {customer_id}",
-                f"Subscription ID: {subscription_id}",
-                f"Category: {category}",
-                f"Priority: {priority}",
-                f"Status: {status}",
-                f"Created: {created_date}",
-            ]
-
-            if agent_id:
-                formatted_parts.append(f"Agent ID: {agent_id}")
-
-            if resolved_date:
-                formatted_parts.append(f"Resolved: {resolved_date}")
-
-            formatted_content = "\n".join(formatted_parts)
-            formatted_content += f"\n\n---\nDESCRIPTION:\n---\n\n{description}"
-
-            if resolution:
-                formatted_content += f"\n\n---\nRESOLUTION:\n---\n\n{resolution}"
-
             data.append(
                 (
                     ticket_id,
@@ -930,7 +894,6 @@ class KnowledgeGenerator(BaseGenerator):
                     resolution,
                     resolved_date,
                     agent_id,
-                    formatted_content,
                 )
             )
 
@@ -947,7 +910,6 @@ class KnowledgeGenerator(BaseGenerator):
                 StructField("resolution", StringType(), True),  # Nullable
                 StructField("resolved_date", TimestampType(), True),  # Nullable
                 StructField("agent_id", StringType(), True),  # Nullable
-                StructField("formatted_content", StringType(), False),
             ]
         )
 

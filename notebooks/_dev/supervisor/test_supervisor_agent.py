@@ -48,9 +48,6 @@ print("\nSupervisor LLM endpoint:", supervisor_config["llm"]["endpoint"])
 account_config = config_manager.get_config("account")
 print("\nAccount agent functions:", account_config["uc_functions"])
 
-tech_support_config = config_manager.get_config("tech_support")
-print("\nTech support agent LLM endpoint:", tech_support_config["llm"]["endpoint"])
-
 # COMMAND ----------
 
 # MAGIC %md
@@ -63,6 +60,7 @@ supervisor = SupervisorAgent()
 print(f"Agent type: {supervisor.agent_type}")
 print(f"LLM endpoint: {supervisor.llm_endpoint}")
 print(f"LLM parameters: {supervisor.llm_params}")
+
 
 # COMMAND ----------
 
@@ -101,28 +99,15 @@ def test_routing(query):
     return agent_type
 
 # test routing with different query types
-print("=== ROUTING TESTS ===\n")
-
-routing_test_queries = [
-    # Account queries
-    "What plan am I currently on?",
-    "When did I create my account?", 
-    
-    # Billing queries  
-    "Why is my bill higher this month?",
-    "When is my payment due?",
-    
-    # Tech support queries
-    "My phone won't connect to the network",
-    "I can't make calls but data works",
-    
-    # Product queries
-    "What's the difference between the Standard and Premium plans?",
-    "Do you have any promotions for existing customers?",
+test_queries = [
+    "What plan am I currently on?",  # account
+    "Why is my bill higher this month?",  # billing
+    "My phone won't connect to the network",  # tech_support
+    "What's the difference between the Standard and Premium plans?"  # product
 ]
 
 routing_results = {}
-for query in routing_test_queries:
+for query in test_queries:
     routing_results[query] = test_routing(query)
 
 # COMMAND ----------
@@ -157,92 +142,50 @@ def format_response(response):
     
     print("\n" + "="*50)
 
-def test_end_to_end_query(query, description=""):
-    """Test an end-to-end query with the supervisor agent."""
-    print(f"\n{'='*80}")
-    print(f"END-TO-END TEST: {description}")
-    print(f"Query: '{query}'")
-    print('='*80)
-    
-    request = ResponsesAgentRequest(
-        input=[{"role": "user", "content": query}]
-    )
+# COMMAND ----------
 
-    response = supervisor.predict(request)
-    format_response(response)
+# MAGIC %md
+# MAGIC ### Test Account Query
+
+# COMMAND ----------
+
+account_query = "What plan am I currently on? My customer ID is CUS-10001."
+
+request = ResponsesAgentRequest(
+    input=[{"role": "user", "content": account_query}]
+)
+
+response = supervisor.predict(request)
+format_response(response)
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Test Account Queries
+# MAGIC ### Test Billing Query
 
 # COMMAND ----------
 
-account_queries = [
-    ("What plan am I currently on? My customer ID is CUS-10001.", "Account Plan Query"),
-]
+billing_query = "Why is my bill higher this month? My customer ID is CUS-10001."
 
-for query, description in account_queries:
-    test_end_to_end_query(query, description)
+request = ResponsesAgentRequest(
+    input=[{"role": "user", "content": billing_query}]
+)
 
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### Test Tech Support Queries
-
-# COMMAND ----------
-
-tech_support_queries = [
-    ("I can make calls but my data isn't working. How do I fix this?", "Data Connection Issue"),
-]
-
-for query, description in tech_support_queries:
-    test_end_to_end_query(query, description)
+response = supervisor.predict(request)
+format_response(response)
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### TODO: test billing queries
+# MAGIC ### Test Streaming Response
 
 # COMMAND ----------
 
-billing_queries = [
-    ("Why is my bill higher this month? My customer ID is CUS-10001.", "Billing Inquiry"),
-]
-
-for query, description in billing_queries:
-    test_end_to_end_query(query, description)
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### TODO: test product queries
-
-# COMMAND ----------
-
-product_queries = [
-    ("What's the difference between the Standard and Premium plans?", "Plan Comparison"),
-]
-
-for query, description in product_queries:
-    test_end_to_end_query(query, description)
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Test Streaming Responses
-
-# COMMAND ----------
-
-def display_streaming_response(model_input, description=""):
+def display_streaming_response(model_input):
     """Display a streaming response as it comes in."""
-    print(f"\n{'='*80}")
-    print(f"STREAMING TEST: {description}")
-    print('='*80)
+    print("=== STREAMING RESPONSE ===\n")
     
     full_text = ""
-    function_calls = []
-    function_outputs = []
     
     for i, event in enumerate(supervisor.predict_stream(model_input)):
         if event.type == "response.output_item.done":
@@ -253,34 +196,26 @@ def display_streaming_response(model_input, description=""):
                     for content_item in item.content:
                         if hasattr(content_item, "type") and content_item.type == "output_text":
                             text = content_item.text
-                            print(f"\n[Message Chunk {i}]")
-                            print(text)
+                            print(f"Chunk {i}: {text}")
                             full_text += text
             
             elif hasattr(item, "type") and item.type == "function_call":
-                print(f"\n[Function Call {i}]: {item.name}")
+                print(f"Function Call: {item.name}")
                 print(f"Arguments: {item.arguments}")
-                function_calls.append(f"{item.name}({item.arguments})")
             
             elif hasattr(item, "type") and item.type == "function_call_output":
-                print(f"\n[Function Output {i}]:")
-                print(item.output[:200] + "..." if len(item.output) > 200 else item.output)
-                function_outputs.append(item.output)
+                print(f"Function Output: {item.output}")
     
-    print(f"\n{'='*50}")
-    print("STREAMING SUMMARY:")
-    print(f"Function Calls: {len(function_calls)}")
-    print(f"Function Outputs: {len(function_outputs)}")
-    print(f"Final Response Length: {len(full_text)} characters")
-    print(f"{'='*80}\n")
+    print("\n=== FULL RESPONSE ===\n")
+    print(full_text)
+    print("\n" + "="*50)
 
 # COMMAND ----------
 
-streaming_test_queries = [
-    (ResponsesAgentRequest(input=[{"role": "user", "content": "What are the details of my account? I'm customer CUS-10001."}]), "Account Query Streaming"),
-    
-    (ResponsesAgentRequest(input=[{"role": "user", "content": "Why is my bill different this month?"}]), "Billing Query Streaming (Not Implemented)"),
-]
+streaming_query = "What are the details of my account? I'm customer CUS-10001."
 
-for request, description in streaming_test_queries:
-    display_streaming_response(request, description)
+streaming_request = ResponsesAgentRequest(
+    input=[{"role": "user", "content": streaming_query}]
+)
+
+display_streaming_response(streaming_request)
