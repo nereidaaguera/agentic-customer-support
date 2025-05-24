@@ -57,7 +57,7 @@ class KnowledgeBaseRetriever:
 
         self.retriever = VectorSearchRetrieverTool(
             index_name=self.index_name,
-            tool_name="vector_search_knowledge_base",
+            tool_name="knowledge_base_vector_search",
             tool_description=(
                 "Search the knowledge base articles for policies, procedures, FAQs, "
                 "troubleshooting guides, and setup instructions. Use this for finding "
@@ -82,7 +82,7 @@ class KnowledgeBaseRetriever:
             List of documents
         """
         with mlflow.start_span(
-            name="vector_search_knowledge_base", span_type=SpanType.RETRIEVER
+            name="knowledge_base_retriever", span_type=SpanType.RETRIEVER
         ) as span:
             span.set_attributes(
                 {
@@ -131,7 +131,7 @@ class KnowledgeBaseRetriever:
             List of documents
         """
         with mlflow.start_span(
-            name="vector_search_knowledge_base", span_type=SpanType.RETRIEVER
+            name="knowledge_base_retriever", span_type=SpanType.RETRIEVER
         ) as span:
             span.set_attributes(
                 {
@@ -209,7 +209,7 @@ class SupportTicketsRetriever:
 
         self.retriever = VectorSearchRetrieverTool(
             index_name=self.index_name,
-            tool_name="vector_search_support_tickets",
+            tool_name="support_tickets_vector_search",
             tool_description=(
                 "Search historical support tickets for similar issues and their resolutions. "
                 "Use this to find how similar technical problems were solved in the past, "
@@ -234,7 +234,7 @@ class SupportTicketsRetriever:
             List of documents
         """
         with mlflow.start_span(
-            name="vector_search_support_tickets", span_type=SpanType.RETRIEVER
+            name="support_tickets_retriever", span_type=SpanType.RETRIEVER
         ) as span:
             span.set_attributes(
                 {
@@ -284,7 +284,7 @@ class SupportTicketsRetriever:
             List of documents from the vector index
         """
         with mlflow.start_span(
-            name="vector_search_support_tickets", span_type=SpanType.RETRIEVER
+            name="support_tickets_retriever", span_type=SpanType.RETRIEVER
         ) as span:
             span.set_attributes(
                 {
