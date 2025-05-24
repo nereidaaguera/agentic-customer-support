@@ -37,6 +37,12 @@ class TechSupportAgent(BaseAgent):
         self.retriever = TechSupportRetriever(environment=environment)
         retriever_tools = self.retriever.get_tools()
 
+        # mapping of tool names to their executable objects
+        vector_search_tools = {
+            "knowledge_base_vector_search": self.retriever.kb_retriever.retriever,
+            "support_tickets_vector_search": self.retriever.tickets_retriever.retriever,
+        }
+
         logger.info(
             f"Tech support agent initialized with {len(retriever_tools)} retrieval tools"
         )
@@ -45,7 +51,8 @@ class TechSupportAgent(BaseAgent):
             agent_type="tech_support",
             llm_endpoint=llm_endpoint,
             config_dir=config_dir,
-            tools=retriever_tools,
+            tools=retriever_tools,  # tool specs for LLM
+            vector_search_tools=vector_search_tools,  # executable objects
         )
 
     def get_description(self) -> str:

@@ -401,7 +401,7 @@ class TechSupportRetriever:
             Dictionary with results from both sources plus metadata
         """
         with mlflow.start_span(
-            name="vector_search_tech_support", span_type=SpanType.RETRIEVER
+            name="tech_support_retriever", span_type=SpanType.RETRIEVER
         ) as span:
             span.set_inputs(
                 {
