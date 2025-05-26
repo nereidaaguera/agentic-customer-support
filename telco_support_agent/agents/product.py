@@ -28,7 +28,7 @@ class ProductAgent(BaseAgent):
         # get toolkit for account domain
         toolkit = get_toolkit_for_domain("product")
 
-        logger.info(f"Account agent initialized with {len(toolkit.tools)} tools")
+        logger.info(f"Product agent initialized with {len(toolkit.tools)} tools")
 
         super().__init__(
             agent_type="product",
