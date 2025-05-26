@@ -101,7 +101,7 @@ def register_customer_devices_info():
     try:
         sql = """
             CREATE OR REPLACE FUNCTION telco_customer_support_dev.agent.get_customer_devices(
-                customer_id STRING COMMENT 'The customer ID in the format CUS-XXXXX'
+                customer STRING COMMENT 'The customer ID in the format CUS-XXXXX'
             )
             RETURNS STRING
             COMMENT 'Returns detailed information about all devices linked to a customer’s subscription,
@@ -117,7 +117,7 @@ def register_customer_devices_info():
                         'subscription_status', s.status,
                         'device_name', device_name,
                         'manufacturer', manufacturer,
-                        'device_type', monthly_price,
+                        'device_type', device_type,
                         'retail_price', retail_price,
                         'monthly_installment', monthly_installment,
                         'storage_gb', storage_gb,
@@ -130,7 +130,7 @@ def register_customer_devices_info():
                 )
             FROM telco_customer_support_dev.bronze.subscriptions s
             JOIN telco_customer_support_dev.bronze.devices d ON s.device_id = d.device_id
-            WHERE s.customer_id = customer_id
+            WHERE s.customer_id = customer
             GROUP BY s.customer_id
             LIMIT 1
             """

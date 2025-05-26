@@ -51,6 +51,10 @@ print("\nAccount agent functions:", account_config["uc_functions"])
 tech_support_config = config_manager.get_config("tech_support")
 print("\nTech support agent LLM endpoint:", tech_support_config["llm"]["endpoint"])
 
+product_config = config_manager.get_config("product")
+print("\nProduct agent LLM endpoint:", product_config["llm"]["endpoint"])
+print("\nProduct agent functions:", product_config["uc_functions"])
+
 # COMMAND ----------
 
 # MAGIC %md

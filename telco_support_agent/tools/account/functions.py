@@ -10,7 +10,7 @@ def register_customer_info():
     try:
         sql = """
         CREATE OR REPLACE FUNCTION telco_customer_support_dev.agent.get_customer_info(
-          customer_id STRING COMMENT 'The customer ID in the format CUS-XXXXX'
+          customer STRING COMMENT 'The customer ID in the format CUS-XXXXX'
         )
         RETURNS STRING
         COMMENT 'Retrieves basic customer information including profile data, status, and account metrics'
@@ -32,7 +32,7 @@ def register_customer_info():
           )
         )
         FROM telco_customer_support_dev.bronze.customers
-        WHERE customer_id = customer_id
+        WHERE customer_id = customer
         LIMIT 1
         """
         client.create_function(sql_function_body=sql)
@@ -46,7 +46,7 @@ def register_customer_subscriptions():
     try:
         sql = """
         CREATE OR REPLACE FUNCTION telco_customer_support_dev.agent.get_customer_subscriptions(
-          customer_id STRING COMMENT 'The customer ID in the format CUS-XXXXX'
+          customer STRING COMMENT 'The customer ID in the format CUS-XXXXX'
         )
         RETURNS STRING
         COMMENT 'Retrieves all active subscriptions for a customer including plan details, status, and device information'
@@ -77,7 +77,7 @@ def register_customer_subscriptions():
           )
           FROM telco_customer_support_dev.bronze.subscriptions s
           JOIN telco_customer_support_dev.bronze.plans p ON s.plan_id = p.plan_id
-          WHERE s.customer_id = customer_id
+          WHERE s.customer_id = customer
           GROUP BY s.customer_id
           LIMIT 1
         )
