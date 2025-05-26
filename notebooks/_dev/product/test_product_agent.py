@@ -71,11 +71,11 @@ request = ResponsesAgentRequest(
 
 def test_query(query):
     print(f"\n=== TESTING QUERY: \"{query}\" ===\n")
-    
+
     request = ResponsesAgentRequest(
         input=[{"role": "user", "content": query}]
     )
-    
+
     try:
         response = product_agent.predict(request)
         if response and hasattr(response, 'output') and response.output:
@@ -90,7 +90,7 @@ def test_query(query):
             print("No response or empty response received")
     except Exception as e:
         print(f"Error processing query: {e}")
-    
+
     print("\n" + "="*80)
 
 # COMMAND ----------
@@ -101,7 +101,10 @@ test_query("What's the difference between the Standard and Premium plans?")
 
 test_queries = [
     "What's the difference between the Standard and Premium plans?",
-    "Show me the plans that give me unlimited data"
+    "Show me the plans with unlimited data",
+    "Do you have any promotions for existing customers?",
+    "Is my phone 5G compatible? My ID is CUS-10601",
+    "Which plan gives me the most data for under $50?"
 ]
 
 # COMMAND ----------

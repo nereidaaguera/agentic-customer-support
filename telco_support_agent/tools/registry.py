@@ -23,7 +23,12 @@ DOMAIN_FUNCTION_MAP = {
     AgentType.TECH_SUPPORT.value: [
         # TODO: add tech support functions
     ],
-    AgentType.PRODUCT.value: [f"{DEFAULT_CATALOG}.{DEFAULT_SCHEMA}.get_plans_info"],
+    AgentType.PRODUCT.value: [
+        f"{DEFAULT_CATALOG}.{DEFAULT_SCHEMA}.get_plans_info",
+        f"{DEFAULT_CATALOG}.{DEFAULT_SCHEMA}.get_devices_info",
+        f"{DEFAULT_CATALOG}.{DEFAULT_SCHEMA}.get_promotions_info",
+        f"{DEFAULT_CATALOG}.{DEFAULT_SCHEMA}.get_customer_devices",
+    ],
 }
 
 

@@ -48,7 +48,7 @@ def register_devices_info():
               collect_list(named_struct(
                 'device_name', device_name,
                 'manufacturer', manufacturer,
-                'device_type', monthly_price,
+                'device_type', device_type,
                 'retail_price', retail_price,
                 'monthly_installment', monthly_installment,
                 'storage_gb', storage_gb,
