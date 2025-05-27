@@ -25,7 +25,10 @@ DOMAIN_FUNCTION_MAP = {
         # TODO: add tech support functions
     ],
     AgentType.PRODUCT.value: [
-        # TODO: add product functions
+        f"{DEFAULT_CATALOG}.{DEFAULT_SCHEMA}.get_plans_info",
+        f"{DEFAULT_CATALOG}.{DEFAULT_SCHEMA}.get_devices_info",
+        f"{DEFAULT_CATALOG}.{DEFAULT_SCHEMA}.get_promotions_info",
+        f"{DEFAULT_CATALOG}.{DEFAULT_SCHEMA}.get_customer_devices",
     ],
 }
 
@@ -98,7 +101,7 @@ def _register_domain_functions(domain: str) -> dict[str, bool]:
     domain_modules = {
         AgentType.ACCOUNT.value: "telco_support_agent.tools.account.functions",
         AgentType.BILLING.value: "telco_support_agent.tools.billing.functions",
-        # TODO: add more as they're implemented
+        AgentType.PRODUCT.value: "telco_support_agent.tools.product.functions",
     }
 
     results = {}

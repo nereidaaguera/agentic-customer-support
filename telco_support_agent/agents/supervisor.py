@@ -15,6 +15,8 @@ from mlflow.types.responses import (
 
 from telco_support_agent.agents.account import AccountAgent
 from telco_support_agent.agents.base_agent import BaseAgent
+from telco_support_agent.agents.product import ProductAgent
+from telco_support_agent.agents.tech_support import TechSupportAgent
 from telco_support_agent.agents.types import AgentType
 from telco_support_agent.utils.logging_utils import get_logger, setup_logging
 
@@ -79,19 +81,24 @@ class SupervisorAgent(BaseAgent):
             else AgentType.from_string(agent_type)
         )
 
-        if agent_type_enum == AgentType.ACCOUNT:
+        agents_classes = {
+            AgentType.ACCOUNT: AccountAgent,
+            AgentType.TECH_SUPPORT: TechSupportAgent,
+            AgentType.PRODUCT: ProductAgent,
+        }
+
+        if agent_type_enum in agents_classes:
             try:
-                agent = AccountAgent(llm_endpoint=self.llm_endpoint)
+                agent = agents_classes[agent_type_enum](llm_endpoint=self.llm_endpoint)
                 self._sub_agents[agent_type_str] = agent
                 logger.info(f"Initialized {agent_type_str} agent")
                 return agent
             except Exception as e:
                 logger.error(f"Error initializing {agent_type_str} agent: {str(e)}")
                 raise
-
-        # TODO: other agent types' not implemented
-        logger.warning(f"{agent_type_str.capitalize()} agent not implemented yet.")
-        return None
+        else:
+            logger.warning(f"{agent_type_str.capitalize()} agent not implemented yet.")
+            return None
 
     @mlflow.trace(span_type=SpanType.AGENT)
     def route_query(self, query: str) -> AgentType:
@@ -128,7 +135,7 @@ class SupervisorAgent(BaseAgent):
             )
             return AgentType.ACCOUNT
 
-    @mlflow.trace(span_type=SpanType.AGENT)
+    @mlflow.trace(span_type=SpanType.AGENT, name="supervisor")
     def predict(self, model_input: ResponsesAgentRequest) -> ResponsesAgentResponse:
         """Process the user query and route to appropriate sub-agent.
 
@@ -198,7 +205,7 @@ class SupervisorAgent(BaseAgent):
             output=sub_response.output, custom_outputs=custom_outputs
         )
 
-    @mlflow.trace(span_type=SpanType.AGENT)
+    @mlflow.trace(span_type=SpanType.AGENT, name="supervisor")
     def predict_stream(
         self, model_input: ResponsesAgentRequest
     ) -> Generator[ResponsesAgentStreamEvent, None, None]:
@@ -301,8 +308,8 @@ class SupervisorAgent(BaseAgent):
                     "type": "output_text",
                     "text": f"I apologize, but our {agent_type_str} support system is currently being upgraded and isn't available yet. "
                     f"We expect this feature to be available in the next few weeks. "
-                    f"In the meantime, I can help with account information, profiles, and subscription details. "
-                    f"Would you like me to help you with any account-related questions?",
+                    f"In the meantime, I can help with account information, profiles, and technical support. "
+                    f"Would you like me to help you with any other questions?",
                 }
             ],
             "id": str(uuid4()),

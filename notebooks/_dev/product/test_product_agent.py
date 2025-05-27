@@ -1,6 +1,6 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Test Account Agent
+# MAGIC # Test Product Agent Class
 
 # COMMAND ----------
 
@@ -24,17 +24,15 @@ if root_path:
 
 # COMMAND ----------
 
-# init tools - will register UC functions if needed
 from telco_support_agent.tools import initialize_tools
 
 from mlflow.types.responses import ResponsesAgentRequest
-
-from telco_support_agent.agents.account import AccountAgent
+from telco_support_agent.agents.product import ProductAgent
 
 # COMMAND ----------
 
-print("Initializing tools for account agent...")
-results = initialize_tools(domains=["account"])
+print("Initializing tools for product agent...")
+results = initialize_tools(domains=["product"])
 
 print("\nFunction initialization status:")
 for domain, functions in results.items():
@@ -51,30 +49,35 @@ else:
 
 # COMMAND ----------
 
-# init agent
-account_agent = AccountAgent()
+product_agent = ProductAgent()
 
-print(f"Agent type: {account_agent.agent_type}")
-print(f"LLM endpoint: {account_agent.llm_endpoint}")
-print(f"LLM parameters: {account_agent.llm_params}")
-print(f"Number of tools: {len(account_agent.tools)}")
+print(f"Agent type: {product_agent.agent_type}")
+print(f"LLM endpoint: {product_agent.llm_endpoint}")
+print(f"LLM parameters: {product_agent.llm_params}")
+print(f"Number of tools: {len(product_agent.tools)}")
 
 print("\nAvailable tools:")
-for tool in account_agent.tools:
+for tool in product_agent.tools:
     if "function" in tool:
         print(f"- {tool['function']['name']}")
 
 # COMMAND ----------
 
+request = ResponsesAgentRequest(
+    input=[{"role": "user", "content": "What's the difference between the Standard and Premium plans?"}]
+)
+
+# COMMAND ----------
+
 def test_query(query):
     print(f"\n=== TESTING QUERY: \"{query}\" ===\n")
-    
+
     request = ResponsesAgentRequest(
         input=[{"role": "user", "content": query}]
     )
-    
+
     try:
-        response = account_agent.predict(request)
+        response = product_agent.predict(request)
         if response and hasattr(response, 'output') and response.output:
             output_item = response.output[-1]
             if "content" in output_item and isinstance(output_item["content"], list):
@@ -87,20 +90,24 @@ def test_query(query):
             print("No response or empty response received")
     except Exception as e:
         print(f"Error processing query: {e}")
-    
+
     print("\n" + "="*80)
 
 # COMMAND ----------
 
-test_query("How many plans do I have on my account? My ID is CUS-10601")
+test_query("What's the difference between the Standard and Premium plans?")
 
 # COMMAND ----------
 
 test_queries = [
-    "What plan am I currently on? My ID is CUS-10601",
-    "When did I create my account? My ID is CUS-10601",
-    "Is my autopay enabled in my subscriptions? My ID is CUS-10601",
+    "What's the difference between the Standard and Premium plans?",
+    "Show me the plans with unlimited data",
+    "Do you have any promotions for existing customers?",
+    "Is my phone 5G compatible? My ID is CUS-10011",
+    "Which plan gives me the most data for under $50?"
 ]
+
+# COMMAND ----------
 
 for query in test_queries:
     test_query(query)
