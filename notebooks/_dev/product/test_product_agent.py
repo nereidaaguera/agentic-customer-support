@@ -103,7 +103,7 @@ test_queries = [
     "What's the difference between the Standard and Premium plans?",
     "Show me the plans with unlimited data",
     "Do you have any promotions for existing customers?",
-    "Is my phone 5G compatible? My ID is CUS-10601",
+    "Is my phone 5G compatible? My ID is CUS-10011",
     "Which plan gives me the most data for under $50?"
 ]
 
