@@ -95,11 +95,15 @@ def _get_supervisor_resources(environment: str) -> list[Resource]:
 
     resources = []
 
-    # get configs for all agent types
+    # get configs for all available agent types
     agent_configs = {}
-    for agent_type in ["supervisor", "account", "tech_support"]:
+    available_agent_types = config_manager.get_all_agent_types()
+    logger.info(f"Discovered agent types: {available_agent_types}")
+
+    for agent_type in available_agent_types:
         try:
             agent_configs[agent_type] = config_manager.get_config(agent_type)
+            logger.info(f"Loaded config for {agent_type} agent")
         except Exception as e:
             logger.warning(f"Could not load {agent_type} config: {e}")
 

@@ -51,6 +51,10 @@ print("\nAccount agent functions:", account_config["uc_functions"])
 tech_support_config = config_manager.get_config("tech_support")
 print("\nTech support agent LLM endpoint:", tech_support_config["llm"]["endpoint"])
 
+product_config = config_manager.get_config("product")
+print("\nProduct agent LLM endpoint:", product_config["llm"]["endpoint"])
+print("\nProduct agent functions:", product_config["uc_functions"])
+
 # COMMAND ----------
 
 # MAGIC %md
@@ -72,20 +76,21 @@ print(f"LLM parameters: {supervisor.llm_params}")
 # COMMAND ----------
 
 print("Initializing UC functions...")
-results = initialize_tools(agent_config=account_config)
+for agent_config in [account_config, product_config]:
+    results = initialize_tools(agent_config=account_config)
 
-print("\nFunction initialization status:")
-for domain, functions in results.items():
-    print(f"\nDomain: {domain}")
-    for func_name, status in functions.items():
-        status_str = "✅ Available" if status else "❌ Unavailable"
-        print(f"  - {func_name}: {status_str}")
+    print("\nFunction initialization status:")
+    for domain, functions in results.items():
+        print(f"\nDomain: {domain}")
+        for func_name, status in functions.items():
+            status_str = "✅ Available" if status else "❌ Unavailable"
+            print(f"  - {func_name}: {status_str}")
 
-if any(not all(functions.values()) for functions in results.values()):
-    print("\nWARNING: Some functions could not be initialized")
-    print("Tests might fail without the necessary UC functions")
-else:
-    print("\nAll required functions are available")
+    if any(not all(functions.values()) for functions in results.values()):
+        print("\nWARNING: Some functions could not be initialized")
+        print("Tests might fail without the necessary UC functions")
+    else:
+        print("\nAll required functions are available")
 
 # COMMAND ----------
 
@@ -216,7 +221,7 @@ for query, description in billing_queries:
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### TODO: test product queries
+# MAGIC ### Test Product Queries
 
 # COMMAND ----------
 
@@ -248,24 +253,24 @@ def display_streaming_response(model_input, description=""):
         if event.type == "response.output_item.done":
             item = event.item
             
-            if hasattr(item, "type") and item.type == "message":
-                if hasattr(item, "content"):
-                    for content_item in item.content:
-                        if hasattr(content_item, "type") and content_item.type == "output_text":
-                            text = content_item.text
+            if "type" in item and item["type"] == "message":
+                if "content" in item:
+                    for content_item in item["content"]:
+                        if "type" in content_item and content_item["type"] == "output_text":
+                            text = content_item["text"]
                             print(f"\n[Message Chunk {i}]")
                             print(text)
                             full_text += text
             
-            elif hasattr(item, "type") and item.type == "function_call":
-                print(f"\n[Function Call {i}]: {item.name}")
-                print(f"Arguments: {item.arguments}")
-                function_calls.append(f"{item.name}({item.arguments})")
+            elif "type" in item and item["type"] == "function_call":
+                print(f"\n[Function Call {i}]: {item["name"]}")
+                print(f"Arguments: {item["arguments"]}")
+                function_calls.append(f"{item["name"]}({item["arguments"]})")
             
-            elif hasattr(item, "type") and item.type == "function_call_output":
+            elif "type" in item and item["type"] == "function_call_output":
                 print(f"\n[Function Output {i}]:")
-                print(item.output[:200] + "..." if len(item.output) > 200 else item.output)
-                function_outputs.append(item.output)
+                print(item["output"][:200] + "..." if len(item["output"]) > 200 else item["output"])
+                function_outputs.append(item["output"])
     
     print(f"\n{'='*50}")
     print("STREAMING SUMMARY:")
@@ -278,7 +283,7 @@ def display_streaming_response(model_input, description=""):
 
 streaming_test_queries = [
     (ResponsesAgentRequest(input=[{"role": "user", "content": "What are the details of my account? I'm customer CUS-10001."}]), "Account Query Streaming"),
-    
+    (ResponsesAgentRequest(input=[{"role": "user", "content": "What's the difference between the Standard and Premium plans?"}]), "Plan Comparison"),
     (ResponsesAgentRequest(input=[{"role": "user", "content": "Why is my bill different this month?"}]), "Billing Query Streaming (Not Implemented)"),
 ]
 
