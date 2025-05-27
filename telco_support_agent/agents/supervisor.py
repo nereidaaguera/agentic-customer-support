@@ -135,7 +135,7 @@ class SupervisorAgent(BaseAgent):
             )
             return AgentType.ACCOUNT
 
-    @mlflow.trace(span_type=SpanType.AGENT)
+    @mlflow.trace(span_type=SpanType.AGENT, name="supervisor")
     def predict(self, model_input: ResponsesAgentRequest) -> ResponsesAgentResponse:
         """Process the user query and route to appropriate sub-agent.
 
@@ -205,7 +205,7 @@ class SupervisorAgent(BaseAgent):
             output=sub_response.output, custom_outputs=custom_outputs
         )
 
-    @mlflow.trace(span_type=SpanType.AGENT)
+    @mlflow.trace(span_type=SpanType.AGENT, name="supervisor")
     def predict_stream(
         self, model_input: ResponsesAgentRequest
     ) -> Generator[ResponsesAgentStreamEvent, None, None]:
