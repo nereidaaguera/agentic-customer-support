@@ -57,8 +57,7 @@ from telco_support_agent.agents.config import config_manager
 
 print("Initializing required UC functions...")
 
-account_config = config_manager.get_config("account")
-results = initialize_tools(agent_config=account_config)
+results = initialize_tools()
 
 success_count = 0
 total_count = 0
