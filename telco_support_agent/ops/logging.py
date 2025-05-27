@@ -99,7 +99,7 @@ def _get_supervisor_resources(environment: str) -> list[Resource]:
     agent_configs = {}
     available_agent_types = config_manager.get_all_agent_types()
     logger.info(f"Discovered agent types: {available_agent_types}")
-    
+
     for agent_type in available_agent_types:
         try:
             agent_configs[agent_type] = config_manager.get_config(agent_type)
