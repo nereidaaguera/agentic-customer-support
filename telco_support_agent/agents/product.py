@@ -35,4 +35,5 @@ class ProductAgent(BaseAgent):
             llm_endpoint=llm_endpoint,
             config_dir=config_dir,
             tools=toolkit.tools,
+            inject_tool_args={"customer": "context"},
         )

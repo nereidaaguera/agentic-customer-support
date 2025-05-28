@@ -2,6 +2,7 @@
 
 import abc
 import json
+from collections import defaultdict
 from collections.abc import Generator
 from pathlib import Path
 from typing import Any, Optional, Union
@@ -42,6 +43,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         ] = None,  # Map of tool name -> VectorSearchRetrieverTool (not UC function)
         system_prompt: Optional[str] = None,
         config_dir: Optional[Path | str] = None,
+        inject_tool_args: Optional[dict[str, str]] = None,
     ):
         """Initialize base agent from config file.
 
@@ -52,6 +54,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             vector_search_tools: Optional dict mapping tool names to VectorSearchRetrieverTool objects
             system_prompt: Optional override for system prompt
             config_dir: Optional directory for config files
+            inject_tool_args: Optional dict of additional tool arguments to be injected into tool calls.
         """
         # load config file
         self.agent_type = agent_type
@@ -73,6 +76,9 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         # set up tools
         self.tools = tools or self._load_tools_from_config()
         self.vector_search_tools = vector_search_tools or {}
+        self.inject_tool_args = inject_tool_args or {}
+        self.tools_with_injected = defaultdict(list)
+        self.cleaned_tools = self.generated_cleaned_tools()
 
         logger.info(f"Initialized {agent_type} agent with {len(self.tools)} tools")
 
@@ -218,49 +224,67 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             chat_msgs.extend(self.convert_to_chat_completion_format(msg))
         return chat_msgs
 
+    def remove_injected_params(self, cleaned_tool):
+        """Remove parameters that will be injected at runtime from the cleaned tool before calling the LLM."""
+        parameters = cleaned_tool["function"]["parameters"]["properties"]
+        required_parameters = cleaned_tool["function"]["parameters"]["required"]
+        func_name = cleaned_tool["function"]["name"]
+        for param in self.inject_tool_args.keys():
+            if param in parameters:
+                logger.info(f"Removing param '{param}' from tool: {func_name}")
+                parameters.pop(param)
+                self.tools_with_injected[func_name].append(param)
+            if param in required_parameters:
+                required_parameters.remove(param)
+        return cleaned_tool
+
+    def generated_cleaned_tools(self):
+        """Create cleaned tools for calling LLM with tools in the expected format."""
+        cleaned_tools = []
+        for tool in self.get_tool_specs():
+            if "function" in tool:
+                cleaned_tool = {
+                    "type": "function",
+                    "function": {
+                        "name": tool["function"]["name"],
+                        "description": tool["function"].get("description", ""),
+                        "parameters": {
+                            "type": "object",
+                            "properties": {},
+                            "required": [],
+                        },
+                    },
+                }
+
+                if (
+                    "parameters" in tool["function"]
+                    and "properties" in tool["function"]["parameters"]
+                ):
+                    cleaned_tool["function"]["parameters"]["properties"] = tool[
+                        "function"
+                    ]["parameters"]["properties"]
+
+                if (
+                    "parameters" in tool["function"]
+                    and "required" in tool["function"]["parameters"]
+                ):
+                    cleaned_tool["function"]["parameters"]["required"] = tool[
+                        "function"
+                    ]["parameters"]["required"]
+
+                cleaned_tools.append(self.remove_injected_params(cleaned_tool))
+
+        return cleaned_tools
+
     @backoff.on_exception(backoff.expo, Exception)
     @mlflow.trace(span_type=SpanType.LLM)
     def call_llm(self, messages: list[dict[str, Any]]) -> dict[str, Any]:
         """Call LLM with provided message history."""
         try:
-            cleaned_tools = []
-            for tool in self.get_tool_specs():
-                if "function" in tool:
-                    cleaned_tool = {
-                        "type": "function",
-                        "function": {
-                            "name": tool["function"]["name"],
-                            "description": tool["function"].get("description", ""),
-                            "parameters": {
-                                "type": "object",
-                                "properties": {},
-                                "required": [],
-                            },
-                        },
-                    }
-
-                    if (
-                        "parameters" in tool["function"]
-                        and "properties" in tool["function"]["parameters"]
-                    ):
-                        cleaned_tool["function"]["parameters"]["properties"] = tool[
-                            "function"
-                        ]["parameters"]["properties"]
-
-                    if (
-                        "parameters" in tool["function"]
-                        and "required" in tool["function"]["parameters"]
-                    ):
-                        cleaned_tool["function"]["parameters"]["required"] = tool[
-                            "function"
-                        ]["parameters"]["required"]
-
-                    cleaned_tools.append(cleaned_tool)
-
             params = {
                 "model": self.llm_endpoint,
                 "messages": self.prepare_messages_for_llm(messages),
-                "tools": cleaned_tools,
+                "tools": self.cleaned_tools,
                 **self.llm_params,
             }
 
@@ -277,14 +301,17 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             raise
 
     def handle_tool_call(
-        self, messages: list[dict[str, Any]], tool_calls: list[dict[str, Any]]
+        self,
+        messages: list[dict[str, Any]],
+        tool_calls: list[dict[str, Any]],
+        custom_inputs: Optional[dict[str, Any]] = None,
     ) -> tuple[list[dict[str, Any]], list[ResponsesAgentStreamEvent]]:
         """Execute tool calls and return updated messages and response events.
 
         Args:
             messages: Current message history
             tool_calls: Tool calls to execute
-
+            custom_inputs: Optional custom inputs
         Returns:
             Tuple of (updated_messages, response_events)
         """
@@ -297,6 +324,11 @@ class BaseAgent(ResponsesAgent, abc.ABC):
 
             # execute tool and convert result to string
             try:
+                # Inject arguments to tool.
+                if function["name"] in self.tools_with_injected:
+                    for param in self.tools_with_injected[function["name"]]:
+                        args[param] = custom_inputs[param]
+
                 result = self.execute_tool(tool_name=function["name"], args=args)
                 result_str = str(result)
             except Exception as e:
@@ -324,14 +356,17 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         return updated_messages, events
 
     def call_and_run_tools(
-        self, messages: list[dict[str, Any]], max_iter: int = 10
+        self,
+        messages: list[dict[str, Any]],
+        custom_inputs: Optional[dict[str, Any]] = None,
+        max_iter: int = 10,
     ) -> Generator[ResponsesAgentStreamEvent, None, None]:
         """Run the call-tool-response loop up to max_iter times.
 
         Args:
             messages: Initial message history
+            custom_inputs: Optional custom inputs
             max_iter: Maximum number of iterations
-
         Yields:
             ResponsesAgentStreamEvent objects
         """
@@ -343,7 +378,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             # handle tool calls if present
             if tool_calls := last_msg.get("tool_calls", None):
                 updated_messages, events = self.handle_tool_call(
-                    current_messages, tool_calls
+                    current_messages, tool_calls, custom_inputs
                 )
                 current_messages = updated_messages
                 yield from events
@@ -416,4 +451,4 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             i.model_dump() for i in model_input.input
         ]
 
-        yield from self.call_and_run_tools(messages)
+        yield from self.call_and_run_tools(messages, model_input.custom_inputs)
