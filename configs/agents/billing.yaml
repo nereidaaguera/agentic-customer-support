@@ -1,7 +1,7 @@
 name: billing
 description: Customer billing information agent.
 llm:
-  endpoint: databricks-claude-3-7-sonnet
+  endpoint: gpt-4o
   params:
     temperature: 0.0
     max_tokens: 1024
