@@ -1,0 +1,108 @@
+# Databricks notebook source
+# MAGIC %md
+# MAGIC # Test Billing Agent
+
+# COMMAND ----------
+
+# MAGIC %pip install -r ../../../requirements.txt -q
+
+# COMMAND ----------
+
+# MAGIC %restart_python
+
+# COMMAND ----------
+
+import os
+import sys
+
+root_path = os.path.abspath(os.path.join(os.getcwd(), "../../.."))
+print(f"Root path: {root_path}")
+
+if root_path:
+    sys.path.append(root_path)
+    print(f"Added {root_path} to Python path")
+
+# COMMAND ----------
+
+from telco_support_agent.tools import initialize_tools
+
+from mlflow.types.responses import ResponsesAgentRequest
+from telco_support_agent.agents.billing import BillingAgent
+
+# COMMAND ----------
+
+print("Initializing tools for billing agent...")
+results = initialize_tools(domains=["billing"])
+
+print("\nFunction initialization status:")
+for domain, functions in results.items():
+    print(f"\nDomain: {domain}")
+    for func_name, status in functions.items():
+        status_str = "✅ Available" if status else "❌ Unavailable"
+        print(f"  - {func_name}: {status_str}")
+
+if any(not all(functions.values()) for functions in results.values()):
+    print("\nWARNING: Some functions could not be initialized")
+    print("Tests might fail without the necessary UC functions")
+else:
+    print("\nAll required functions are available")
+
+# COMMAND ----------
+
+billing_agent = BillingAgent()
+
+print(f"Agent type: {billing_agent.agent_type}")
+print(f"LLM endpoint: {billing_agent.llm_endpoint}")
+print(f"LLM parameters: {billing_agent.llm_params}")
+print(f"Number of tools: {len(billing_agent.tools)}")
+
+print("\nAvailable tools:")
+for tool in billing_agent.tools:
+    if "function" in tool:
+        print(f"- {tool['function']['name']}")
+
+# COMMAND ----------
+
+def test_query(query):
+    print(f"\n=== TESTING QUERY: \"{query}\" ===\n")
+
+    request = ResponsesAgentRequest(
+        input=[{"role": "user", "content": query}]
+    )
+
+    try:
+        response = billing_agent.predict(request)
+        if response and hasattr(response, 'output') and response.output:
+            output_item = response.output[-1]
+            if "content" in output_item and isinstance(output_item["content"], list):
+                print(output_item["content"][0]["text"])
+            elif "content" in output_item:
+                print(output_item["content"])
+            else:
+                print("Response:", output_item)
+        else:
+            print("No response or empty response received")
+    except Exception as e:
+        print(f"Error processing query: {e}")
+
+    print("\n" + "="*80)
+
+# COMMAND ----------
+
+test_query("What are the charges on my bill for customer CUS-10001 from 2025-04-01 to 2025-04-30?")
+
+# COMMAND ----------
+
+test_queries = [
+    "What are the charges on my bill for customer CUS-10001 from 2025-04-01 to 2025-04-30?",
+    "When is my payment due for customer CUS-10002?",
+    "I see a charge for $14.99 that I don't recognize. My customer ID is CUS-10003 and show me my bill for March 2025",
+    "How much data did customer CUS-10001 use from 2025-04-01 to 2025-04-30?",
+    "Is there an unpaid amount for customer CUS-10001 from 2025-04-01 to 2025-04-30?",
+    "Show me my billing history for customer CUS-10002 for the last 3 months"
+]
+
+# COMMAND ----------
+
+for query in test_queries:
+    test_query(query)

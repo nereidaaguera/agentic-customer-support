@@ -345,36 +345,48 @@ class ProductGenerator(BaseGenerator):
                         "type": "Percentage",
                         "value": 50.0,
                         "duration": 90,
+                        "eligible_plans": "all",
+                        "eligible_devices": "all",
                     },
                     {
                         "name": "Switch & Save",
                         "type": "Fixed",
                         "value": 20.0,
                         "duration": 180,
+                        "eligible_plans": "all",
+                        "eligible_devices": "all",
                     },
                     {
                         "name": "First Month Free",
                         "type": "Percentage",
                         "value": 100.0,
                         "duration": 30,
+                        "eligible_plans": "all",
+                        "eligible_devices": "all",
                     },
                     {
                         "name": "Port-In Credit",
                         "type": "Fixed",
                         "value": 200.0,
                         "duration": 30,
+                        "eligible_plans": "all",
+                        "eligible_devices": "all",
                     },
                     {
                         "name": "BOGO Line Offer",
                         "type": "Service",
                         "value": 0.0,
                         "duration": 365,
+                        "eligible_plans": "all",
+                        "eligible_devices": "all",
                     },
                     {
                         "name": "Family Migration Bonus",
                         "type": "Fixed",
                         "value": 75.0,
                         "duration": 60,
+                        "eligible_plans": "PLAN-1008,PLAN-1001,PLAN-1003",  ## family plan idS
+                        "eligible_devices": "all",
                     },
                 ],
             },
@@ -387,42 +399,56 @@ class ProductGenerator(BaseGenerator):
                         "type": "Fixed",
                         "value": 100.0,
                         "duration": 60,
+                        "eligible_plans": "all",
+                        "eligible_devices": "DEV-2029,DEV-2030,DEV2034,DEV-2002",
                     },
                     {
                         "name": "Galaxy S25 Upgrade",
                         "type": "Fixed",
                         "value": 150.0,
                         "duration": 90,
+                        "eligible_plans": "all",
+                        "eligible_devices": "DEV-2025",
                     },
                     {
                         "name": "Free Pixel 9 with Premium Plan",
                         "type": "Service",
                         "value": 0.0,
                         "duration": 60,
+                        "eligible_plans": "all",
+                        "eligible_devices": "all",
                     },
                     {
                         "name": "Free Phone Upgrade",
                         "type": "Service",
                         "value": 0.0,
                         "duration": 30,
+                        "eligible_plans": "all",
+                        "eligible_devices": "DEV-2026,DEV-2027,DEV-2029,DEV-2030,DEV-2034,DEV-2002,DEV-2008",  # ["iPhone 15", "Galaxy S24", "Pixel 8", "OnePlus 12"]
                     },
                     {
                         "name": "Device Protection Bundle",
                         "type": "Percentage",
                         "value": 50.0,
                         "duration": 180,
+                        "eligible_plans": "all",
+                        "eligible_devices": "all",
                     },
                     {
                         "name": "Premium Accessory Package",
                         "type": "Service",
                         "value": 0.0,
                         "duration": 30,
+                        "eligible_plans": "all",
+                        "eligible_devices": "all",
                     },
                     {
                         "name": "Early Upgrade Eligibility",
                         "type": "Service",
                         "value": 0.0,
                         "duration": 180,
+                        "eligible_plans": "all",
+                        "eligible_devices": "all",
                     },
                 ],
             },
@@ -435,42 +461,56 @@ class ProductGenerator(BaseGenerator):
                         "type": "Percentage",
                         "value": 15.0,
                         "duration": 120,
+                        "eligible_plans": "PLAN-1004,PLAN-1008,PLAN-1012",  ##unlimited plan idS
+                        "eligible_devices": "all",
                     },
                     {
                         "name": "Family Plan Extra Line Free",
                         "type": "Service",
                         "value": 0.0,
                         "duration": 90,
+                        "eligible_plans": "PLAN-1008,PLAN-1001,PLAN-1003",  ## family plan idS
+                        "eligible_devices": "all",
                     },
                     {
                         "name": "Premium Plan Trial",
                         "type": "Percentage",
                         "value": 25.0,
                         "duration": 60,
+                        "eligible_plans": "PLAN-1007,PLAN-1011,PLAN-1003",  ## premium plan idS
+                        "eligible_devices": "all",
                     },
                     {
                         "name": "Data Rollover Plus",
                         "type": "Service",
                         "value": 0.0,
                         "duration": 365,
+                        "eligible_plans": "all",  ## premium plan idS
+                        "eligible_devices": "all",
                     },
                     {
                         "name": "International Add-On Included",
                         "type": "Service",
                         "value": 0.0,
                         "duration": 90,
+                        "eligible_plans": "all",  ## premium plan idS
+                        "eligible_devices": "all",
                     },
                     {
                         "name": "Streaming Service Bundle",
                         "type": "Service",
                         "value": 0.0,
                         "duration": 180,
+                        "eligible_plans": "all",  ## premium plan idS
+                        "eligible_devices": "all",
                     },
                     {
                         "name": "Multi-Line Discount",
                         "type": "Percentage",
                         "value": 10.0,
                         "duration": 365,
+                        "eligible_plans": "all",  ## premium plan idS
+                        "eligible_devices": "all",
                     },
                 ],
             },
@@ -483,42 +523,56 @@ class ProductGenerator(BaseGenerator):
                         "type": "Service",
                         "value": 0.0,
                         "duration": 90,
+                        "eligible_plans": "all",  ## premium plan idS
+                        "eligible_devices": "all",
                     },
                     {
                         "name": "Back to School Bundle",
                         "type": "Fixed",
                         "value": 25.0,
                         "duration": 45,
+                        "eligible_plans": "all",  ## premium plan idS
+                        "eligible_devices": "all",
                     },
                     {
                         "name": "Holiday Device Offer",
                         "type": "Fixed",
                         "value": 50.0,
                         "duration": 30,
+                        "eligible_plans": "all",  ## premium plan idS
+                        "eligible_devices": "all",
                     },
                     {
                         "name": "Black Friday Special",
                         "type": "Percentage",
                         "value": 40.0,
                         "duration": 14,
+                        "eligible_plans": "all",  ## premium plan idS
+                        "eligible_devices": "all",
                     },
                     {
                         "name": "Valentine's Couples Plan",
                         "type": "Fixed",
                         "value": 30.0,
                         "duration": 28,
+                        "eligible_plans": "all",  ## premium plan idS
+                        "eligible_devices": "all",
                     },
                     {
                         "name": "Spring Trade-In Event",
                         "type": "Fixed",
                         "value": 75.0,
                         "duration": 45,
+                        "eligible_plans": "all",  ## premium plan idS
+                        "eligible_devices": "all",
                     },
                     {
                         "name": "Graduation Gift Promotion",
                         "type": "Service",
                         "value": 0.0,
                         "duration": 60,
+                        "eligible_plans": "all",  ## premium plan idS
+                        "eligible_devices": "all",
                     },
                 ],
             },
@@ -531,42 +585,56 @@ class ProductGenerator(BaseGenerator):
                         "type": "Percentage",
                         "value": 10.0,
                         "duration": 150,
+                        "eligible_plans": "all",  ## premium plan idS
+                        "eligible_devices": "all",
                     },
                     {
                         "name": "Anniversary Discount",
                         "type": "Fixed",
                         "value": 15.0,
                         "duration": 60,
+                        "eligible_plans": "all",  ## premium plan idS
+                        "eligible_devices": "all",
                     },
                     {
                         "name": "Premium Customer Thank You",
                         "type": "Service",
                         "value": 0.0,
                         "duration": 90,
+                        "eligible_plans": "all",  ## premium plan idS
+                        "eligible_devices": "all",
                     },
                     {
                         "name": "Long-Term Customer Rate Lock",
                         "type": "Service",
                         "value": 0.0,
                         "duration": 365,
+                        "eligible_plans": "all",  ## premium plan idS
+                        "eligible_devices": "all",
                     },
                     {
                         "name": "Priority Support Access",
                         "type": "Service",
                         "value": 0.0,
                         "duration": 180,
+                        "eligible_plans": "all",  ## premium plan idS
+                        "eligible_devices": "all",
                     },
                     {
                         "name": "Annual Upgrade Option",
                         "type": "Service",
                         "value": 0.0,
                         "duration": 365,
+                        "eligible_plans": "all",  ## premium plan idS
+                        "eligible_devices": "all",
                     },
                     {
                         "name": "5-Year Milestone Gift",
                         "type": "Fixed",
                         "value": 100.0,
                         "duration": 30,
+                        "eligible_plans": "all",  ## premium plan idS
+                        "eligible_devices": "all",
                     },
                 ],
             },
@@ -578,24 +646,32 @@ class ProductGenerator(BaseGenerator):
                         "type": "Percentage",
                         "value": 25.0,
                         "duration": 180,
+                        "eligible_plans": "PLAN-1004,PLAN-1010,PLAN-1011",  ##Business plan idS
+                        "eligible_devices": "all",
                     },
                     {
                         "name": "Multi-Line Business Discount",
                         "type": "Fixed",
                         "value": 15.0,
                         "duration": 365,
+                        "eligible_plans": "PLAN-1004,PLAN-1010,PLAN-1011",  ##Business plan idS
+                        "eligible_devices": "all",
                     },
                     {
                         "name": "Enterprise Solution Package",
                         "type": "Service",
                         "value": 0.0,
                         "duration": 90,
+                        "eligible_plans": "PLAN-1004,PLAN-1010,PLAN-1011",  ##Business plan idS
+                        "eligible_devices": "all",
                     },
                     {
                         "name": "Business Device Fleet Upgrade",
                         "type": "Fixed",
                         "value": 50.0,
                         "duration": 120,
+                        "eligible_plans": "PLAN-1004,PLAN-1010,PLAN-1011",  ##Business plan idS
+                        "eligible_devices": "all",
                     },
                 ],
             },
@@ -607,24 +683,32 @@ class ProductGenerator(BaseGenerator):
                         "type": "Percentage",
                         "value": 35.0,
                         "duration": 5,
+                        "eligible_plans": "all",  ## premium plan idS
+                        "eligible_devices": "all",
                     },
                     {
                         "name": "Weekend Special",
                         "type": "Fixed",
                         "value": 25.0,
                         "duration": 3,
+                        "eligible_plans": "all",  ## premium plan idS
+                        "eligible_devices": "all",
                     },
                     {
                         "name": "One-Day Activation Bonus",
                         "type": "Fixed",
                         "value": 50.0,
                         "duration": 1,
+                        "eligible_plans": "all",  ## premium plan idS
+                        "eligible_devices": "all",
                     },
                     {
                         "name": "48-Hour Priority Shipping",
                         "type": "Service",
                         "value": 0.0,
                         "duration": 2,
+                        "eligible_plans": "all",  ## premium plan idS
+                        "eligible_devices": "all",
                     },
                 ],
             },
@@ -643,6 +727,8 @@ class ProductGenerator(BaseGenerator):
             discount_type = promo_format["type"]
             discount_value = promo_format["value"]
             duration_days = promo_format["duration"]
+            eligible_plans_str = promo_format["eligible_plans"]
+            eligible_devices_str = promo_format["eligible_devices"]
 
             # Generate realistic descriptions
             if discount_type == "Percentage":
@@ -672,8 +758,8 @@ class ProductGenerator(BaseGenerator):
                 # Add specific device details for certain promotions
                 if "Free Phone Upgrade" in promo_name:
                     devices = ["iPhone 15", "Galaxy S24", "Pixel 8", "OnePlus 12"]
-                    eligible_device = self.random.choice(devices)
-                    description += f" Eligible customers can upgrade to a {eligible_device} at no additional cost."
+
+                    description += f" Eligible customers can upgrade to a {','.join(devices)} at no additional cost."
 
                 if "Protection Bundle" in promo_name:
                     description += " Includes device insurance, screen protection, and priority tech support."
@@ -744,6 +830,8 @@ class ProductGenerator(BaseGenerator):
                         end_date.date(),
                         description,
                         is_active,
+                        eligible_devices_str,
+                        eligible_plans_str,
                     )
                 )
 
@@ -772,6 +860,8 @@ class ProductGenerator(BaseGenerator):
                     end_date.date(),
                     description,
                     is_active,
+                    eligible_plans_str,  # add eligible plan
+                    eligible_devices_str,  # add eligble device
                 )
             )
 
@@ -785,6 +875,8 @@ class ProductGenerator(BaseGenerator):
                 StructField("end_date", DateType(), False),
                 StructField("description", StringType(), False),
                 StructField("is_active", BooleanType(), False),
+                StructField("eligible_plans", StringType(), False),  # Use ArrayType
+                StructField("eligible_devices", StringType(), False),  # Use ArrayType
             ]
         )
 

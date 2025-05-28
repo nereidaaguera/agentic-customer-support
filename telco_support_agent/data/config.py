@@ -124,13 +124,13 @@ CONFIG: ConfigDict = {
         "customers": 1500,
         "plans": 12,
         "devices": 35,
-        "promotions": 40,
+        "promotions": 80,
         "kb_articles": 250,
         "tickets": 150,
     },
     # Date ranges
     "date_ranges": {
-        "customer_registration": ["2020-01-01", "2025-06-01"],
+        "customer_registration": ["2020-01-01", "2025-06-13"],
         "billing_cycles": ["2024-01", "2025-06"],
         "device_release": ["2019-01-01", "2025-05-01"],
     },

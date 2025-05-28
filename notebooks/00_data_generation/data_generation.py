@@ -37,27 +37,27 @@ print(f"Running data generation for {env} environment")
 
 # Configure which tables to generate (set to True for tables to generate)
 generate_config = {
-    
+
     # Set to True to regenerate all tables
     "all": False,
 
     # Product data
     "plans": False,
     "devices": False,
-    "promotions": False,
-    
+    "promotions": True,
+
     # Customer data
     "customers": False,
     "subscriptions": False,
-    
+
     # Billing data
     "billing": False,
     "usage": False,
-    
+
     # Knowledge base data
     "kb_articles": False,
     "support_tickets": True,
-    
+
 }
 
 # COMMAND ----------
@@ -96,7 +96,7 @@ else:
     plans_df = load_existing_table("plans")
     print("Using existing plans data")
 
-display(plans_df)    
+display(plans_df)
 
 # COMMAND ----------
 
@@ -113,7 +113,7 @@ else:
     devices_df = load_existing_table("devices")
     print("Using existing devices data")
 
-display(devices_df)    
+display(devices_df)
 
 # COMMAND ----------
 
@@ -195,8 +195,8 @@ print(f"Subscriptions: {get_table_count('subscriptions')}")
 
 # Sample validation query - customers with subscription counts
 query = f"""
-SELECT 
-  c.customer_id, 
+SELECT
+  c.customer_id,
   c.customer_segment,
   c.city,
   c.state,
@@ -233,7 +233,7 @@ else:
     billing_df = load_existing_table("billing")
     print("Using existing billing data")
 
-display(billing_df)    
+display(billing_df)
 
 # COMMAND ----------
 
@@ -261,7 +261,7 @@ print(f"Usage Records: {get_table_count('usage')}")
 
 # Sample query - total monthly revenue
 query = f"""
-SELECT 
+SELECT
   billing_cycle,
   COUNT(*) as bill_count,
   SUM(total_amount) as total_billed,
@@ -284,7 +284,7 @@ display(spark.sql(query))
 
 query = f"""
 -- Find customers with premium devices and their associated promotions and billing records
-SELECT 
+SELECT
   d.device_id,
   d.manufacturer,
   d.device_name,
@@ -301,13 +301,13 @@ FROM telco_customer_support_{env}.bronze.devices d
 JOIN telco_customer_support_{env}.bronze.subscriptions s ON d.device_id = s.device_id
 LEFT JOIN telco_customer_support_{env}.bronze.promotions p ON s.promo_id = p.promo_id
 JOIN telco_customer_support_{env}.bronze.billing b ON s.subscription_id = b.subscription_id
-WHERE 
+WHERE
   (d.manufacturer = 'Samsung' AND d.device_name LIKE '%S25%')
   OR (d.manufacturer = 'Apple' AND d.device_name LIKE '%iPhone 16%')
   OR (d.manufacturer = 'Google' AND d.device_name LIKE '%Pixel 9%')
   AND s.status = 'Active'
   AND b.billing_cycle >= '2025-01'
-ORDER BY 
+ORDER BY
   d.manufacturer,
   d.device_name,
   b.billing_cycle DESC
@@ -350,7 +350,7 @@ display(kb_df)
 
 if should_generate("support_tickets"):
     tickets_df = knowledge_gen.generate_tickets(
-        customers_df, 
+        customers_df,
         subscriptions_df,
         plans_df=plans_df,
         devices_df=devices_df
@@ -372,7 +372,7 @@ print(f"Support Tickets: {get_table_count('support_tickets')}")
 
 # Sample query - Top knowledge base categories and content types
 query = f"""
-SELECT 
+SELECT
   category,
   content_type,
   COUNT(*) as article_count
@@ -386,7 +386,7 @@ display(spark.sql(query))
 
 # Sample query - Support ticket distribution by category and status
 query = f"""
-SELECT 
+SELECT
   category,
   status,
   COUNT(*) as ticket_count,

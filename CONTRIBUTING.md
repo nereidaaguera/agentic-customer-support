@@ -5,7 +5,7 @@
 
 1. **Create a new branch** for your feature or bugfix, prepending with `<your-name>/` (e.g., `niall/add-customer-data-generation`)
 2. **Install dependencies** using Poetry: `poetry install` (requires `poetry>=2.1.2`)
-3. **Make changes**, following coding standards 
+3. **Make changes**, following coding standards
 4. **Run tests and linting** to ensure quality: `./scripts/lint.sh` and `pytest`
 5. **Commit changes** with clear, descriptive commit messages
 6. **Push branch** and submit a pull request. Tag at least one reviewer
@@ -24,6 +24,8 @@ pre-commit hooks will automatically enforce these standards when you commit.
 ## Setting Up Pre-commit Hooks
 
 ```bash
+# unt core.hookSPath globally
+git config --global --unset-all core.hooksPath
 # install pre-commit hooks
 # may hit issues with this if Databricks pre-commit git hooks installed. Can skip
 poetry run pre-commit install
