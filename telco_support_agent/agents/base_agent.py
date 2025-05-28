@@ -32,15 +32,15 @@ TRACE_REQUEST_RESPONSE_PREVIEW_MAX_LENGTH = 10000
 
 
 def compute_request_preview(request: str) -> str:
-    """Compute a preview of the request for tracing.
+    """Compute preview of request for tracing.
 
-    Extracts the most recent user message content for display in trace previews.
+    Extracts most recent user message content for display in trace previews.
 
     Args:
-        request: The raw request string to process
+        request: raw request string to process
 
     Returns:
-        A preview string truncated to max length
+        preview string truncated to max length
     """
     preview = ""
     if isinstance(request, str):
@@ -64,15 +64,15 @@ def compute_request_preview(request: str) -> str:
 
 
 def compute_response_preview(response: str) -> str:
-    """Compute a preview of the response for tracing.
+    """Compute preview of response for tracing.
 
-    Extracts the assistant's text response for display in trace previews.
+    Extracts assistant response for display in trace previews.
 
     Args:
-        response: The raw response string to process
+        response: raw response string to process
 
     Returns:
-        A preview string truncated to max length
+        preview string truncated to max length
     """
     preview = ""
     if isinstance(response, str):
