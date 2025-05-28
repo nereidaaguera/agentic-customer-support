@@ -24,27 +24,10 @@ if root_path:
 
 # COMMAND ----------
 
-# init tools - will register UC functions if needed
 from telco_support_agent.tools import initialize_tools
 
 from mlflow.types.responses import ResponsesAgentRequest
-
 from telco_support_agent.agents.billing import BillingAgent
-
-# COMMAND ----------
-
-# init agent
-billing_agent = BillingAgent()
-
-print(f"Agent type: {billing_agent.agent_type}")
-print(f"LLM endpoint: {billing_agent.llm_endpoint}")
-print(f"LLM parameters: {billing_agent.llm_params}")
-print(f"Number of tools: {len(billing_agent.tools)}")
-
-print("\nAvailable tools:")
-for tool in billing_agent.tools:
-    if "function" in tool:
-        print(f"- {tool['function']['name']}")
 
 # COMMAND ----------
 
@@ -63,6 +46,20 @@ if any(not all(functions.values()) for functions in results.values()):
     print("Tests might fail without the necessary UC functions")
 else:
     print("\nAll required functions are available")
+
+# COMMAND ----------
+
+billing_agent = BillingAgent()
+
+print(f"Agent type: {billing_agent.agent_type}")
+print(f"LLM endpoint: {billing_agent.llm_endpoint}")
+print(f"LLM parameters: {billing_agent.llm_params}")
+print(f"Number of tools: {len(billing_agent.tools)}")
+
+print("\nAvailable tools:")
+for tool in billing_agent.tools:
+    if "function" in tool:
+        print(f"- {tool['function']['name']}")
 
 # COMMAND ----------
 
@@ -92,15 +89,20 @@ def test_query(query):
 
 # COMMAND ----------
 
-test_query("How much is my bill for the total amount charge for my billing of 2025-04-01 to 2025-04-30? My ID is CUS-10601")
+test_query("What are the charges on my bill for customer CUS-10001 from 2025-04-01 to 2025-04-30?")
 
 # COMMAND ----------
 
 test_queries = [
-    "Is there an additional charge for my billing of 2025-04-01 to 2025-04-30? My ID is CUS-10601",
-    "Is the total charge for my billing of Jun 2025 higher than the total charge for my billing of May 2025? My ID is CUS-10601",
-    "Is there a unpaid amount for my billing of 2025-04-01 to 2025-04-30? My ID is CUS-10601",
+    "What are the charges on my bill for customer CUS-10001 from 2025-04-01 to 2025-04-30?",
+    "When is my payment due for customer CUS-10002?",
+    "I see a charge for $14.99 that I don't recognize. My customer ID is CUS-10003 and show me my bill for March 2025",
+    "How much data did customer CUS-10001 use from 2025-04-01 to 2025-04-30?",
+    "Is there an unpaid amount for customer CUS-10001 from 2025-04-01 to 2025-04-30?",
+    "Show me my billing history for customer CUS-10002 for the last 3 months"
 ]
+
+# COMMAND ----------
 
 for query in test_queries:
     test_query(query)
