@@ -43,9 +43,18 @@ def compute_request_preview(request: str) -> str:
         preview string truncated to max length
     """
     preview = ""
+
     if isinstance(request, str):
         try:
             data = json.loads(request)
+        except (json.JSONDecodeError, TypeError):
+            preview = request
+            return preview[:TRACE_REQUEST_RESPONSE_PREVIEW_MAX_LENGTH]
+    else:
+        data = request
+
+    if isinstance(data, dict):
+        try:
             input_list = data.get("model_input", {}).get("input", [])
             if isinstance(input_list, list):
                 for item in reversed(input_list):
@@ -56,10 +65,12 @@ def compute_request_preview(request: str) -> str:
                     ):
                         preview = item["content"]
                         break
-        except (json.JSONDecodeError, KeyError, TypeError) as e:
-            logger.debug(f"Error parsing request for preview: {e}")
+        except (KeyError, TypeError, AttributeError) as e:
+            logger.debug(f"Error extracting user content from request: {e}")
+
     if not preview:
-        preview = request
+        preview = str(request)
+
     return preview[:TRACE_REQUEST_RESPONSE_PREVIEW_MAX_LENGTH]
 
 
@@ -69,15 +80,24 @@ def compute_response_preview(response: str) -> str:
     Extracts assistant response for display in trace previews.
 
     Args:
-        response: raw response string to process
+        response: The raw response string to process
 
     Returns:
-        preview string truncated to max length
+        A preview string truncated to max length
     """
     preview = ""
+
     if isinstance(response, str):
         try:
             data = json.loads(response)
+        except (json.JSONDecodeError, TypeError):
+            preview = response
+            return preview[:TRACE_REQUEST_RESPONSE_PREVIEW_MAX_LENGTH]
+    else:
+        data = response
+
+    if isinstance(data, dict):
+        try:
             output = data.get("output")
             if isinstance(output, list):
                 for item in reversed(output):
@@ -96,10 +116,12 @@ def compute_response_preview(response: str) -> str:
                                 break
                         if preview:
                             break
-        except (json.JSONDecodeError, KeyError, TypeError) as e:
-            logger.debug(f"Error parsing response for preview: {e}")
+        except (KeyError, TypeError, AttributeError) as e:
+            logger.debug(f"Error extracting assistant content from response: {e}")
+
     if not preview:
-        preview = response
+        preview = str(response)
+
     return preview[:TRACE_REQUEST_RESPONSE_PREVIEW_MAX_LENGTH]
 
 
