@@ -43,7 +43,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         ] = None,  # Map of tool name -> VectorSearchRetrieverTool (not UC function)
         system_prompt: Optional[str] = None,
         config_dir: Optional[Path | str] = None,
-        inject_tool_args: Optional[dict[str, str]] = None,
+        inject_tool_args: Optional[list[str]] = None,
     ):
         """Initialize base agent from config file.
 
@@ -54,7 +54,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             vector_search_tools: Optional dict mapping tool names to VectorSearchRetrieverTool objects
             system_prompt: Optional override for system prompt
             config_dir: Optional directory for config files
-            inject_tool_args: Optional dict of additional tool arguments to be injected into tool calls.
+            inject_tool_args: Optional list of additional tool arguments to be injected into tool calls from custom_inputs.
         """
         # load config file
         self.agent_type = agent_type
@@ -76,8 +76,8 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         # set up tools
         self.tools = tools or self._load_tools_from_config()
         self.vector_search_tools = vector_search_tools or {}
-        self.inject_tool_args = inject_tool_args or {}
-        self.tools_with_injected = defaultdict(list)
+        self.inject_tool_args = inject_tool_args or []
+        self.tools_with_injected_args = defaultdict(list)
         self.cleaned_tools = self.generated_cleaned_tools()
 
         logger.info(f"Initialized {agent_type} agent with {len(self.tools)} tools")
@@ -224,18 +224,18 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             chat_msgs.extend(self.convert_to_chat_completion_format(msg))
         return chat_msgs
 
-    def remove_injected_params(self, cleaned_tool):
+    def remove_injected_args(self, cleaned_tool):
         """Remove parameters that will be injected at runtime from the cleaned tool before calling the LLM."""
         parameters = cleaned_tool["function"]["parameters"]["properties"]
         required_parameters = cleaned_tool["function"]["parameters"]["required"]
         func_name = cleaned_tool["function"]["name"]
-        for param in self.inject_tool_args.keys():
-            if param in parameters:
-                logger.info(f"Removing param '{param}' from tool: {func_name}")
-                parameters.pop(param)
-                self.tools_with_injected[func_name].append(param)
-            if param in required_parameters:
-                required_parameters.remove(param)
+        for arg in self.inject_tool_args:
+            if arg in parameters:
+                logger.info(f"Removing argument '{arg}' from tool: {func_name}")
+                parameters.pop(arg)
+                self.tools_with_injected_args[func_name].append(arg)
+            if arg in required_parameters:
+                required_parameters.remove(arg)
         return cleaned_tool
 
     def generated_cleaned_tools(self):
@@ -272,7 +272,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
                         "function"
                     ]["parameters"]["required"]
 
-                cleaned_tools.append(self.remove_injected_params(cleaned_tool))
+                cleaned_tools.append(self.remove_injected_args(cleaned_tool))
 
         return cleaned_tools
 
@@ -324,9 +324,9 @@ class BaseAgent(ResponsesAgent, abc.ABC):
 
             # execute tool and convert result to string
             try:
-                # Inject arguments to tool.
-                if function["name"] in self.tools_with_injected:
-                    for param in self.tools_with_injected[function["name"]]:
+                # Inject arguments before calling the tool. Values are coming from custom_inputs.
+                if function["name"] in self.tools_with_injected_args:
+                    for param in self.tools_with_injected_args[function["name"]]:
                         args[param] = custom_inputs[param]
 
                 result = self.execute_tool(tool_name=function["name"], args=args)
@@ -355,21 +355,33 @@ class BaseAgent(ResponsesAgent, abc.ABC):
 
         return updated_messages, events
 
+    def check_model_input(self, model_input: ResponsesAgentRequest):
+        """Check that custom_inputs contains the injected tool arguments expected by the agent."""
+        if self.inject_tool_args:
+            for param in self.inject_tool_args:
+                assert model_input.custom_inputs and model_input.custom_inputs.get(
+                    param
+                ), f"Agent invalid input. Agent expects custom input: {param}"
+
     def call_and_run_tools(
         self,
-        messages: list[dict[str, Any]],
-        custom_inputs: Optional[dict[str, Any]] = None,
+        model_input: ResponsesAgentRequest,
         max_iter: int = 10,
     ) -> Generator[ResponsesAgentStreamEvent, None, None]:
         """Run the call-tool-response loop up to max_iter times.
 
         Args:
-            messages: Initial message history
-            custom_inputs: Optional custom inputs
+            model_input: ResponsesAgentRequest model input.
             max_iter: Maximum number of iterations
         Yields:
-            ResponsesAgentStreamEvent objects
+            Responses Agent Stream Event objects
         """
+        self.check_model_input(model_input)
+
+        messages = [{"role": "system", "content": self.system_prompt}] + [
+            i.model_dump() for i in model_input.input
+        ]
+
         current_messages = messages.copy()
 
         for _ in range(max_iter):
@@ -378,7 +390,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             # handle tool calls if present
             if tool_calls := last_msg.get("tool_calls", None):
                 updated_messages, events = self.handle_tool_call(
-                    current_messages, tool_calls, custom_inputs
+                    current_messages, tool_calls, model_input.custom_inputs
                 )
                 current_messages = updated_messages
                 yield from events
@@ -447,8 +459,4 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         self, model_input: ResponsesAgentRequest
     ) -> Generator[ResponsesAgentStreamEvent, None, None]:
         """Stream predictions."""
-        messages = [{"role": "system", "content": self.system_prompt}] + [
-            i.model_dump() for i in model_input.input
-        ]
-
-        yield from self.call_and_run_tools(messages, model_input.custom_inputs)
+        yield from self.call_and_run_tools(model_input)
