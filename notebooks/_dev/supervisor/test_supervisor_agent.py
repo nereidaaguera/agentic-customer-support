@@ -256,40 +256,45 @@ for query, description in product_queries:
 
 # COMMAND ----------
 
-import time
+def display_streaming_response(model_input, description=""):
+    """Display a streaming response as it comes in."""
+    print(f"\n{'='*80}")
+    print(f"STREAMING TEST: {description}")
+    print('='*80)
 
-def test_stream_response(query, description=""):
-    """Test streaming response with simple real-time text display."""
-    print(f"\nTesting: {description or query}")
-    print(f"{'-' * 60}")
-    
-    request = ResponsesAgentRequest(
-        input=[{"role": "user", "content": query}]
-    )
-    
-    for event in supervisor.predict_stream(request):
-        if event.type == "response.output_text.delta":
-            chunk = event.delta.get("text", "") if hasattr(event, 'delta') and event.delta else ""
-            if chunk:
-                print(chunk, end="", flush=True)
-        
-        elif event.type == "response.output_item.done" and "type" in event.item:
-            if event.item["type"] == "message" and "content" in event.item:
-                for content_item in event.item["content"]:
-                    if "type" in content_item and content_item["type"] == "output_text":
-                        text = content_item["text"]
-                        print(text, end="", flush=True)
-            
-            elif event.item["type"] == "function_call":
-                print(f"\n\nFunction Call: {event.item['name']}")
-                print("Processing...", end="", flush=True)
-            
-            elif event.item["type"] == "function_call_output":
-                print(" Done")
-                print("Continuing...\n")
-    
-    print(f"\n{'-' * 60}")
-    print("✅ Streaming complete!\n")
+    full_text = ""
+    function_calls = []
+    function_outputs = []
+
+    for i, event in enumerate(supervisor.predict_stream(model_input)):
+        if event.type == "response.output_item.done":
+            item = event.item
+
+            if "type" in item and item["type"] == "message":
+                if "content" in item:
+                    for content_item in item["content"]:
+                        if "type" in content_item and content_item["type"] == "output_text":
+                            text = content_item["text"]
+                            print(f"\n[Message Chunk {i}]")
+                            print(text)
+                            full_text += text
+
+            elif "type" in item and item["type"] == "function_call":
+                print(f"\n[Function Call {i}]: {item["name"]}")
+                print(f"Arguments: {item["arguments"]}")
+                function_calls.append(f"{item["name"]}({item["arguments"]})")
+
+            elif "type" in item and item["type"] == "function_call_output":
+                print(f"\n[Function Output {i}]:")
+                print(item["output"][:200] + "..." if len(item["output"]) > 200 else item["output"])
+                function_outputs.append(item["output"])
+
+    print(f"\n{'='*50}")
+    print("STREAMING SUMMARY:")
+    print(f"Function Calls: {len(function_calls)}")
+    print(f"Function Outputs: {len(function_outputs)}")
+    print(f"Final Response Length: {len(full_text)} characters")
+    print(f"{'='*80}\n")
 
 # COMMAND ----------
 
