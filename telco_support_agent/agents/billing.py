@@ -1,4 +1,4 @@
-"""Account agent for handling account-related queries."""
+"""Billing agent for handling billing-related queries."""
 
 from typing import Optional
 
@@ -11,25 +11,25 @@ logger = get_logger(__name__)
 
 
 class BillingAgent(BaseAgent):
-    """Account agent to manage user's account queries.
+    """Billing agent to manage customer billing queries.
 
-    This agent answers questions related to user's account information,
-    subscriptions, and account management.
+    This agent answers questions related to customer billing information,
+    payments, charges, billing cycles, and usage details.
     """
 
     def __init__(
         self, llm_endpoint: Optional[str] = None, config_dir: Optional[str] = None
     ) -> None:
-        """Initialize the account agent.
+        """Initialize the billing agent.
 
         Args:
             llm_endpoint: Optional LLM endpoint override
             config_dir: Optional directory for config files
         """
-        # get toolkit for account domain
+        # get toolkit for billing domain
         toolkit = get_toolkit_for_domain("billing")
 
-        logger.info(f"Account agent initialized with {len(toolkit.tools)} tools")
+        logger.info(f"Billing agent initialized with {len(toolkit.tools)} tools")
 
         super().__init__(
             agent_type="billing",
