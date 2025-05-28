@@ -19,7 +19,7 @@ DOMAIN_FUNCTION_MAP = {
     ],
     AgentType.BILLING.value: [
         f"{DEFAULT_CATALOG}.{DEFAULT_SCHEMA}.get_billing_info",
-        # TODO: add more billing functions
+        f"{DEFAULT_CATALOG}.{DEFAULT_SCHEMA}.get_usage_info",
     ],
     AgentType.TECH_SUPPORT.value: [
         # TODO: add tech support functions
