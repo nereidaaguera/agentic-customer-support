@@ -93,6 +93,11 @@ def test_query(query, custom_inputs):
 
 # COMMAND ----------
 
+# Expect error if no custom_input customer is provided.
+test_query("How many plans do I have on my account?", custom_inputs={})
+
+# COMMAND ----------
+
 test_query("How many plans do I have on my account?", custom_inputs={"customer": "CUS-10601"})
 
 # COMMAND ----------
