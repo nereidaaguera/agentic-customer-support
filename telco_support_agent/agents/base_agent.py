@@ -420,16 +420,15 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         with mlflow.start_span(
             name=f"tool_{trace_tool_name}", span_type=SpanType.TOOL
         ) as span:
+            span.set_inputs({"tool_name": tool_name, "args": args})
             span.set_attributes(
                 {
-                    "tool_name": tool_name,
                     "tool_type": "uc_function"
                     if "__" in tool_name
                     else "vector_search",
                     "agent_type": self.agent_type,
                 }
             )
-            span.set_inputs(args)
 
             try:
                 # check if vector search tool
