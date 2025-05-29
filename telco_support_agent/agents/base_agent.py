@@ -12,6 +12,7 @@ import backoff
 import mlflow
 from databricks.sdk import WorkspaceClient
 from mlflow.entities import SpanType
+from mlflow.entities.trace_info import TraceInfo
 from mlflow.pyfunc import ResponsesAgent
 from mlflow.types.responses import (
     ResponsesAgentRequest,
@@ -26,6 +27,132 @@ from telco_support_agent.utils.logging_utils import get_logger, setup_logging
 
 setup_logging()
 logger = get_logger(__name__)
+
+# Monkey patch TraceInfo.__init__ so we have better previews in the UI.
+TRACE_REQUEST_RESPONSE_PREVIEW_MAX_LENGTH = 10000
+
+
+def compute_request_preview(request: str) -> str:
+    """Compute preview of request for tracing.
+
+    Extracts most recent user message content for display in trace previews.
+
+    Args:
+        request: raw request string to process
+
+    Returns:
+        preview string truncated to max length
+    """
+    preview = ""
+
+    if isinstance(request, str):
+        try:
+            data = json.loads(request)
+        except (json.JSONDecodeError, TypeError):
+            preview = request
+            return preview[:TRACE_REQUEST_RESPONSE_PREVIEW_MAX_LENGTH]
+    else:
+        data = request
+
+    if isinstance(data, dict):
+        try:
+            input_list = data.get("model_input", {}).get("input", [])
+            if isinstance(input_list, list):
+                for item in reversed(input_list):
+                    if (
+                        isinstance(item, dict)
+                        and item.get("role") == "user"
+                        and isinstance(item.get("content"), str)
+                    ):
+                        preview = item["content"]
+                        break
+        except (KeyError, TypeError, AttributeError) as e:
+            logger.debug(f"Error extracting user content from request: {e}")
+
+    if not preview:
+        preview = str(request)
+
+    return preview[:TRACE_REQUEST_RESPONSE_PREVIEW_MAX_LENGTH]
+
+
+def compute_response_preview(response: str) -> str:
+    """Compute preview of response for tracing.
+
+    Extracts assistant response for display in trace previews.
+
+    Args:
+        response: The raw response string to process
+
+    Returns:
+        A preview string truncated to max length
+    """
+    preview = ""
+
+    if isinstance(response, str):
+        try:
+            data = json.loads(response)
+        except (json.JSONDecodeError, TypeError):
+            preview = response
+            return preview[:TRACE_REQUEST_RESPONSE_PREVIEW_MAX_LENGTH]
+    else:
+        data = response
+
+    if isinstance(data, dict):
+        try:
+            output = data.get("output")
+            if isinstance(output, list):
+                for item in reversed(output):
+                    if (
+                        isinstance(item, dict)
+                        and item.get("role") == "assistant"
+                        and isinstance(item.get("content"), list)
+                    ):
+                        for part in reversed(item["content"]):
+                            if (
+                                isinstance(part, dict)
+                                and part.get("type") == "output_text"
+                                and isinstance(part.get("text"), str)
+                            ):
+                                preview = part["text"]
+                                break
+                        if preview:
+                            break
+        except (KeyError, TypeError, AttributeError) as e:
+            logger.debug(f"Error extracting assistant content from response: {e}")
+
+    if not preview:
+        preview = str(response)
+
+    return preview[:TRACE_REQUEST_RESPONSE_PREVIEW_MAX_LENGTH]
+
+
+is_patched = False
+
+if not is_patched:
+    # Monkey-patch the __init__
+    original_init = TraceInfo.__init__
+
+    def patched_init(self, request_preview=None, response_preview=None, **kwargs):  # NoQA: D417
+        """Patched TraceInfo.__init__ that computes better previews.
+
+        Args:
+            request_preview: Raw request preview data
+            response_preview: Raw response preview data
+            **kwargs: Additional arguments passed to original __init__
+        """
+        if request_preview is not None:
+            request_preview = compute_request_preview(request_preview)
+        if response_preview is not None:
+            response_preview = compute_response_preview(response_preview)
+        original_init(
+            self,
+            request_preview=request_preview,
+            response_preview=response_preview,
+            **kwargs,
+        )
+
+    TraceInfo.__init__ = patched_init
+    is_patched = True
 
 
 class BaseAgent(ResponsesAgent, abc.ABC):
@@ -443,20 +570,20 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         )
 
     @mlflow.trace(span_type=SpanType.AGENT)
-    def predict(self, model_input: ResponsesAgentRequest) -> ResponsesAgentResponse:
+    def predict(self, request: ResponsesAgentRequest) -> ResponsesAgentResponse:
         """Make prediction based on input request."""
         outputs = [
             event.item
-            for event in self.predict_stream(model_input)
+            for event in self.predict_stream(request)
             if event.type == "response.output_item.done"
         ]
         return ResponsesAgentResponse(
-            output=outputs, custom_outputs=model_input.custom_inputs
+            output=outputs, custom_outputs=request.custom_inputs
         )
 
     @mlflow.trace(span_type=SpanType.AGENT)
     def predict_stream(
-        self, model_input: ResponsesAgentRequest
+        self, request: ResponsesAgentRequest
     ) -> Generator[ResponsesAgentStreamEvent, None, None]:
         """Stream predictions."""
         yield from self.call_and_run_tools(model_input)

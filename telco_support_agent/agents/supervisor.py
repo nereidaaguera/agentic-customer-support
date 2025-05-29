@@ -15,6 +15,7 @@ from mlflow.types.responses import (
 
 from telco_support_agent.agents.account import AccountAgent
 from telco_support_agent.agents.base_agent import BaseAgent
+from telco_support_agent.agents.billing import BillingAgent
 from telco_support_agent.agents.product import ProductAgent
 from telco_support_agent.agents.tech_support import TechSupportAgent
 from telco_support_agent.agents.types import AgentType
@@ -83,6 +84,7 @@ class SupervisorAgent(BaseAgent):
 
         agents_classes = {
             AgentType.ACCOUNT: AccountAgent,
+            AgentType.BILLING: BillingAgent,
             AgentType.TECH_SUPPORT: TechSupportAgent,
             AgentType.PRODUCT: ProductAgent,
         }
@@ -136,17 +138,17 @@ class SupervisorAgent(BaseAgent):
             return AgentType.ACCOUNT
 
     @mlflow.trace(span_type=SpanType.AGENT, name="supervisor")
-    def predict(self, model_input: ResponsesAgentRequest) -> ResponsesAgentResponse:
+    def predict(self, request: ResponsesAgentRequest) -> ResponsesAgentResponse:
         """Process the user query and route to appropriate sub-agent.
 
         Args:
-            model_input: The request containing user messages
+            request: The request containing user messages
 
         Returns:
             The response from the appropriate sub-agent
         """
         # extract the user query from the input
-        user_messages = [msg for msg in model_input.input if msg.role == "user"]
+        user_messages = [msg for msg in request.input if msg.role == "user"]
         if not user_messages:
             # no user messages found, return an error response
             return ResponsesAgentResponse(
@@ -171,9 +173,7 @@ class SupervisorAgent(BaseAgent):
         agent_type = self.route_query(query)
 
         # add routing decision to custom outputs
-        custom_outputs = (
-            model_input.custom_inputs.copy() if model_input.custom_inputs else {}
-        )
+        custom_outputs = request.custom_inputs.copy() if request.custom_inputs else {}
         custom_outputs["routing"] = {
             "agent_type": agent_type.value,
             "decision_time": mlflow.get_run(
@@ -194,7 +194,7 @@ class SupervisorAgent(BaseAgent):
             )
 
         # let sub-agent handle query
-        sub_response = sub_agent.predict(model_input)
+        sub_response = sub_agent.predict(request)
 
         # combine custom outputs
         if sub_response.custom_outputs:
@@ -207,18 +207,18 @@ class SupervisorAgent(BaseAgent):
 
     @mlflow.trace(span_type=SpanType.AGENT, name="supervisor")
     def predict_stream(
-        self, model_input: ResponsesAgentRequest
+        self, request: ResponsesAgentRequest
     ) -> Generator[ResponsesAgentStreamEvent, None, None]:
         """Stream the response from the appropriate sub-agent.
 
         Args:
-            model_input: The request containing user messages
+            request: The request containing user messages
 
         Yields:
             ResponsesAgentStreamEvent objects from the sub-agent
         """
         # extract the user query from the input
-        user_messages = [msg for msg in model_input.input if msg.role == "user"]
+        user_messages = [msg for msg in request.input if msg.role == "user"]
         if not user_messages:
             # no user messages found, return an error response
             yield ResponsesAgentStreamEvent(
@@ -265,7 +265,7 @@ class SupervisorAgent(BaseAgent):
 
         try:
             # stream response from sub-agent
-            yield from sub_agent.predict_stream(model_input)
+            yield from sub_agent.predict_stream(request)
 
         except Exception as e:
             logger.error(f"Error processing with {agent_type.value} agent: {str(e)}")
