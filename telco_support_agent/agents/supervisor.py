@@ -193,8 +193,23 @@ class SupervisorAgent(BaseAgent):
                 output=[non_response], custom_outputs=custom_outputs
             )
 
-        # let sub-agent handle query
-        sub_response = sub_agent.predict(request)
+        with mlflow.start_span(name=f"{agent_type.value}_agent") as span:
+            span.set_attributes(
+                {
+                    "agent_type": agent_type.value,
+                    "query": query,
+                    "customer_id": request.custom_inputs.get("customer")
+                    if request.custom_inputs
+                    else None,
+                }
+            )
+            span.set_inputs({"request": request.model_dump()})
+
+            sub_response = sub_agent.predict(request)
+
+            span.set_outputs(
+                {"response_summary": f"{len(sub_response.output)} output items"}
+            )
 
         # combine custom outputs
         if sub_response.custom_outputs:
