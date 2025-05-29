@@ -2,33 +2,33 @@
 
 # UC model info
 uc_model:
-  catalog: "telco_customer_support_dev"
-  schema: "agent"
-  model_name: "telco_customer_support_agent"
-  # version: "1"  # Optional: specify version, otherwise uses latest
+  catalog: telco_customer_support_dev
+  schema: agent
+  model_name: telco_customer_support_agent
+  # version: 1  # Optional: specify version, otherwise uses latest
 
 # Deployment parameters
 deployment:
-  endpoint_name: "telco-customer-support-agent"
+  endpoint_name: telco-customer-support-agent
   scale_to_zero_enabled: true
-  workload_size: "Small"  # Small, Medium, Large
+  workload_size: Small  # Small, Medium, Large
   wait_for_ready: true
   
   # Optional: Budget policy ID
-  # budget_policy_id: "budget-policy-id"
+  # budget_policy_id: budget-policy-id
   
   # Optional: Additional deployment tags beyond defaults
   tags:
-    project: "telco_support_agent"
-    team: "databricks-agents"
-    environment: "dev"
+    project: telco_support_agent
+    team: databricks-agents
+    environment: dev
 
 # Environment variables for the deployed agent
 environment_vars:
   # any environment variables the agent might need
   # Example:
-  # API_KEY: "{{secrets/telco-support/api-key}}"
-  # DEBUG_MODE: "false"
+  # API_KEY: {{secrets/telco-support/api-key}}
+  # DEBUG_MODE: false
 
 # Agent Instructions - will be visible in the Review App
 instructions: |
@@ -45,4 +45,4 @@ instructions: |
 permissions:
   users:
     - telco-customer-support-dev
-  permission_level: "CAN_MANAGE"  # CAN_VIEW, CAN_RUN, CAN_MANAGE
+  permission_level: CAN_MANAGE  # CAN_VIEW, CAN_RUN, CAN_MANAGE
