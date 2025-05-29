@@ -44,6 +44,7 @@ print("Configuration:")
 print(f"  Name: {config['name']}")
 print(f"  Description: {config['description']}")
 print(f"  UC Model: {config['uc_registration']['catalog']}.{config['uc_registration']['schema']}.{config['uc_registration']['model_name']}")
+print(f"  Input Example: {config['input_example']}")
 
 # COMMAND ----------
 
@@ -86,7 +87,8 @@ print(f"Created supervisor agent (LLM: {supervisor.llm_endpoint})")
 from mlflow.types.responses import ResponsesAgentRequest
 
 test_request = ResponsesAgentRequest(
-    input=[{"role": "user", "content": "What plan am I currently on? My customer ID is CUS-10001."}]
+    input=[{"role": "user", "content": "What plan am I currently on?"}],
+    custom_inputs={"customer": "CUS-10001"}
 )
 
 response = supervisor.predict(test_request)
@@ -122,6 +124,8 @@ print("Testing logged model...")
 loaded_model = mlflow.pyfunc.load_model(logged_model_info.model_uri)
 
 test_input = config["input_example"]
+print(f"Testing with input: {test_input}")
+
 response = loaded_model.predict(test_input)
 
 print("✅ Logged model works correctly")
@@ -144,4 +148,3 @@ model_version = register_agent_to_uc(
 )
 
 print(f"✅ Registered: {uc_model_name} version {model_version.version}")
-
