@@ -241,7 +241,7 @@ class SupervisorAgent(BaseAgent):
             )
 
         with mlflow.start_span(
-            name=f"{execution_result.agent_type.value}_agent"
+            span_type=SpanType.AGENT, name=f"{execution_result.agent_type.value}_agent"
         ) as span:
             span.set_attributes(
                 {
@@ -301,7 +301,6 @@ class SupervisorAgent(BaseAgent):
         )
 
         try:
-            # stream response from sub-agent with enhanced tracing
             with mlflow.start_span(
                 name=f"{execution_result.agent_type.value}_agent"
             ) as span:

@@ -663,7 +663,6 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             },
         )
 
-    @mlflow.trace(span_type=SpanType.AGENT)
     def predict(self, request: ResponsesAgentRequest) -> ResponsesAgentResponse:
         """Make prediction based on input request."""
         outputs = [
