@@ -32,6 +32,12 @@ logger = get_logger(__name__)
 TRACE_REQUEST_RESPONSE_PREVIEW_MAX_LENGTH = 10000
 
 
+class MissingCustomInputError(ValueError):
+    """Raise when custom inputs are missing from the request."""
+
+    pass
+
+
 def compute_request_preview(request: str) -> str:
     """Compute preview of request for tracing.
 
@@ -155,6 +161,98 @@ if not is_patched:
     is_patched = True
 
 
+class ToolParameterInjector:
+    """Handle injection of runtime params into tool calls."""
+
+    def __init__(self, inject_params: list[str]):
+        """Initialize the parameter injector.
+
+        Args:
+            inject_params: List of parameter names to inject at runtime
+        """
+        self.inject_params = inject_params
+        self.tools_with_injected_params: dict[str, list[str]] = defaultdict(list)
+
+    def prepare_tool_spec_for_llm(self, tool_spec: dict[str, Any]) -> dict[str, Any]:
+        """Remove injected parameters from tool spec for LLM consumption.
+
+        Args:
+            tool_spec: Original tool specification
+
+        Returns:
+            Tool specification with injected parameters removed
+        """
+        if "function" not in tool_spec:
+            return tool_spec
+
+        # deep copy - avoid modifying original
+        cleaned_spec = {
+            "type": "function",
+            "function": {
+                "name": tool_spec["function"]["name"],
+                "description": tool_spec["function"].get("description", ""),
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": [],
+                },
+            },
+        }
+
+        if "parameters" in tool_spec["function"]:
+            if "properties" in tool_spec["function"]["parameters"]:
+                cleaned_spec["function"]["parameters"]["properties"] = tool_spec[
+                    "function"
+                ]["parameters"]["properties"].copy()
+
+            if "required" in tool_spec["function"]["parameters"]:
+                cleaned_spec["function"]["parameters"]["required"] = tool_spec[
+                    "function"
+                ]["parameters"]["required"].copy()
+
+        func_name = cleaned_spec["function"]["name"]
+        parameters = cleaned_spec["function"]["parameters"]["properties"]
+        required_params = cleaned_spec["function"]["parameters"]["required"]
+
+        for param in self.inject_params:
+            if param in parameters:
+                logger.info(f"Removing parameter '{param}' from tool: {func_name}")
+                parameters.pop(param)
+                self.tools_with_injected_params[func_name].append(param)
+
+            if param in required_params:
+                required_params.remove(param)
+
+        return cleaned_spec
+
+    def inject_parameters(
+        self, function_name: str, args: dict[str, Any], custom_inputs: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Inject runtime params into function arguments.
+
+        Args:
+            function_name: Name of the function being called
+            args: Original function arguments
+            custom_inputs: Custom inputs containing values to inject
+
+        Returns:
+            Function arguments with injected parameters
+        """
+        if function_name not in self.tools_with_injected_params:
+            return args
+
+        enhanced_args = args.copy()
+        for param in self.tools_with_injected_params[function_name]:
+            if param in custom_inputs:
+                enhanced_args[param] = custom_inputs[param]
+            else:
+                logger.warning(
+                    f"Missing custom input '{param}' for function {function_name}"
+                )
+
+        return enhanced_args
+
+
 class BaseAgent(ResponsesAgent, abc.ABC):
     """Base agent class all agents inherit from."""
 
@@ -203,9 +301,10 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         # set up tools
         self.tools = tools or self._load_tools_from_config()
         self.vector_search_tools = vector_search_tools or {}
-        self.inject_tool_args = inject_tool_args or []
-        self.tools_with_injected_args = defaultdict(list)
-        self.cleaned_tools = self.generated_cleaned_tools()
+
+        # init parameter injector
+        self.parameter_injector = ToolParameterInjector(inject_tool_args or [])
+        self.llm_tool_specs = self._prepare_llm_tool_specs()
 
         logger.info(f"Initialized {agent_type} agent with {len(self.tools)} tools")
 
@@ -264,9 +363,45 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             logger.error(f"Error loading UC function tools: {str(e)}")
             return []
 
+    def _prepare_llm_tool_specs(self) -> list[dict[str, Any]]:
+        """Prepare tool specifications for LLM by removing injected parameters.
+
+        Returns:
+            List of tool specifications formatted for LLM consumption
+        """
+        return [
+            self.parameter_injector.prepare_tool_spec_for_llm(tool)
+            for tool in self.tools
+        ]
+
     def get_tool_specs(self) -> list[dict]:
         """Return tool specifications in the format LLM expects."""
-        return self.tools
+        return self.llm_tool_specs
+
+    def validate_request(self, request: ResponsesAgentRequest) -> None:
+        """Validate that request contains required custom inputs.
+
+        Args:
+            request: The incoming request to validate
+
+        Raises:
+            MissingCustomInputError: If required custom inputs are missing
+        """
+        if not self.parameter_injector.inject_params:
+            return
+
+        missing_inputs = []
+        custom_inputs = request.custom_inputs or {}
+
+        for param in self.parameter_injector.inject_params:
+            if param not in custom_inputs:
+                missing_inputs.append(param)
+
+        if missing_inputs:
+            raise MissingCustomInputError(
+                f"Missing required custom inputs: {missing_inputs}. "
+                f"This agent requires: {self.parameter_injector.inject_params}"
+            )
 
     @mlflow.trace(span_type=SpanType.TOOL)
     def execute_tool(self, tool_name: str, args: dict) -> Any:
@@ -345,63 +480,11 @@ class BaseAgent(ResponsesAgent, abc.ABC):
     def prepare_messages_for_llm(
         self, messages: list[dict[str, Any]]
     ) -> list[dict[str, Any]]:
-        """Filter out message fields that are not compatible with LLM message formats."""
+        """Filter out message fields that are not compatible with LLM message formats and convert from Responses API to ChatCompletion compatible."""
         chat_msgs = []
         for msg in messages:
             chat_msgs.extend(self.convert_to_chat_completion_format(msg))
         return chat_msgs
-
-    def remove_injected_args(self, cleaned_tool):
-        """Remove parameters that will be injected at runtime from the cleaned tool before calling the LLM."""
-        parameters = cleaned_tool["function"]["parameters"]["properties"]
-        required_parameters = cleaned_tool["function"]["parameters"]["required"]
-        func_name = cleaned_tool["function"]["name"]
-        for arg in self.inject_tool_args:
-            if arg in parameters:
-                logger.info(f"Removing argument '{arg}' from tool: {func_name}")
-                parameters.pop(arg)
-                self.tools_with_injected_args[func_name].append(arg)
-            if arg in required_parameters:
-                required_parameters.remove(arg)
-        return cleaned_tool
-
-    def generated_cleaned_tools(self):
-        """Create cleaned tools for calling LLM with tools in the expected format."""
-        cleaned_tools = []
-        for tool in self.get_tool_specs():
-            if "function" in tool:
-                cleaned_tool = {
-                    "type": "function",
-                    "function": {
-                        "name": tool["function"]["name"],
-                        "description": tool["function"].get("description", ""),
-                        "parameters": {
-                            "type": "object",
-                            "properties": {},
-                            "required": [],
-                        },
-                    },
-                }
-
-                if (
-                    "parameters" in tool["function"]
-                    and "properties" in tool["function"]["parameters"]
-                ):
-                    cleaned_tool["function"]["parameters"]["properties"] = tool[
-                        "function"
-                    ]["parameters"]["properties"]
-
-                if (
-                    "parameters" in tool["function"]
-                    and "required" in tool["function"]["parameters"]
-                ):
-                    cleaned_tool["function"]["parameters"]["required"] = tool[
-                        "function"
-                    ]["parameters"]["required"]
-
-                cleaned_tools.append(self.remove_injected_args(cleaned_tool))
-
-        return cleaned_tools
 
     @backoff.on_exception(backoff.expo, Exception)
     @mlflow.trace(span_type=SpanType.LLM)
@@ -411,7 +494,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             params = {
                 "model": self.llm_endpoint,
                 "messages": self.prepare_messages_for_llm(messages),
-                "tools": self.cleaned_tools,
+                "tools": self.get_tool_specs(),
                 **self.llm_params,
             }
 
@@ -439,6 +522,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             messages: Current message history
             tool_calls: Tool calls to execute
             custom_inputs: Optional custom inputs
+
         Returns:
             Tuple of (updated_messages, response_events)
         """
@@ -449,14 +533,15 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             function = tool_call["function"]
             args = json.loads(function["arguments"])
 
-            # execute tool and convert result to string
             try:
-                # Inject arguments before calling the tool. Values are coming from custom_inputs.
-                if function["name"] in self.tools_with_injected_args:
-                    for param in self.tools_with_injected_args[function["name"]]:
-                        args[param] = custom_inputs[param]
+                # inject params before calling tool
+                enhanced_args = self.parameter_injector.inject_parameters(
+                    function["name"], args, custom_inputs or {}
+                )
 
-                result = self.execute_tool(tool_name=function["name"], args=args)
+                result = self.execute_tool(
+                    tool_name=function["name"], args=enhanced_args
+                )
                 result_str = str(result)
             except Exception as e:
                 logger.error(f"Error executing tool {function['name']}: {e}")
@@ -482,14 +567,6 @@ class BaseAgent(ResponsesAgent, abc.ABC):
 
         return updated_messages, events
 
-    def check_request(self, request: ResponsesAgentRequest):
-        """Check that custom_inputs contains the injected tool arguments expected by the agent."""
-        if self.inject_tool_args:
-            for param in self.inject_tool_args:
-                assert request.custom_inputs and request.custom_inputs.get(param), (
-                    f"Agent invalid input. Agent expects custom input: {param}"
-                )
-
     def call_and_run_tools(
         self,
         request: ResponsesAgentRequest,
@@ -503,7 +580,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         Yields:
             Responses Agent Stream Event objects
         """
-        self.check_request(request)
+        self.validate_request(request)
 
         messages = [{"role": "system", "content": self.system_prompt}] + [
             i.model_dump() for i in request.input
