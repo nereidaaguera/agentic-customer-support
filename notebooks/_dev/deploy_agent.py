@@ -162,31 +162,54 @@ print("="*50)
 # MAGIC %md
 # MAGIC ## Test Deployed Endpoint
 # MAGIC 
-# MAGIC Verify the deployed endpoint works correctly
+# MAGIC Verify deployed endpoint works correctly
 
 # COMMAND ----------
 
 from mlflow.deployments import get_deploy_client
 
-print("Testing deployed endpoint...")
+print("Testing deployed endpoint with custom inputs...")
 
 client = get_deploy_client()
-test_queries = [
-    "What plan am I currently on? My customer ID is CUS-10001.",
-    "Hello, how can you help me today?",
-    "I need help with my bill",
+
+test_cases = [
+    {
+        "input": [{"role": "user", "content": "What plan am I currently on?"}],
+        "custom_inputs": {"customer": "CUS-10001"},
+        "description": "Account query with customer ID"
+    },
+    {
+        "input": [{"role": "user", "content": "Show me my billing details for this month"}],
+        "custom_inputs": {"customer": "CUS-10002"}, 
+        "description": "Billing query with customer ID"
+    },
+    {
+        "input": [{"role": "user", "content": "What devices do I have on my account?"}],
+        "custom_inputs": {"customer": "CUS-10003"},
+        "description": "Product query with customer ID"
+    },
+    {
+        "input": [{"role": "user", "content": "My phone won't connect to WiFi"}],
+        "description": "Tech support query (no custom inputs required)"
+    },
 ]
 
-for i, test_query in enumerate(test_queries, 1):
-    print(f"\n--- Test Query {i}: {test_query} ---")
+for i, test_case in enumerate(test_cases, 1):
+    print(f"\n--- Test Case {i}: {test_case['description']} ---")
     
     try:
+        request_data = {
+            "input": test_case["input"],
+            "databricks_options": {"return_trace": True}
+        }
+        
+        if "custom_inputs" in test_case:
+            request_data["custom_inputs"] = test_case["custom_inputs"]
+            print(f"Custom inputs: {test_case['custom_inputs']}")
+        
         response = client.predict(
             endpoint=deployment_result.endpoint_name,
-            inputs={
-                "input": [{"role": "user", "content": test_query}],
-                "databricks_options": {"return_trace": True}
-            }
+            inputs=request_data
         )
 
         print("✅ Query successful!")
@@ -195,10 +218,13 @@ for i, test_query in enumerate(test_queries, 1):
             if "content" in output:
                 for content in output["content"]:
                     if "text" in content:
-                        print(f"Response: {content['text']}")
+                        print(f"Response: {content['text'][:200]}...")
                         break
+        
+        if "custom_outputs" in response:
+            print(f"Custom outputs: {response['custom_outputs']}")
                         
     except Exception as e:
         print(f"❌ Query failed: {str(e)}")
 
-print("\n🎉 Endpoint testing completed!")
+print("\n🎉 Custom inputs endpoint testing completed!")

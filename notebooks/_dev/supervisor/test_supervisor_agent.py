@@ -174,7 +174,7 @@ def format_response(response):
 
     print("\n" + "="*50)
 
-def test_end_to_end_query(query, description=""):
+def test_end_to_end_query(query, custom_inputs, description=""):
     """Test an end-to-end query with the supervisor agent."""
     print(f"\n{'='*80}")
     print(f"END-TO-END TEST: {description}")
@@ -182,11 +182,21 @@ def test_end_to_end_query(query, description=""):
     print('='*80)
 
     request = ResponsesAgentRequest(
-        input=[{"role": "user", "content": query}]
+        input=[{"role": "user", "content": query}],
+        custom_inputs=custom_inputs
     )
 
     response = supervisor.predict(request)
     format_response(response)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Customer input 
+
+# COMMAND ----------
+    
+custom_inputs = {"customer": "CUS-10001"}
 
 # COMMAND ----------
 
@@ -196,11 +206,12 @@ def test_end_to_end_query(query, description=""):
 # COMMAND ----------
 
 account_queries = [
-    ("What plan am I currently on? My customer ID is CUS-10001.", "Account Plan Query"),
+    ("What plan am I currently on?", "Account Plan Query"),
+    ("Is my autopay enabled in my subscriptions?", "Subscription Query")
 ]
 
 for query, description in account_queries:
-    test_end_to_end_query(query, description)
+    test_end_to_end_query(query, custom_inputs, description)
 
 # COMMAND ----------
 
@@ -214,7 +225,7 @@ tech_support_queries = [
 ]
 
 for query, description in tech_support_queries:
-    test_end_to_end_query(query, description)
+    test_end_to_end_query(query, custom_inputs, description)
 
 # COMMAND ----------
 
@@ -224,16 +235,16 @@ for query, description in tech_support_queries:
 # COMMAND ----------
 
 billing_queries = [
-    ("Why is my bill higher this month? My customer ID is CUS-10001.", "Billing Inquiry"),
-    ("What are the charges on my bill for customer CUS-10002 from 2025-04-01 to 2025-04-30?", "Billing Details Request"),
-    ("When is my payment due for customer CUS-10003?", "Payment Due Date"),
-    ("I see a charge for $14.99 that I don't recognize. My customer ID is CUS-10001.", "Billing Dispute"),
-    ("How much data did customer CUS-10001 use from 2025-04-01 to 2025-04-30?", "Usage Inquiry"),
-    ("Is there an unpaid amount for my billing? My customer ID is CUS-10001.", "Payment Status Check"),
+    ("Why is my bill higher this month?", "Billing Inquiry"),
+    ("What are the charges on the customer's bill from 2025-04-01 to 2025-04-30?", "Billing Details Request"),
+    ("When is my payment due?", "Payment Due Date"),
+    ("I see a charge for $14.99 that I don't recognize", "Billing Dispute"),
+    ("How much data did the customer use from 2025-04-01 to 2025-04-30?", "Usage Inquiry"),
+    ("Is there an unpaid amount for my billing?", "Payment Status Check"),
 ]
 
 for query, description in billing_queries:
-    test_end_to_end_query(query, description)
+    test_end_to_end_query(query, custom_inputs, description)
 
 # COMMAND ----------
 
@@ -244,10 +255,11 @@ for query, description in billing_queries:
 
 product_queries = [
     ("What's the difference between the Standard and Premium plans?", "Plan Comparison"),
+    ("Do I have a Google phone?", "Device Brand")
 ]
 
 for query, description in product_queries:
-    test_end_to_end_query(query, description)
+    test_end_to_end_query(query, custom_inputs, description)
 
 # COMMAND ----------
 
@@ -299,10 +311,10 @@ def display_streaming_response(model_input, description=""):
 # COMMAND ----------
 
 streaming_test_queries = [
-    (ResponsesAgentRequest(input=[{"role": "user", "content": "What are the details of my account? I'm customer CUS-10001."}]), "Account Query Streaming"),
-    (ResponsesAgentRequest(input=[{"role": "user", "content": "What's the difference between the Standard and Premium plans?"}]), "Plan Comparison Streaming"),
-    (ResponsesAgentRequest(input=[{"role": "user", "content": "Why is my bill higher this month? My customer ID is CUS-10001."}]), "Billing Query Streaming"),
-    (ResponsesAgentRequest(input=[{"role": "user", "content": "What are my billing charges for customer CUS-10002 from 2025-04-01 to 2025-04-30?"}]), "Billing Details Streaming"),
+    (ResponsesAgentRequest(input=[{"role": "user", "content": "What are the details of my account?"}], custom_inputs=custom_inputs), "Account Query Streaming"),
+    (ResponsesAgentRequest(input=[{"role": "user", "content": "What's the difference between the Standard and Premium plans?"}], custom_inputs=custom_inputs), "Plan Comparison"),
+    (ResponsesAgentRequest(input=[{"role": "user", "content": "Why is my bill different this month?"}], custom_inputs=custom_inputs), "Billing Query Streaming (Not Implemented)"),
+    (ResponsesAgentRequest(input=[{"role": "user", "content": "What are the billing charges for the customer from 2025-04-01 to 2025-04-30?"}], custom_inputs=custom_inputs), "Billing Query Streaming (Not Implemented)"),
     (ResponsesAgentRequest(input=[{"role": "user", "content": "My phone won't connect to WiFi. How do I fix this?"}]), "Tech Support Streaming"),
 ]
 

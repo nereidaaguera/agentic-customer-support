@@ -1,4 +1,4 @@
-"""Log Agent models to MLflow using Models from Code approach - using package constants."""
+"""Log Agent models to MLflow using Models from Code approach - updated for custom inputs."""
 
 import inspect
 from typing import Optional
@@ -12,6 +12,7 @@ from mlflow.models.resources import (
     DatabricksVectorSearchIndex,
     Resource,
 )
+from mlflow.types.responses import ResponsesAgentRequest
 
 from telco_support_agent import PACKAGE_DIR, PROJECT_ROOT
 from telco_support_agent.utils.logging_utils import get_logger
@@ -53,8 +54,12 @@ def log_agent(
 
     if input_example is None:
         input_example = {
-            "input": [{"role": "user", "content": "Hello, how can you help me today?"}]
+            "input": [{"role": "user", "content": "Hello, how can you help me today?"}],
+            "custom_inputs": {"customer": "CUS-10001"},
         }
+
+    logger.info(f"Using input example: {input_example}")
+    _validate_agent_with_custom_inputs(agent_class, input_example)
 
     extra_pip_requirements = _get_requirements()
 
@@ -73,6 +78,34 @@ def log_agent(
 
         logger.info(f"Successfully logged model: {model_info.model_uri}")
         return model_info
+
+
+def _validate_agent_with_custom_inputs(agent_class: type, input_example: dict) -> None:
+    """Validate that agent works properly with custom inputs.
+
+    Args:
+        agent_class: The agent class to validate
+        input_example: Input example to test with
+
+    Raises:
+        ValueError: If validation fails
+    """
+    logger.info("Validating agent with custom inputs...")
+
+    try:
+        agent = agent_class()
+
+        request = ResponsesAgentRequest(**input_example)
+        response = agent.predict(request)
+
+        if not response or not response.output:
+            raise ValueError("Agent returned empty response")
+
+        logger.info("Agent validation with custom inputs successful")
+
+    except Exception as e:
+        logger.error(f"Agent validation failed: {str(e)}")
+        raise ValueError(f"Agent validation failed: {str(e)}") from e
 
 
 def _collect_config_artifacts() -> dict[str, str]:

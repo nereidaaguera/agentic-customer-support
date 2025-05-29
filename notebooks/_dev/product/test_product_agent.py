@@ -63,17 +63,12 @@ for tool in product_agent.tools:
 
 # COMMAND ----------
 
-request = ResponsesAgentRequest(
-    input=[{"role": "user", "content": "What's the difference between the Standard and Premium plans?"}]
-)
-
-# COMMAND ----------
-
-def test_query(query):
+def test_query(query, custom_inputs):
     print(f"\n=== TESTING QUERY: \"{query}\" ===\n")
 
     request = ResponsesAgentRequest(
-        input=[{"role": "user", "content": query}]
+        input=[{"role": "user", "content": query}],
+        custom_inputs=custom_inputs,
     )
 
     try:
@@ -95,7 +90,7 @@ def test_query(query):
 
 # COMMAND ----------
 
-test_query("What's the difference between the Standard and Premium plans?")
+test_query("Is my phone 5G compatible?", custom_inputs={"customer": "CUS-10011"})
 
 # COMMAND ----------
 
@@ -103,11 +98,13 @@ test_queries = [
     "What's the difference between the Standard and Premium plans?",
     "Show me the plans with unlimited data",
     "Do you have any promotions for existing customers?",
-    "Is my phone 5G compatible? My ID is CUS-10011",
-    "Which plan gives me the most data for under $50?"
+    "Is my phone 5G compatible?",
+    "Which plan gives me the most data for under $50?",
+    "Do I have a Google phone?",
+    "Do you have any device with more storage than mine?"
 ]
 
 # COMMAND ----------
 
 for query in test_queries:
-    test_query(query)
+    test_query(query, custom_inputs={"customer": "CUS-10011"})

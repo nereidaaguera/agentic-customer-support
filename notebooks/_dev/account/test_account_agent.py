@@ -66,13 +66,14 @@ for tool in account_agent.tools:
 
 # COMMAND ----------
 
-def test_query(query):
+def test_query(query, custom_inputs):
     print(f"\n=== TESTING QUERY: \"{query}\" ===\n")
-    
+
     request = ResponsesAgentRequest(
-        input=[{"role": "user", "content": query}]
+        input=[{"role": "user", "content": query}],
+        custom_inputs=custom_inputs,
     )
-    
+
     try:
         response = account_agent.predict(request)
         if response and hasattr(response, 'output') and response.output:
@@ -87,20 +88,25 @@ def test_query(query):
             print("No response or empty response received")
     except Exception as e:
         print(f"Error processing query: {e}")
-    
+
     print("\n" + "="*80)
 
 # COMMAND ----------
 
-test_query("How many plans do I have on my account? My ID is CUS-10601")
+# Expect error if no custom_input customer is provided.
+test_query("How many plans do I have on my account?", custom_inputs={})
+
+# COMMAND ----------
+
+test_query("How many plans do I have on my account?", custom_inputs={"customer": "CUS-10601"})
 
 # COMMAND ----------
 
 test_queries = [
-    "What plan am I currently on? My ID is CUS-10601",
-    "When did I create my account? My ID is CUS-10601",
-    "Is my autopay enabled in my subscriptions? My ID is CUS-10601",
+    "What plan am I currently on?",
+    "When did I create my account?",
+    "Is my autopay enabled in my subscriptions?",
 ]
 
 for query in test_queries:
-    test_query(query)
+    test_query(query, custom_inputs={"customer": "CUS-10601"})

@@ -1,16 +1,18 @@
 # Config for logging and registering agent
 name: telco_customer_support_agent
-description: "Multi-agent system for telco customer support"
+description: Multi-agent system for telco customer support
 
 # MLflow logging params
 input_example:
   input:
-    - role: "user"
-      content: "My iPhone won't connect to international networks while traveling. How do I fix this?"
+    - role: user
+      content: What plan am I currently on?
+  custom_inputs:
+    customer: CUS-10001
 
 # Unity Catalog registration params
 uc_registration:
-  catalog: "telco_customer_support_dev"
-  schema: "agent"
-  model_name: "telco_customer_support_agent"
-  #alias: "prod"
+  catalog: telco_customer_support_dev
+  schema: agent
+  model_name: telco_customer_support_agent
+  #alias: prod
