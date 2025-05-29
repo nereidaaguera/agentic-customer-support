@@ -193,11 +193,6 @@ class SupervisorAgent(BaseAgent):
         custom_outputs = request.custom_inputs.copy() if request.custom_inputs else {}
         custom_outputs["routing"] = {
             "agent_type": agent_type.value,
-            "decision_time": mlflow.get_run(
-                mlflow.active_run().info.run_id
-            ).info.start_time
-            if mlflow.active_run()
-            else None,
         }
 
         # get sub-agent
@@ -252,7 +247,12 @@ class SupervisorAgent(BaseAgent):
                     else None,
                 }
             )
-            span.set_inputs({"request": request.model_dump()})
+            span.set_inputs(
+                {
+                    "request": request.model_dump(),
+                    "custom_inputs": request.custom_inputs,
+                }
+            )
 
             sub_response = execution_result.sub_agent.predict(request)
 

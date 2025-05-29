@@ -403,7 +403,6 @@ class BaseAgent(ResponsesAgent, abc.ABC):
                 f"This agent requires: {self.parameter_injector.inject_params}"
             )
 
-    @mlflow.trace(span_type=SpanType.TOOL)
     def execute_tool(self, tool_name: str, args: dict) -> Any:
         """Execute tool.
 
@@ -416,26 +415,47 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         Returns:
             Tool execution result
         """
-        try:
-            # check if vector search tool
-            if tool_name in self.vector_search_tools:
-                vector_tool = self.vector_search_tools[tool_name]
-                return vector_tool.execute(**args)
+        trace_tool_name = tool_name.replace("__", ".").split(".")[-1]
 
-            # otherwise treat as UC function
-            # replace any underscores to dots in function name
-            uc_function_name = tool_name.replace("__", ".")
-
-            # execute tool using UC function client
-            result = self.uc_client.execute_function(
-                function_name=uc_function_name, parameters=args
+        with mlflow.start_span(
+            name=f"tool_{trace_tool_name}", span_type=SpanType.TOOL
+        ) as span:
+            span.set_attributes(
+                {
+                    "tool_name": tool_name,
+                    "tool_type": "uc_function"
+                    if "__" in tool_name
+                    else "vector_search",
+                    "agent_type": self.agent_type,
+                }
             )
-            return result.value
+            span.set_inputs(args)
 
-        except Exception as e:
-            error_msg = f"Error executing tool {tool_name}: {str(e)}"
-            logger.error(error_msg)
-            return error_msg
+            try:
+                # check if vector search tool
+                if tool_name in self.vector_search_tools:
+                    vector_tool = self.vector_search_tools[tool_name]
+                    result = vector_tool.execute(**args)
+                else:
+                    # otherwise treat as UC function
+                    # replace any underscores to dots in function name
+                    uc_function_name = tool_name.replace("__", ".")
+
+                    # execute tool using UC function client
+                    result = self.uc_client.execute_function(
+                        function_name=uc_function_name, parameters=args
+                    )
+                    result = result.value
+
+                span.set_outputs(result)
+                return result
+
+            except Exception as e:
+                error_msg = f"Error executing tool {tool_name}: {str(e)}"
+                span.set_attributes({"error": True, "error_message": error_msg})
+                span.set_outputs({"error": error_msg})
+                logger.error(error_msg)
+                return error_msg
 
     def convert_to_chat_completion_format(
         self, message: dict[str, Any]
