@@ -56,7 +56,7 @@ def compute_request_preview(request: str) -> str:
 
     if isinstance(data, dict):
         try:
-            input_list = data.get("model_input", {}).get("input", [])
+            input_list = data.get("request", {}).get("input", [])
             if isinstance(input_list, list):
                 for item in reversed(input_list):
                     if (
@@ -482,31 +482,31 @@ class BaseAgent(ResponsesAgent, abc.ABC):
 
         return updated_messages, events
 
-    def check_model_input(self, model_input: ResponsesAgentRequest):
+    def check_request(self, request: ResponsesAgentRequest):
         """Check that custom_inputs contains the injected tool arguments expected by the agent."""
         if self.inject_tool_args:
             for param in self.inject_tool_args:
-                assert model_input.custom_inputs and model_input.custom_inputs.get(
-                    param
-                ), f"Agent invalid input. Agent expects custom input: {param}"
+                assert request.custom_inputs and request.custom_inputs.get(param), (
+                    f"Agent invalid input. Agent expects custom input: {param}"
+                )
 
     def call_and_run_tools(
         self,
-        model_input: ResponsesAgentRequest,
+        request: ResponsesAgentRequest,
         max_iter: int = 10,
     ) -> Generator[ResponsesAgentStreamEvent, None, None]:
         """Run the call-tool-response loop up to max_iter times.
 
         Args:
-            model_input: ResponsesAgentRequest model input.
+            request: ResponsesAgentRequest model input.
             max_iter: Maximum number of iterations
         Yields:
             Responses Agent Stream Event objects
         """
-        self.check_model_input(model_input)
+        self.check_request(request)
 
         messages = [{"role": "system", "content": self.system_prompt}] + [
-            i.model_dump() for i in model_input.input
+            i.model_dump() for i in request.input
         ]
 
         current_messages = messages.copy()
@@ -517,7 +517,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             # handle tool calls if present
             if tool_calls := last_msg.get("tool_calls", None):
                 updated_messages, events = self.handle_tool_call(
-                    current_messages, tool_calls, model_input.custom_inputs
+                    current_messages, tool_calls, request.custom_inputs
                 )
                 current_messages = updated_messages
                 yield from events
@@ -586,4 +586,4 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         self, request: ResponsesAgentRequest
     ) -> Generator[ResponsesAgentStreamEvent, None, None]:
         """Stream predictions."""
-        yield from self.call_and_run_tools(model_input)
+        yield from self.call_and_run_tools(request)
