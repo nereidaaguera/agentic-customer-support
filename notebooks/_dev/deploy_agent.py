@@ -78,7 +78,8 @@ try:
     print("✅ Model loaded successfully")
     
     test_input = {
-        "input": [{"role": "user", "content": "What plan am I currently on? My customer ID is CUS-10001."}]
+        "input": [{"role": "user", "content": "What plan am I currently on?"}],
+        "custom_inputs": {"customer": "CUS-10001"}
     }
     
     print("Testing model prediction...")
