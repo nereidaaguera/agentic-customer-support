@@ -14,9 +14,11 @@ from databricks.sdk import WorkspaceClient
 from mlflow.entities import SpanType
 from mlflow.entities.trace_info import TraceInfo
 from mlflow.pyfunc import ResponsesAgent
-from mlflow.types.responses import (ResponsesAgentRequest,
-                                    ResponsesAgentResponse,
-                                    ResponsesAgentStreamEvent)
+from mlflow.types.responses import (
+    ResponsesAgentRequest,
+    ResponsesAgentResponse,
+    ResponsesAgentStreamEvent,
+)
 from unitycatalog.ai.core.databricks import DatabricksFunctionClient
 from unitycatalog.ai.openai.toolkit import UCFunctionToolkit
 
@@ -312,8 +314,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
                     tool_name.split(".")[-1] if "." in tool_name else tool_name
                 )
                 is_disabled = (
-                    tool_name in self.disable_tools
-                    or simple_name in self.disable_tools
+                    tool_name in self.disable_tools or simple_name in self.disable_tools
                 )
                 if not is_disabled:
                     filtered_vector_tools[tool_name] = tool_obj
@@ -418,8 +419,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
                 )
 
                 is_disabled = (
-                    tool_name in self.disable_tools
-                    or simple_name in self.disable_tools
+                    tool_name in self.disable_tools or simple_name in self.disable_tools
                 )
 
                 if is_disabled:

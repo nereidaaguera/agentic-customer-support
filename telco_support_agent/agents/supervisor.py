@@ -7,9 +7,11 @@ from uuid import uuid4
 import mlflow
 from mlflow.entities import SpanType
 from mlflow.models import set_model
-from mlflow.types.responses import (ResponsesAgentRequest,
-                                    ResponsesAgentResponse,
-                                    ResponsesAgentStreamEvent)
+from mlflow.types.responses import (
+    ResponsesAgentRequest,
+    ResponsesAgentResponse,
+    ResponsesAgentStreamEvent,
+)
 
 from telco_support_agent.agents.account import AccountAgent
 from telco_support_agent.agents.base_agent import BaseAgent
