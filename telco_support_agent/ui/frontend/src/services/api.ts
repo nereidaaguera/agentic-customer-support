@@ -64,7 +64,7 @@ export const getDemoCustomers = async (): Promise<CustomerInfo[]> => {
 const convertToConversationHistory = (messages: ApiMessage[]) => {
   // Filter out system messages and convert to backend format
   return messages
-    .filter(msg => msg.role !== 'system')
+    .filter(msg => msg.role === 'user' || msg.role === 'assistant') // Fixed: removed 'system' check
     .map(msg => ({
       role: msg.role,
       content: msg.content
@@ -84,7 +84,7 @@ const convertBackendToAgentResponse = (backendResponse: any): AgentResponse => {
         tool_name: tool.name || `Tool ${index + 1}`,
         description: `Called ${tool.name}`,
         reasoning: `Tool executed with arguments: ${JSON.stringify(tool.arguments)}`,
-        type: 'function_call',
+        type: 'EXTERNAL_API',
         informations: [tool.name]
       });
     });

@@ -105,6 +105,9 @@ databricks configure
 ### Deploy
 
 ```bash
+# Create the app in Databricks
+databricks apps create telco-support-agent
+
 # Deploy with default settings
 ./deploy.sh
 
