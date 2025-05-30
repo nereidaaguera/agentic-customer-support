@@ -1,0 +1,21 @@
+command: ["uvicorn", "backend.app.main:app", "--reload", "--host", "0.0.0.0", "--port", "8000"]
+
+static_dir: static
+
+env:
+  - name: 'ENV'
+    value: 'dev'
+  - name: 'TELCO_SUPPORT_AGENT_ENV'
+    value: 'dev'
+  - name: 'DATABRICKS_HOST'
+    value: 'https://your-workspace.cloud.databricks.com'
+  - name: 'DATABRICKS_TOKEN'
+    value: 'your-databricks-token-here'
+  - name: 'DATABRICKS_ENDPOINT_NAME'
+    value: 'telco-customer-support-agent'
+  # Add CORS origins for local development
+  - name: 'CORS_ORIGINS'
+    value: 'http://localhost:5173,http://localhost:3000'
+  # Demo customer IDs
+  - name: 'DEMO_CUSTOMER_IDS'
+    value: 'CUS-10001,CUS-10002,CUS-10006,CUS-10023,CUS-10048,CUS-10172,CUS-11081,CUS-10619'

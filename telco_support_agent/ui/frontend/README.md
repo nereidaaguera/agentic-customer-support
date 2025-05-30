@@ -1,6 +1,6 @@
 # Telco Support Agent Frontend
 
-A Vue.js application showcasing Databricks Agent Framework for a telecom customer support application.
+Vue.js application for teleco customer support agent application.
 
 ## Project Setup
 
