@@ -54,4 +54,6 @@ build/
 *.swp
 *.swo 
 
+# Build files
 *.tsbuildinfo
+static/
