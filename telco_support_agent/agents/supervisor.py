@@ -1,7 +1,7 @@
 """Supervisor agent to orchestrate specialized sub-agents."""
 
 from collections.abc import Generator
-from typing import Optional, Union
+from typing import NamedTuple, Optional, Union
 from uuid import uuid4
 
 import mlflow
@@ -23,6 +23,16 @@ from telco_support_agent.utils.logging_utils import get_logger, setup_logging
 
 setup_logging()
 logger = get_logger(__name__)
+
+
+class AgentExecutionResult(NamedTuple):
+    """Result of agent execution preparation."""
+
+    sub_agent: Optional[BaseAgent]
+    agent_type: AgentType
+    query: str
+    custom_outputs: dict
+    error_response: Optional[dict] = None
 
 
 class SupervisorAgent(BaseAgent):
@@ -137,33 +147,40 @@ class SupervisorAgent(BaseAgent):
             )
             return AgentType.ACCOUNT
 
-    @mlflow.trace(span_type=SpanType.AGENT, name="supervisor")
-    def predict(self, request: ResponsesAgentRequest) -> ResponsesAgentResponse:
-        """Process the user query and route to appropriate sub-agent.
+    def _prepare_agent_execution(
+        self, request: ResponsesAgentRequest
+    ) -> AgentExecutionResult:
+        """Prepare for agent execution by handling routing / validation.
+
+        Consolidates common logic between predict and predict_stream.
 
         Args:
             request: The request containing user messages
 
         Returns:
-            The response from the appropriate sub-agent
+            AgentExecutionResult containing all necessary information for execution
         """
         # extract the user query from the input
         user_messages = [msg for msg in request.input if msg.role == "user"]
         if not user_messages:
-            # no user messages found, return an error response
-            return ResponsesAgentResponse(
-                output=[
+            # no user messages found, return error response
+            error_response = {
+                "role": "assistant",
+                "type": "message",
+                "content": [
                     {
-                        "role": "assistant",
-                        "type": "message",
-                        "content": [
-                            {
-                                "type": "output_text",
-                                "text": "No user query found in the request.",
-                            }
-                        ],
+                        "type": "output_text",
+                        "text": "No user query found in the request.",
                     }
-                ]
+                ],
+                "id": str(uuid4()),
+            }
+            return AgentExecutionResult(
+                sub_agent=None,
+                agent_type=AgentType.ACCOUNT,  # placeholder
+                query="",
+                custom_outputs={},
+                error_response=error_response,
             )
 
         # use last user message as the query
@@ -172,103 +189,148 @@ class SupervisorAgent(BaseAgent):
         # determine which agent should handle query
         agent_type = self.route_query(query)
 
-        # add routing decision to custom outputs
+        # prepare custom outputs with routing decision
         custom_outputs = request.custom_inputs.copy() if request.custom_inputs else {}
         custom_outputs["routing"] = {
             "agent_type": agent_type.value,
-            "decision_time": mlflow.get_run(
-                mlflow.active_run().info.run_id
-            ).info.start_time
-            if mlflow.active_run()
-            else None,
         }
 
         # get sub-agent
         sub_agent = self._get_sub_agent(agent_type)
 
-        # if sub-agent not implemented generate non-response
+        # if sub-agent not implemented, prepare non-response
         if sub_agent is None:
-            non_response = self.generate_non_response(agent_type, query)
-            return ResponsesAgentResponse(
-                output=[non_response], custom_outputs=custom_outputs
+            error_response = self.generate_non_response(agent_type, query)
+            return AgentExecutionResult(
+                sub_agent=None,
+                agent_type=agent_type,
+                query=query,
+                custom_outputs=custom_outputs,
+                error_response=error_response,
             )
 
-        # let sub-agent handle query
-        sub_response = sub_agent.predict(request)
+        return AgentExecutionResult(
+            sub_agent=sub_agent,
+            agent_type=agent_type,
+            query=query,
+            custom_outputs=custom_outputs,
+            error_response=None,
+        )
 
-        # combine custom outputs
-        if sub_response.custom_outputs:
-            custom_outputs.update(sub_response.custom_outputs)
+    @mlflow.trace(span_type=SpanType.AGENT, name="supervisor")
+    def predict(self, request: ResponsesAgentRequest) -> ResponsesAgentResponse:
+        """Process user query, route to, and yield response from sub-agent.
 
-        # return sub-agent's response with custom outputs
+        Args:
+            request: The request containing user messages
+
+        Returns:
+            The response from the sub-agent
+        """
+        execution_result = self._prepare_agent_execution(request)
+
+        if execution_result.error_response:
+            return ResponsesAgentResponse(
+                output=[execution_result.error_response],
+                custom_outputs=execution_result.custom_outputs,
+            )
+
+        with mlflow.start_span(
+            span_type=SpanType.AGENT, name=f"{execution_result.agent_type.value}_agent"
+        ) as span:
+            span.set_attributes(
+                {
+                    "agent_type": execution_result.agent_type.value,
+                    "query": execution_result.query,
+                    "customer_id": request.custom_inputs.get("customer")
+                    if request.custom_inputs
+                    else None,
+                }
+            )
+            span.set_inputs(
+                {
+                    "request": request.model_dump(),
+                    "custom_inputs": request.custom_inputs,
+                }
+            )
+
+            sub_response = execution_result.sub_agent.predict(request)
+
+            # combine custom outputs
+            final_custom_outputs = execution_result.custom_outputs.copy()
+            if sub_response.custom_outputs:
+                final_custom_outputs.update(sub_response.custom_outputs)
+
+            span.set_outputs(
+                {
+                    "response": sub_response.output,
+                    "custom_outputs": final_custom_outputs,
+                }
+            )
+
         return ResponsesAgentResponse(
-            output=sub_response.output, custom_outputs=custom_outputs
+            output=sub_response.output, custom_outputs=final_custom_outputs
         )
 
     @mlflow.trace(span_type=SpanType.AGENT, name="supervisor")
     def predict_stream(
         self, request: ResponsesAgentRequest
     ) -> Generator[ResponsesAgentStreamEvent, None, None]:
-        """Stream the response from the appropriate sub-agent.
+        """Stream response from the selected sub-agent.
 
         Args:
-            request: The request containing user messages
+            request: request containing user messages
 
         Yields:
             ResponsesAgentStreamEvent objects from the sub-agent
         """
-        # extract the user query from the input
-        user_messages = [msg for msg in request.input if msg.role == "user"]
-        if not user_messages:
-            # no user messages found, return an error response
+        execution_result = self._prepare_agent_execution(request)
+
+        if execution_result.error_response:
             yield ResponsesAgentStreamEvent(
-                type="response.output_item.done",
-                item={
-                    "id": str(uuid4()),
-                    "content": [
-                        {
-                            "type": "output_text",
-                            "text": "No user query found in the request.",
-                        }
-                    ],
-                    "role": "assistant",
-                    "type": "message",
-                },
+                type="response.output_item.done", item=execution_result.error_response
             )
             return
 
-        # use the last user message as query
-        query = user_messages[-1].content
-
-        # determine which agent should handle this query
-        agent_type = self.route_query(query)
-
-        # emit debug event (visible in traces but not UI)
         yield ResponsesAgentStreamEvent(
             type="response.debug",
             item={
                 "id": str(uuid4()),
-                "routing_decision": f"Query routed to {agent_type.value} agent",
+                "routing_decision": f"Query routed to {execution_result.agent_type.value} agent",
             },
         )
 
-        # get sub-agent if implemented
-        sub_agent = self._get_sub_agent(agent_type)
-
-        # if sub-agent not implemented generate non-response
-        if sub_agent is None:
-            non_response = self.generate_non_response(agent_type, query)
-            yield ResponsesAgentStreamEvent(
-                type="response.output_item.done", item=non_response
-            )
-            return
-
         try:
-            # stream response from sub-agent
-            yield from sub_agent.predict_stream(request)
+            with mlflow.start_span(
+                name=f"{execution_result.agent_type.value}_agent"
+            ) as span:
+                span.set_attributes(
+                    {
+                        "agent_type": execution_result.agent_type.value,
+                        "query": execution_result.query,
+                        "streaming": True,
+                    }
+                )
+                span.set_inputs(
+                    {
+                        "request": request.model_dump(),
+                        "customer_id": request.custom_inputs.get("customer")
+                        if request.custom_inputs
+                        else None,
+                    }
+                )
+
+                response_count = 0
+                for event in execution_result.sub_agent.predict_stream(request):
+                    response_count += 1
+                    yield event
+
+                span.set_outputs({"events_streamed": response_count})
 
         except Exception as e:
-            logger.error(f"Error processing with {agent_type.value} agent: {str(e)}")
+            logger.error(
+                f"Error processing with {execution_result.agent_type.value} agent: {str(e)}"
+            )
             yield ResponsesAgentStreamEvent(
                 type="response.output_item.done",
                 item={
