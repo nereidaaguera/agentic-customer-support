@@ -58,7 +58,7 @@ print("Created supervisor with get_usage_info disable")
 usage_queries = [
     "Show me my billing details for March 2025",
     "What are the charges on my bill from 2025-04-01 to 2025-04-30?",
-    "What's my usage breakdown for the past 3 months?"
+    "What's was my usage for the month of April 2025?",
 ]
 
 test_customer = "CUS-10001"
