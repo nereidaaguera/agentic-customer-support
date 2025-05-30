@@ -17,12 +17,12 @@
           <template v-slot:prepend>
             <v-avatar size="32" color="primary">
               <span class="text-white text-caption">
-                {{ item.raw.customer_id.replace('CUS-', '') }}
+                {{ item?.raw?.customer_id?.replace('CUS-', '') || 'N/A' }}
               </span>
             </v-avatar>
           </template>
-          <v-list-item-title>{{ item.raw.display_name }}</v-list-item-title>
-          <v-list-item-subtitle>{{ item.raw.customer_id }}</v-list-item-subtitle>
+          <v-list-item-title>{{ item?.raw?.display_name || 'Unknown' }}</v-list-item-title>
+          <v-list-item-subtitle>{{ item?.raw?.customer_id || 'Unknown' }}</v-list-item-subtitle>
         </v-list-item>
       </template>
       
@@ -30,10 +30,10 @@
         <div class="d-flex align-center">
           <v-avatar size="24" color="primary" class="mr-2">
             <span class="text-white text-caption">
-              {{ item.raw.customer_id.replace('CUS-', '') }}
+              {{ item?.raw?.customer_id?.replace('CUS-', '') || 'N/A' }}
             </span>
           </v-avatar>
-          <span>{{ item.raw.display_name }}</span>
+          <span>{{ item?.raw?.display_name || 'Unknown' }}</span>
         </div>
       </template>
     </v-select>

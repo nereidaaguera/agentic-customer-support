@@ -2,12 +2,6 @@ import { ref } from 'vue';
 import type { AgentResponse, ToolCall } from '@/types/AgentResponse';
 import type { ApiMessage } from '@/types/ChatMessage';
 
-// Types definition for the API
-export interface Message {
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-}
-
 // Customer info interface
 export interface CustomerInfo {
   customer_id: string;
@@ -62,13 +56,11 @@ export const getDemoCustomers = async (): Promise<CustomerInfo[]> => {
  * Convert API messages to conversation history format expected by backend
  */
 const convertToConversationHistory = (messages: ApiMessage[]) => {
-  // Filter out system messages and convert to backend format
-  return messages
-    .filter(msg => msg.role === 'user' || msg.role === 'assistant') // Fixed: removed 'system' check
-    .map(msg => ({
-      role: msg.role,
-      content: msg.content
-    }));
+  // Convert to backend format (ApiMessage only has 'user' | 'assistant')
+  return messages.map(msg => ({
+    role: msg.role,
+    content: msg.content
+  }));
 };
 
 /**
