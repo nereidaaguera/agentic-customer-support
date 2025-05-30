@@ -1,12 +1,10 @@
-# Intelligent Document Processing Frontend
+# Telco Support Agent Frontend
 
-A vibe coded application to showcase Dabricks Mosaic AI.
-
+A Vue.js application showcasing Databricks Agent Framework for a telecom customer support application.
 
 ## Project Setup
 
 ### Frontend
-
 
 ```bash
 cd frontend
@@ -18,7 +16,3 @@ npm run dev
 
 # Build for production
 npm run build
-```
-
-### Backend
-
