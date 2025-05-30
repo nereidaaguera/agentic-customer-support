@@ -1,52 +1,63 @@
 """Configuration settings for the Telco Support Agent UI."""
 
+import os
 from functools import lru_cache
 
 from pydantic import Field
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     """Application settings."""
 
-    # Application settings
-    environment: str = Field(default="development", env="ENVIRONMENT")
-    host: str = Field(default="0.0.0.0", env="HOST")  # noqa: S104
-    port: int = Field(default=8000, env="PORT")
-
-    # CORS settings
-    cors_origins: list[str] = Field(
-        default=["http://localhost:3000", "http://localhost:5173"], env="CORS_ORIGINS"
+    model_config = SettingsConfigDict(
+        env_file=".env", case_sensitive=False, extra="ignore"
     )
+
+    # App settings
+    environment: str = Field(default="development")
+    host: str = Field(default="0.0.0.0")  # noqa: S104
+    port: int = Field(default=8000)
 
     # Databricks settings
     databricks_host: str = Field(
-        default="https://db-ml-models-prod-us-west.cloud.databricks.com",
-        env="DATABRICKS_HOST",
+        default="https://db-ml-models-prod-us-west.cloud.databricks.com"
     )
-    databricks_token: str = Field(..., env="DATABRICKS_TOKEN")
-    databricks_endpoint_name: str = Field(
-        default="telco-customer-support-agent", env="DATABRICKS_ENDPOINT_NAME"
-    )
+    databricks_token: str = Field(default="")
+    databricks_endpoint_name: str = Field(default="telco-customer-support-agent")
 
     # Request settings
-    request_timeout: int = Field(default=300, env="REQUEST_TIMEOUT")  # 5 minutes
-    max_retries: int = Field(default=3, env="MAX_RETRIES")
+    request_timeout: int = Field(default=300)
+    max_retries: int = Field(default=3)
 
-    # Default customer IDs for demo/testing
-    demo_customer_ids: list[str] = Field(
-        default=[
-            "CUS-10001",
-            "CUS-10002",
-            "CUS-10006",
-            "CUS-10023",
-            "CUS-10048",
-            "CUS-10172",
-            "CUS-11081",
-            "CUS-10619",
-        ],
-        env="DEMO_CUSTOMER_IDS",
-    )
+    def get_cors_origins(self) -> list[str]:
+        """Get CORS origins from environment or defaults."""
+        cors_str = os.getenv(
+            "CORS_ORIGINS", "http://localhost:3000,http://localhost:5173"
+        )
+        return [origin.strip() for origin in cors_str.split(",") if origin.strip()]
+
+    def get_demo_customer_ids(self) -> list[str]:
+        """Get demo customer IDs from environment or defaults."""
+        customers_str = os.getenv(
+            "DEMO_CUSTOMER_IDS",
+            "CUS-10001,CUS-10002,CUS-10006,CUS-10023,CUS-10048,CUS-10172,CUS-11081,CUS-10619",
+        )
+        return [
+            customer_id.strip()
+            for customer_id in customers_str.split(",")
+            if customer_id.strip()
+        ]
+
+    @property
+    def cors_origins(self) -> list[str]:
+        """Get CORS origins."""
+        return self.get_cors_origins()
+
+    @property
+    def demo_customer_ids(self) -> list[str]:
+        """Get demo customer IDs."""
+        return self.get_demo_customer_ids()
 
     @property
     def databricks_endpoint(self) -> str:
@@ -56,16 +67,12 @@ class Settings(BaseSettings):
     @property
     def databricks_headers(self) -> dict:
         """Get headers for Databricks API requests."""
+        if not self.databricks_token:
+            raise ValueError("DATABRICKS_TOKEN is required but not set")
         return {
             "Authorization": f"Bearer {self.databricks_token}",
             "Content-Type": "application/json",
         }
-
-    class Config:
-        """Pydantic config."""
-
-        env_file = ".env"
-        case_sensitive = False
 
 
 @lru_cache
