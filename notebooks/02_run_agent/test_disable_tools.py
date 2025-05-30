@@ -41,11 +41,11 @@ print(f"Initialized {success_count}/{total_count} UC functions")
 # COMMAND ----------
 
 # Normal supervisor - all tools enabled
-normal_supervisor = SupervisorAgent()
+normal_supervisor_agent = SupervisorAgent()
 print("Created normal supervisor (all tools enabled)")
 
 # Supervisor with get_usage_info disabled
-disable_supervisor = SupervisorAgent(disable_tools=["get_usage_info"])
+disable_usage_tool_agent = SupervisorAgent(disable_tools=["get_usage_info"])
 print("Created supervisor with get_usage_info disable")
 
 # COMMAND ----------
@@ -56,9 +56,8 @@ print("Created supervisor with get_usage_info disable")
 # COMMAND ----------
 
 usage_queries = [
-    "How much data did I use last month?",
-    "What's my usage breakdown for the current billing cycle?",
-    "How many voice minutes did I use in March 2025?",
+    "What are the charges on my bill from 2025-04-01 to 2025-04-30?",
+    "How much data did the customer use from 2025-04-01 to 2025-04-30?",  
 ]
 
 test_customer = "CUS-10001"
@@ -104,10 +103,10 @@ for query in usage_queries:
     print(f"TESTING: {query}")
     print('='*60)
     
-    test_query(normal_supervisor, query, "Normal Supervisor")
+    test_query(normal_supervisor_agent, query, "Normal Supervisor")
     
     print("\n" + "-"*40)
     
-    test_query(disable_supervisor, query, "Disable Usage Tool")
+    test_query(disable_usage_tool_agent, query, "Disable Usage Tool")
     
     print("\n")
