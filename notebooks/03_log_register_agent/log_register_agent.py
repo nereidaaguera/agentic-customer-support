@@ -24,7 +24,7 @@ print(f"Added {project_root} to Python path")
 
 # COMMAND ----------
 
-from telco_support_agent.agents.supervisor import SupervisorAgent
+from telco_support_agent.agent.supervisor import SupervisorAgent
 from telco_support_agent.ops.logging import log_agent
 from telco_support_agent.ops.registry import register_agent_to_uc
 
@@ -54,7 +54,7 @@ print(f"  Input Example: {config['input_example']}")
 # COMMAND ----------
 
 from telco_support_agent.tools import initialize_tools
-from telco_support_agent.agents.config import config_manager
+from telco_support_agent.agent.config import config_manager
 
 print("Initializing required UC functions...")
 

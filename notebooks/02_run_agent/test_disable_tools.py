@@ -22,7 +22,7 @@ root_path = os.path.abspath(os.path.join(os.getcwd(), "../.."))
 sys.path.append(root_path)
 
 from mlflow.types.responses import ResponsesAgentRequest
-from telco_support_agent.agents.supervisor import SupervisorAgent
+from telco_support_agent.agent.supervisor import SupervisorAgent
 from telco_support_agent.tools import initialize_tools
 
 # COMMAND ----------

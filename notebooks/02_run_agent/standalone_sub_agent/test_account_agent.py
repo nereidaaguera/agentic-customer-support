@@ -29,7 +29,7 @@ from telco_support_agent.tools import initialize_tools
 
 from mlflow.types.responses import ResponsesAgentRequest
 
-from telco_support_agent.agents.account import AccountAgent
+from telco_support_agent.agent.account import AccountAgent
 
 # COMMAND ----------
 

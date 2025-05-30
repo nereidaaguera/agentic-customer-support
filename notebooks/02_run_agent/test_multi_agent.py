@@ -28,10 +28,10 @@ import itertools
 
 from mlflow.types.responses import ResponsesAgentRequest
 
-from telco_support_agent.agents.config import config_manager
-from telco_support_agent.agents.supervisor import SupervisorAgent
+from telco_support_agent.agent.config import config_manager
+from telco_support_agent.agent.supervisor import SupervisorAgent
 from telco_support_agent.tools import initialize_tools
-from telco_support_agent.agents.types import AgentType
+from telco_support_agent.agent.types import AgentType
 
 # COMMAND ----------
 

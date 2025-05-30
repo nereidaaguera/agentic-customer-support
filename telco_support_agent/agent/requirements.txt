@@ -1,0 +1,6 @@
+mlflow
+backoff
+databricks-openai
+git+https://github.com/aravind-segu/databricks-sdk-py.git@mcpSupport#egg=databricks-sdk[mcp]
+databricks-connect==16.1.5
+databricks-agents
