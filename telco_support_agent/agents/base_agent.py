@@ -413,16 +413,23 @@ class BaseAgent(ResponsesAgent, abc.ABC):
                 tool_name = tool.tool_name
 
             if tool_name:
-                simple_name = (
-                    tool_name.split(".")[-1] if "." in tool_name else tool_name
-                )
+                # UC functions use underscores: telco_customer_support_dev__agent__get_usage_info
+                # Other tools might use dots: some.namespace.tool_name
+                if "." in tool_name:
+                    simple_name = tool_name.split(".")[-1]
+                elif "__" in tool_name:
+                    simple_name = tool_name.split("__")[-1]
+                else:
+                    simple_name = tool_name
 
                 is_disabled = (
                     tool_name in self.disable_tools or simple_name in self.disable_tools
                 )
 
                 if is_disabled:
-                    logger.info(f"Disabling tool: {tool_name}")
+                    logger.info(
+                        f"Disabling tool: {tool_name} (simple name: {simple_name})"
+                    )
                     disabled_count += 1
                     continue
 
