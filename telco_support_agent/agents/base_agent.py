@@ -216,7 +216,6 @@ class ToolParameterInjector:
 
         for param in self.inject_params:
             if param in parameters:
-                logger.info(f"Removing parameter '{param}' from tool: {func_name}")
                 parameters.pop(param)
                 self.tools_with_injected_params[func_name].append(param)
 
