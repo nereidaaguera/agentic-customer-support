@@ -14,11 +14,9 @@ from databricks.sdk import WorkspaceClient
 from mlflow.entities import SpanType
 from mlflow.entities.trace_info import TraceInfo
 from mlflow.pyfunc import ResponsesAgent
-from mlflow.types.responses import (
-    ResponsesAgentRequest,
-    ResponsesAgentResponse,
-    ResponsesAgentStreamEvent,
-)
+from mlflow.types.responses import (ResponsesAgentRequest,
+                                    ResponsesAgentResponse,
+                                    ResponsesAgentStreamEvent)
 from unitycatalog.ai.core.databricks import DatabricksFunctionClient
 from unitycatalog.ai.openai.toolkit import UCFunctionToolkit
 
@@ -269,7 +267,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         system_prompt: Optional[str] = None,
         config_dir: Optional[Path | str] = None,
         inject_tool_args: Optional[list[str]] = None,
-        disabled_tools: Optional[list[str]] = None,
+        disable_tools: Optional[list[str]] = None,
     ):
         """Initialize base agent from config file.
 
@@ -281,12 +279,12 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             system_prompt: Optional override for system prompt
             config_dir: Optional directory for config files
             inject_tool_args: Optional list of additional tool arguments to be injected into tool calls from custom_inputs.
-            disabled_tools: Optional list of tool names to disable. Can be simple names or full UC function names.
+            disable_tools: Optional list of tool names to disable. Can be simple names or full UC function names.
         """
         # load config file
         self.agent_type = agent_type
         self.config = self._load_config(agent_type, config_dir)
-        self.disabled_tools = disabled_tools or []
+        self.disable_tools = disable_tools or []
 
         self.llm_endpoint = llm_endpoint or self.config.llm.endpoint
         self.llm_params = self.config.llm.params
@@ -303,19 +301,19 @@ class BaseAgent(ResponsesAgent, abc.ABC):
 
         # set up tools
         raw_tools = tools or self._load_tools_from_config()
-        self.tools = self._filter_disabled_tools(raw_tools)
+        self.tools = self._filter_disable_tools(raw_tools)
 
         # Filter vector search tools as well
         self.vector_search_tools = vector_search_tools or {}
-        if self.disabled_tools and self.vector_search_tools:
+        if self.disable_tools and self.vector_search_tools:
             filtered_vector_tools = {}
             for tool_name, tool_obj in self.vector_search_tools.items():
                 simple_name = (
                     tool_name.split(".")[-1] if "." in tool_name else tool_name
                 )
                 is_disabled = (
-                    tool_name in self.disabled_tools
-                    or simple_name in self.disabled_tools
+                    tool_name in self.disable_tools
+                    or simple_name in self.disable_tools
                 )
                 if not is_disabled:
                     filtered_vector_tools[tool_name] = tool_obj
@@ -328,8 +326,8 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         self.llm_tool_specs = self._prepare_llm_tool_specs()
 
         logger.info(f"Initialized {agent_type} agent with {len(self.tools)} tools")
-        if self.disabled_tools:
-            logger.info(f"Disabled tools: {self.disabled_tools}")
+        if self.disable_tools:
+            logger.info(f"Disabled tools: {self.disable_tools}")
 
     @classmethod
     def _load_config(
@@ -386,7 +384,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             logger.error(f"Error loading UC function tools: {str(e)}")
             return []
 
-    def _filter_disabled_tools(self, tools: list[dict]) -> list[dict]:
+    def _filter_disable_tools(self, tools: list[dict]) -> list[dict]:
         """Filter disabled tools from the tools list.
 
         Args:
@@ -395,7 +393,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         Returns:
             Filtered list of tools with disabled tools removed
         """
-        if not self.disabled_tools:
+        if not self.disable_tools:
             return tools
 
         filtered_tools = []
@@ -420,8 +418,8 @@ class BaseAgent(ResponsesAgent, abc.ABC):
                 )
 
                 is_disabled = (
-                    tool_name in self.disabled_tools
-                    or simple_name in self.disabled_tools
+                    tool_name in self.disable_tools
+                    or simple_name in self.disable_tools
                 )
 
                 if is_disabled:

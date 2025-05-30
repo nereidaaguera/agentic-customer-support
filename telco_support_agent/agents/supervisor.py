@@ -7,11 +7,9 @@ from uuid import uuid4
 import mlflow
 from mlflow.entities import SpanType
 from mlflow.models import set_model
-from mlflow.types.responses import (
-    ResponsesAgentRequest,
-    ResponsesAgentResponse,
-    ResponsesAgentStreamEvent,
-)
+from mlflow.types.responses import (ResponsesAgentRequest,
+                                    ResponsesAgentResponse,
+                                    ResponsesAgentStreamEvent)
 
 from telco_support_agent.agents.account import AccountAgent
 from telco_support_agent.agents.base_agent import BaseAgent
@@ -46,14 +44,14 @@ class SupervisorAgent(BaseAgent):
         self,
         llm_endpoint: Optional[str] = None,
         config_dir: Optional[str] = None,
-        disabled_tools: Optional[list[str]] = None,
+        disable_tools: Optional[list[str]] = None,
     ):
         """Initialize supervisor agent.
 
         Args:
             llm_endpoint: Optional override for LLM endpoint
             config_dir: Optional directory for config files
-            disabled_tools: Optional list of tool names to disable.
+            disable_tools: Optional list of tool names to disable.
                 Can be either simple names (e.g., 'get_usage_info') or full UC function
                 names (e.g., 'telco_customer_support_dev.agent.get_usage_info').
         """
@@ -67,11 +65,11 @@ class SupervisorAgent(BaseAgent):
         )
 
         self._sub_agents = {}
-        self.disabled_tools = disabled_tools or []
+        self.disable_tools = disable_tools or []
 
-        if self.disabled_tools:
+        if self.disable_tools:
             logger.info(
-                f"Supervisor configured with disabled tools: {self.disabled_tools}"
+                f"Supervisor configured with disabled tools: {self.disable_tools}"
             )
 
     def get_description(self) -> str:
@@ -110,7 +108,7 @@ class SupervisorAgent(BaseAgent):
         if agent_type_enum in agents_classes:
             try:
                 agent = agents_classes[agent_type_enum](
-                    llm_endpoint=self.llm_endpoint, disabled_tools=self.disabled_tools
+                    llm_endpoint=self.llm_endpoint, disable_tools=self.disable_tools
                 )
                 self._sub_agents[agent_type_str] = agent
                 logger.info(f"Initialized {agent_type_str} agent")
@@ -206,8 +204,8 @@ class SupervisorAgent(BaseAgent):
         }
 
         # add disabled tools info to custom outputs
-        if self.disabled_tools:
-            custom_outputs["routing"]["disabled_tools"] = self.disabled_tools
+        if self.disable_tools:
+            custom_outputs["routing"]["disable_tools"] = self.disable_tools
 
         # get sub-agent
         sub_agent = self._get_sub_agent(agent_type)
@@ -259,7 +257,7 @@ class SupervisorAgent(BaseAgent):
                     "customer_id": request.custom_inputs.get("customer")
                     if request.custom_inputs
                     else None,
-                    "disabled_tools": self.disabled_tools,
+                    "disable_tools": self.disable_tools,
                 }
             )
             span.set_inputs(
@@ -324,7 +322,7 @@ class SupervisorAgent(BaseAgent):
                         "agent_type": execution_result.agent_type.value,
                         "query": execution_result.query,
                         "streaming": True,
-                        "disabled_tools": self.disabled_tools,
+                        "disable_tools": self.disable_tools,
                     }
                 )
                 span.set_inputs(

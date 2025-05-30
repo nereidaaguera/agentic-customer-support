@@ -20,14 +20,14 @@ class ProductAgent(BaseAgent):
         self,
         llm_endpoint: Optional[str] = None,
         config_dir: Optional[str] = None,
-        disabled_tools: Optional[list[str]] = None,
+        disable_tools: Optional[list[str]] = None,
     ) -> None:
         """Initialize the product agent.
 
         Args:
             llm_endpoint: Optional LLM endpoint override
             config_dir: Optional directory for config files
-            disabled_tools: Optional list of tool names to disable
+            disable_tools: Optional list of tool names to disable
         """
         # get toolkit for product domain
         toolkit = get_toolkit_for_domain("product")
@@ -40,5 +40,5 @@ class ProductAgent(BaseAgent):
             config_dir=config_dir,
             tools=toolkit.tools,
             inject_tool_args=["customer"],
-            disabled_tools=disabled_tools,
+            disable_tools=disable_tools,
         )
