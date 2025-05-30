@@ -26,6 +26,7 @@ class TechSupportAgent(BaseAgent):
         llm_endpoint: Optional[str] = None,
         config_dir: Optional[str] = None,
         environment: str = "prod",
+        disabled_tools: Optional[list[str]] = None,
     ) -> None:
         """Init agent.
 
@@ -33,6 +34,7 @@ class TechSupportAgent(BaseAgent):
             llm_endpoint: Optional LLM endpoint override
             config_dir: Optional directory for config files
             environment: Environment to use for retrievers (dev, prod)
+            disabled_tools: Optional list of tool names to disable
         """
         self.retriever = TechSupportRetriever(environment=environment)
         retriever_tools = self.retriever.get_tools()
@@ -53,6 +55,7 @@ class TechSupportAgent(BaseAgent):
             config_dir=config_dir,
             tools=retriever_tools,  # tool specs for LLM
             vector_search_tools=vector_search_tools,  # executable objects
+            disabled_tools=disabled_tools,
         )
 
     def get_description(self) -> str:

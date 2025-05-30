@@ -269,6 +269,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         system_prompt: Optional[str] = None,
         config_dir: Optional[Path | str] = None,
         inject_tool_args: Optional[list[str]] = None,
+        disabled_tools: Optional[list[str]] = None,
     ):
         """Initialize base agent from config file.
 
@@ -280,10 +281,12 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             system_prompt: Optional override for system prompt
             config_dir: Optional directory for config files
             inject_tool_args: Optional list of additional tool arguments to be injected into tool calls from custom_inputs.
+            disabled_tools: Optional list of tool names to disable. Can be simple names or full UC function names.
         """
         # load config file
         self.agent_type = agent_type
         self.config = self._load_config(agent_type, config_dir)
+        self.disabled_tools = disabled_tools or []
 
         self.llm_endpoint = llm_endpoint or self.config.llm.endpoint
         self.llm_params = self.config.llm.params
@@ -299,14 +302,34 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         self.system_prompt = system_prompt or self.config.system_prompt
 
         # set up tools
-        self.tools = tools or self._load_tools_from_config()
+        raw_tools = tools or self._load_tools_from_config()
+        self.tools = self._filter_disabled_tools(raw_tools)
+
+        # Filter vector search tools as well
         self.vector_search_tools = vector_search_tools or {}
+        if self.disabled_tools and self.vector_search_tools:
+            filtered_vector_tools = {}
+            for tool_name, tool_obj in self.vector_search_tools.items():
+                simple_name = (
+                    tool_name.split(".")[-1] if "." in tool_name else tool_name
+                )
+                is_disabled = (
+                    tool_name in self.disabled_tools
+                    or simple_name in self.disabled_tools
+                )
+                if not is_disabled:
+                    filtered_vector_tools[tool_name] = tool_obj
+                else:
+                    logger.info(f"Disabling vector search tool: {tool_name}")
+            self.vector_search_tools = filtered_vector_tools
 
         # init parameter injector
         self.parameter_injector = ToolParameterInjector(inject_tool_args or [])
         self.llm_tool_specs = self._prepare_llm_tool_specs()
 
         logger.info(f"Initialized {agent_type} agent with {len(self.tools)} tools")
+        if self.disabled_tools:
+            logger.info(f"Disabled tools: {self.disabled_tools}")
 
     @classmethod
     def _load_config(
@@ -362,6 +385,58 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         except Exception as e:
             logger.error(f"Error loading UC function tools: {str(e)}")
             return []
+
+    def _filter_disabled_tools(self, tools: list[dict]) -> list[dict]:
+        """Filter disabled tools from the tools list.
+
+        Args:
+            tools: List of tool specifications
+
+        Returns:
+            Filtered list of tools with disabled tools removed
+        """
+        if not self.disabled_tools:
+            return tools
+
+        filtered_tools = []
+        disabled_count = 0
+
+        for tool in tools:
+            tool_name = None
+
+            if "function" in tool and "name" in tool["function"]:
+                # UC function format
+                tool_name = tool["function"]["name"]
+            elif "name" in tool:
+                # direct name format
+                tool_name = tool["name"]
+            elif hasattr(tool, "tool_name"):
+                # VectorSearchRetrieverTool format
+                tool_name = tool.tool_name
+
+            if tool_name:
+                simple_name = (
+                    tool_name.split(".")[-1] if "." in tool_name else tool_name
+                )
+
+                is_disabled = (
+                    tool_name in self.disabled_tools
+                    or simple_name in self.disabled_tools
+                )
+
+                if is_disabled:
+                    logger.info(f"Disabling tool: {tool_name}")
+                    disabled_count += 1
+                    continue
+
+            filtered_tools.append(tool)
+
+        if disabled_count > 0:
+            logger.info(
+                f"Filtered out {disabled_count} disabled tools for {self.agent_type} agent"
+            )
+
+        return filtered_tools
 
     def _prepare_llm_tool_specs(self) -> list[dict[str, Any]]:
         """Prepare tool specifications for LLM by removing injected parameters.
