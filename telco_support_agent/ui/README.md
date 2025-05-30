@@ -72,11 +72,7 @@ npm run dev
 
 ```bash
 # From the root ui/ directory
-# Option 1: Direct Python
 uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
-
-# Option 2: Using Databricks Apps local runner
-databricks apps run-local --prepare-environment
 ```
 
 ### 5. Access the Application
@@ -100,17 +96,11 @@ databricks apps run-local --prepare-environment
 
 ### Prerequisites for Deployment
 
-1. **Databricks CLI configured:**
-   ```bash
-   databricks configure
-   # Or use OAuth: databricks auth login
-   ```
-
-2. **Verify agent endpoint is deployed:**
-   ```bash
-   # Check your agent endpoint exists
-   databricks model-serving list | grep telco-customer-support-agent
-   ```
+**Databricks CLI configured:**
+```bash
+databricks configure
+# Or use OAuth: databricks auth login
+```
 
 ### Deploy
 

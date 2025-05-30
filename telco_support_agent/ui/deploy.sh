@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Accept parameters
-APP_FOLDER_IN_WORKSPACE=${1:-"/Workspace/telco-support-agent"}
+APP_FOLDER_IN_WORKSPACE=${1:-"/Workspace/Shared/telco_support_agent"}
 LAKEHOUSE_APP_NAME=${2:-"telco-support-agent"}
 DATABRICKS_PROFILE=${3:-"DEFAULT"}
 
@@ -12,11 +12,9 @@ echo "App name: $LAKEHOUSE_APP_NAME"
 echo "Databricks profile: $DATABRICKS_PROFILE"
 echo "================================================"
 
-# Frontend build and import
 echo "📦 Building frontend..."
 (
   cd frontend
-  # Ensure clean build
   rm -rf dist/
   npm install
   npm run build
@@ -24,7 +22,7 @@ echo "📦 Building frontend..."
   mv dist ../static
   echo "✅ Frontend built successfully"
   
-  # Upload static files to workspace
+  # upload static files to workspace
   echo "📁 Uploading static files to workspace..."
   databricks workspace delete "$APP_FOLDER_IN_WORKSPACE/static" --recursive --profile $DATABRICKS_PROFILE 2>/dev/null || true
   databricks workspace import-dir ../static "$APP_FOLDER_IN_WORKSPACE/static" --overwrite --profile $DATABRICKS_PROFILE
@@ -80,7 +78,7 @@ echo "App name: $LAKEHOUSE_APP_NAME"
 echo "Workspace folder: $APP_FOLDER_IN_WORKSPACE"
 echo ""
 echo "📱 Open the app:"
-echo "   https://your-workspace.cloud.databricks.com/apps/$LAKEHOUSE_APP_NAME"
+echo "   https://db-ml-models-prod-us-west.cloud.databricks.com/apps/$LAKEHOUSE_APP_NAME"
 echo ""
 echo "⚙️  Manage the app:"
 echo "   Go to Compute > Apps in your Databricks workspace"
