@@ -151,15 +151,15 @@ class TelcoAgentService:
             logger.error(
                 f"HTTP error from Databricks: {e.response.status_code} - {e.response.text}"
             )
-            raise Exception(f"Agent service error: {e.response.status_code}")
+            raise Exception(f"Agent service error: {e.response.status_code}") from e
 
         except httpx.RequestError as e:
             logger.error(f"Request error to Databricks: {e}")
-            raise Exception("Unable to connect to agent service")
+            raise Exception("Unable to connect to agent service") from e
 
         except Exception as e:
             logger.error(f"Unexpected error: {e}")
-            raise Exception(f"Agent processing error: {str(e)}")
+            raise Exception(f"Agent processing error: {str(e)}") from e
 
     async def send_message_stream(
         self,

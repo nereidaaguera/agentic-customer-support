@@ -11,7 +11,7 @@ class Settings(BaseSettings):
 
     # Application settings
     environment: str = Field(default="development", env="ENVIRONMENT")
-    host: str = Field(default="0.0.0.0", env="HOST")
+    host: str = Field(default="0.0.0.0", env="HOST")  # noqa: S104
     port: int = Field(default=8000, env="PORT")
 
     # CORS settings

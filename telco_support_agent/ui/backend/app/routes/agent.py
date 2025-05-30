@@ -84,7 +84,7 @@ async def chat(
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Error processing request: {str(e)}"
-        )
+        ) from e
 
 
 @router.post("/chat/stream")
@@ -105,7 +105,7 @@ async def chat_stream(
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Error processing streaming request: {str(e)}"
-        )
+        ) from e
 
 
 @router.get("/health")

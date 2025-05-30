@@ -39,7 +39,7 @@ if __name__ == "__main__":
     # check if Databricks token is set
     if (
         not settings.databricks_token
-        or settings.databricks_token == "databricks_token_here"
+        or settings.databricks_token == "databricks_token_here"  # noqa: S105
     ):
         print("❌ ERROR: DATABRICKS_TOKEN not configured!")
         print("   Please set your Databricks token in the .env file")
