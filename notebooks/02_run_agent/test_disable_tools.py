@@ -96,7 +96,7 @@ def test_query(supervisor, query, supervisor_name):
 # COMMAND ----------
 
 print("="*80)
-print("TESTING disable TOOLS FUNCTIONALITY")
+print("TESTING DISABLE TOOLS FUNCTIONALITY")
 print("="*80)
 
 for query in usage_queries:
