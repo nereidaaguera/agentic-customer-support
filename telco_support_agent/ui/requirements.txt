@@ -1,0 +1,27 @@
+# Web framework and server
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+
+# HTTP client for Databricks API calls
+httpx==0.25.2
+
+# Configuration management
+pydantic[email]==2.5.0
+pydantic-settings==2.1.0
+python-dotenv==1.0.0
+
+# YAML configuration
+pyyaml==6.0.1
+
+# Environment variables and settings
+structlog==23.2.0
+
+# Databricks integrations (if needed for authentication)
+databricks-sdk
+
+# MLflow (if you need model serving integration)
+mlflow
+
+# Testing (optional for production)
+pytest==8.0.0
+pytest-asyncio==0.23.5
