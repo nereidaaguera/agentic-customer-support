@@ -27,8 +27,8 @@ from unitycatalog.ai.core.databricks import DatabricksFunctionClient
 import asyncio
 from contextlib import asynccontextmanager
 from databricks.sdk import WorkspaceClient
-from mcp import streamablehttp_client, ClientSession  # adjust imports to your package structure
-
+from mcp.client.session import ClientSession
+from mcp.client.streamable_http import streamablehttp_client
 
 ###############################################################################
 ## Define tools for your agent, enabling it to retrieve data or take actions
@@ -49,7 +49,7 @@ async def mcp_session(server_url: str, workspace_client: WorkspaceClient):
     # Open bidirectional stream
     async with streamablehttp_client(
             url=server_url,
-            auth=workspace_client.mcp.oauth_provider()
+            auth=workspace_client.mcp.get_oauth_provider()
     ) as (read_stream, write_stream, _):
         async with ClientSession(read_stream, write_stream) as session:
             await session.initialize()
@@ -85,9 +85,9 @@ def make_mcp_exec_fn(
     return exec_fn
 
 
-def get_mcp_tool_infos(workspace_client: WorkspaceClient):
+def get_mcp_tool_infos(workspace_client: WorkspaceClient, server_urls: list[str]):
     tool_infos = []
-    for mcp_server_url in MCP_SERVER_URLS:
+    for mcp_server_url in server_urls:
         # 1. pull dynamic MCP tool specs
         mcp_tools = list_mcp_tools(mcp_server_url, workspace_client)
         # 2. convert each into a ToolInfo and append

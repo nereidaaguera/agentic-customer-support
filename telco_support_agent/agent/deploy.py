@@ -1,4 +1,5 @@
-from mcp_agent import AGENT, LLM_ENDPOINT_NAME
+import os
+from agent import LLM_ENDPOINT_NAME
 from mlflow.models.resources import DatabricksFunction, DatabricksServingEndpoint
 from pkg_resources import get_distribution
 import mlflow
@@ -8,17 +9,11 @@ from databricks import agents
 
 mlflow.set_registry_uri("databricks-uc")
 
-print("---------Testing the Agent Predict Function---------")
-print(AGENT.predict({"messages": [{"role": "user", "content": "Try running the notification stream tool with some default values! Maybe a short interval"}]}))
-
-print()
-print("---------Testing the Agent Predict Stream Function---------")
-for chunk in AGENT.predict_stream({"messages": [{"role": "user", "content": "Try running the notification stream tool with some default values! Maybe a short interval"}]}):
-    print(chunk, "-----------\n")
-
-print()
 print("---------Logging the Model to MLflow---------")
 
+
+here = os.path.dirname(os.path.abspath(__file__))
+agent_script = os.path.join(here, "agent.py")
 
 resources = [DatabricksServingEndpoint(endpoint_name=LLM_ENDPOINT_NAME)]
 system_auth_policy = SystemAuthPolicy(resources=resources)
@@ -31,7 +26,7 @@ user_auth_policy = UserAuthPolicy(
 with mlflow.start_run():
     logged_agent_info = mlflow.pyfunc.log_model(
         artifact_path="agent",
-        python_model="mcp_agent.py",
+        python_model=agent_script,
         pip_requirements=[
             "mlflow",
             "backoff",
@@ -43,7 +38,7 @@ with mlflow.start_run():
             system_auth_policy=system_auth_policy,
             user_auth_policy=user_auth_policy
         ),
-        infer_code_paths=True
+        code_paths=[os.path.join(here, "tools.py")]
     )
 
 print("Successfully logged the model to MLflow to run id: ", logged_agent_info.run_id)

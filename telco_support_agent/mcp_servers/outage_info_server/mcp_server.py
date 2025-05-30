@@ -18,7 +18,7 @@ from datetime import datetime, timedelta
 
 load_dotenv()
 DATABRICKS_APP_PORT = int(os.getenv("DATABRICKS_APP_PORT", 8000))  # Default to 8000 if not set
-logging.basicConfig(level=logging.INFO)
+# logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("telco-mcp-server")
 
 app = Server("telco-mcp-server")

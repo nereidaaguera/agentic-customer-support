@@ -23,7 +23,17 @@ from databricks.sdk.credentials_provider import ModelServingUserCredentials
 from databricks.sdk import WorkspaceClient
 from tools import get_mcp_tool_infos
 
-logger = logging.getLogger(__name__)
+import logging
+import httpx
+#
+# logging.basicConfig(
+#     format="%(levelname)s [%(asctime)s] %(name)s - %(message)s",
+#     datefmt="%Y-%m-%d %H:%M:%S",
+#     level=logging.DEBUG
+# )
+
+
+# logger = logging.getLogger(__name__)
 
 ############################################
 # Define your LLM endpoint and system prompt
@@ -38,7 +48,8 @@ You are a helpful assistant.
 # Set up MCP tools
 ##################
 MCP_SERVER_URLS = [
-    "https://uc-mcp-server-aravind-6051921418418893.staging.aws.databricksapps.com/mcp/"
+    "https://telco-outage-server-3888667486068890.aws.databricksapps.com/api/mcp/",
+    # "https://db-ml-models-prod-us-west.cloud.databricks.com/api/2.0/mcp/functions/system/ai",
 ]
 
 class ToolCallingAgent(ChatAgent):
@@ -62,7 +73,7 @@ class ToolCallingAgent(ChatAgent):
         self.invokers_workspace_client = None
         self.definers_workspace_client = None
         self.model_serving_client = None
-    
+
     def initialize_clients(self):
         if self.definers_workspace_client is None:
             self.definers_workspace_client = WorkspaceClient()
@@ -93,7 +104,7 @@ class ToolCallingAgent(ChatAgent):
     
     def initialize_tools(self):
         if self._tools_dict is None:
-            all_tool_infos = get_mcp_tool_infos(self.invokers_workspace_client)
+            all_tool_infos = get_mcp_tool_infos(workspace_client=self.invokers_workspace_client, server_urls=MCP_SERVER_URLS)
             self._tools_dict = {tool.name: tool for tool in all_tool_infos}
 
     def prepare_messages_for_llm(self, messages: list[ChatAgentMessage]) -> list[dict[str, Any]]:
@@ -196,3 +207,14 @@ class ToolCallingAgent(ChatAgent):
 mlflow.openai.autolog()
 AGENT = ToolCallingAgent(llm_endpoint=LLM_ENDPOINT_NAME)
 mlflow.models.set_model(AGENT)
+
+if __name__ == "__main__":
+    print("---------Testing the Agent Predict Function---------")
+    user_query = "I'm experiencing an outage at Moscone Center, is this a known issue? Also, what's the 100th fibonacci number?"
+    response = AGENT.predict({"messages": [{"role": "user", "content": user_query}]})
+    for msg in response.messages:
+        print(msg.content)
+
+    print("---------Testing the Agent Predict Stream Function---------")
+    for chunk in AGENT.predict_stream({"messages": [{"role": "user", "content": user_query}]}):
+        print(chunk.delta.content, "-----------\n")
