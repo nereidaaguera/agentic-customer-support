@@ -18,13 +18,17 @@ class AccountAgent(BaseAgent):
     """
 
     def __init__(
-        self, llm_endpoint: Optional[str] = None, config_dir: Optional[str] = None
+        self,
+        llm_endpoint: Optional[str] = None,
+        config_dir: Optional[str] = None,
+        disable_tools: Optional[list[str]] = None,
     ) -> None:
         """Initialize the account agent.
 
         Args:
             llm_endpoint: Optional LLM endpoint override
             config_dir: Optional directory for config files
+            disable_tools: Optional list of tool names to disable
         """
         # get toolkit for account domain
         toolkit = get_toolkit_for_domain("account")
@@ -37,4 +41,5 @@ class AccountAgent(BaseAgent):
             config_dir=config_dir,
             tools=toolkit.tools,
             inject_tool_args=["customer"],
+            disable_tools=disable_tools,
         )
