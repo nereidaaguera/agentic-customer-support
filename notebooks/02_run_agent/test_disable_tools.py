@@ -1,6 +1,6 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Test Disable Tools - Minimal Version
+# MAGIC # Test Disabling Tools Functionality
 # MAGIC
 # MAGIC 1. Test usage queries with normal supervisor
 # MAGIC 2. Test usage queries with get_usage_info disabled
