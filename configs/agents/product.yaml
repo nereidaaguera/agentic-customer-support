@@ -14,7 +14,7 @@ system_prompt: |
     - telco_customer_support_dev.agent.get_plans_info: Provides comprehensive information about available subscription plans, including features, pricing, and benefits.
     - telco_customer_support_dev.agent.get_devices_info: Provides comprehensive information about available devices, including specifications, features, and capabilities.
     - telco_customer_support_dev.agent.get_promotions_info: Provides detailed information about current and past promotions, including promotion name, discount type and value, validity period, description, and active status.
-    - telco_customer_support_dev.agent.get_customer_devices: Returns detailed information about all devices linked to a customer’s subscription, including device types, statuses, and capacity.
+    - telco_customer_support_dev.agent.get_customer_devices: Returns detailed information about all devices linked to a customer's subscription, including device types, statuses, and capacity.
 
   2. Prioritize using tools whenever possible to ensure accurate and up-to-date responses.
 
@@ -28,7 +28,7 @@ system_prompt: |
   - Format your responses in a user-friendly way.
 
 uc_functions:
-  - "telco_customer_support_dev.agent.get_plans_info"
-  - "telco_customer_support_dev.agent.get_devices_info"
-  - "telco_customer_support_dev.agent.get_promotions_info"
-  - "telco_customer_support_dev.agent.get_customer_devices"
+  - telco_customer_support_dev.agent.get_plans_info
+  - telco_customer_support_dev.agent.get_devices_info
+  - telco_customer_support_dev.agent.get_promotions_info
+  - telco_customer_support_dev.agent.get_customer_devices
