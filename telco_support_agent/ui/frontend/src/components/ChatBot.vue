@@ -1,5 +1,5 @@
 <template>
-  <div class="chat-container" @use-case-change="onUseCaseChange">
+  <div class="chat-container">
     <div class="messages-container" ref="messagesContainer">
       <div 
         v-for="(message, index) in messages" 
@@ -177,6 +177,7 @@ const props = defineProps<{
   finalAnswer: string;
   finalInformations: string[];
   intelligenceEnabled: boolean;
+  customerId: string;
 }>();
 
 const emit = defineEmits<{
@@ -184,7 +185,6 @@ const emit = defineEmits<{
   (e: 'update:agents', value: ToolCall[]): void;
   (e: 'update:final-answer', value: string): void;
   (e: 'update:final-informations', value: string[]): void;
-  (e: 'use-case-change', value: string): void;
 }>();
 
 // Store agent responses in a map keyed by message ID
@@ -219,7 +219,7 @@ interface Message {
 const messages = ref<Message[]>([
   {
     id: generateMessageId(),
-    text: "Hello! I'm your AI assistant. How can I help you today?",
+    text: "Hello! I'm your telco support assistant. How can I help you today?",
     sender: 'bot',
     timestamp: new Date(),
     animationComplete: true
@@ -254,99 +254,9 @@ interface PredefinedQuestion {
 // Get predefined questions from the API
 const predefinedQuestions = ref<PredefinedQuestion[]>([]);
 
-// Add useCase ref
-const useCase = ref('telco');
-const demoType = ref('assist');
-
-// Handle use case changes
-const handleUseCaseChange = async (newUseCase: string) => {
-  useCase.value = newUseCase;
-  
-  // Reset chat to initial state
-  messages.value = [{
-    id: generateMessageId(),
-    text: "Hello! I'm your AI assistant. How can I help you today?",
-    sender: 'bot',
-    timestamp: new Date(),
-    animationComplete: true
-  }];
-  
-  // Clear any ongoing state
-  currentStreamingTools.value = [];
-  currentFinalAnswer.value = '';
-  currentFinalInformations.value = [];
-  isTyping.value = false;
-  isThinking.value = false;
-  emit('update:thinking', false);
-  emit('update:agents', []);
-  emit('update:final-answer', '');
-  emit('update:final-informations', []);
-  
-  // Clear the responses map
-  responsesMap.value.clear();
-  
-  try {
-    // Fetch new questions for the use case and demo type
-    const questions = await getPredefinedQuestions(newUseCase, demoType.value);
-    predefinedQuestions.value = questions;
-  } catch (error) {
-    console.error('Error fetching predefined questions:', error);
-    predefinedQuestions.value = [];
-  }
-  
-  // Scroll to top since we're resetting
-  await nextTick();
-  if (messagesContainer.value) {
-    messagesContainer.value.scrollTop = 0;
-  }
-};
-
-// Handle demo type changes
-const handleDemoTypeChange = async (newDemoType: string) => {
-  demoType.value = newDemoType;
-  
-  // Reset chat to initial state
-  messages.value = [{
-    id: generateMessageId(),
-    text: "Hello! I'm your AI assistant. How can I help you today?",
-    sender: 'bot',
-    timestamp: new Date(),
-    animationComplete: true
-  }];
-  
-  // Clear any ongoing state
-  currentStreamingTools.value = [];
-  currentFinalAnswer.value = '';
-  currentFinalInformations.value = [];
-  isTyping.value = false;
-  isThinking.value = false;
-  emit('update:thinking', false);
-  emit('update:agents', []);
-  emit('update:final-answer', '');
-  emit('update:final-informations', []);
-  
-  // Clear the responses map
-  responsesMap.value.clear();
-  
-  try {
-    // Fetch new questions for the current use case and new demo type
-    const questions = await getPredefinedQuestions(useCase.value, newDemoType);
-    predefinedQuestions.value = questions;
-  } catch (error) {
-    console.error('Error fetching predefined questions:', error);
-    predefinedQuestions.value = [];
-  }
-  
-  // Scroll to top since we're resetting
-  await nextTick();
-  if (messagesContainer.value) {
-    messagesContainer.value.scrollTop = 0;
-  }
-};
-
 // Load predefined questions on mount
 onMounted(async () => {
-  predefinedQuestions.value = await getPredefinedQuestions(useCase.value, demoType.value);
+  predefinedQuestions.value = await getPredefinedQuestions();
   scrollToBottom();
 });
 
@@ -367,7 +277,7 @@ const convertToApiMessages = (chatMessages: Message[]): ApiMessage[] => {
   }));
 };
 
-// Modified sendMessage to include use case and demo type
+// Modified sendMessage to use customer ID from props
 const sendMessage = async () => {
   if (!userInput.value.trim()) return;
   
@@ -402,9 +312,9 @@ const sendMessage = async () => {
     // Convert messages to API format
     const apiMessages = convertToApiMessages(messages.value);
     
-    // Call the API with the user message ID, use case, and demo type
+    // Call the API with the user message ID and customer ID from props
     agentResultsEmitter.addListener(userMessageId, handleAgentStreamingResponse);
-    await sendMessageToAgent(apiMessages, userMessageId, props.intelligenceEnabled, useCase.value, demoType.value);
+    await sendMessageToAgent(apiMessages, userMessageId, props.intelligenceEnabled, props.customerId);
     agentResultsEmitter.removeListener(userMessageId);
     
   } catch (error) {
@@ -583,24 +493,42 @@ onMounted(() => {
   scrollToBottom();
 });
 
-// Add method to get current use case
-const getCurrentUseCase = () => useCase.value;
-
-// Add method to get current demo type
-const getCurrentDemoType = () => demoType.value;
-
-// Expose both methods
-defineExpose({
-  handleUseCaseChange,
-  handleDemoTypeChange,
-  getCurrentUseCase,
-  getCurrentDemoType
-});
-
-// Add event handler for use case changes
-const onUseCaseChange = (useCase: string) => {
-  handleUseCaseChange(useCase);
+// Reset chat method for when customer changes
+const resetChat = () => {
+  messages.value = [{
+    id: generateMessageId(),
+    text: "Hello! I'm your telco support assistant. How can I help you today?",
+    sender: 'bot',
+    timestamp: new Date(),
+    animationComplete: true
+  }];
+  
+  // Clear any ongoing state
+  currentStreamingTools.value = [];
+  currentFinalAnswer.value = '';
+  currentFinalInformations.value = [];
+  isTyping.value = false;
+  isThinking.value = false;
+  emit('update:thinking', false);
+  emit('update:agents', []);
+  emit('update:final-answer', '');
+  emit('update:final-informations', []);
+  
+  // Clear the responses map
+  responsesMap.value.clear();
+  
+  // Scroll to top since we're resetting
+  nextTick(() => {
+    if (messagesContainer.value) {
+      messagesContainer.value.scrollTop = 0;
+    }
+  });
 };
+
+// Expose reset method
+defineExpose({
+  resetChat
+});
 
 // Update the handleFeedback function and add new functions
 const handleFeedbackClick = (message: Message, type: 'positive' | 'negative') => {
@@ -624,7 +552,8 @@ const submitFeedback = (message: Message) => {
   const feedback = {
     messageId: message.id,
     type: message.feedbackState.type,
-    text: message.feedbackState.text
+    text: message.feedbackState.text,
+    customerId: props.customerId
   };
   
   console.log('Submitting feedback:', feedback);
@@ -837,11 +766,6 @@ const submitFeedback = (message: Message) => {
   display: block;
 }
 
-/* Add padding-bottom only when the intelligence button exists */
-.message-with-intelligence:has(.intelligence-button) {
-  padding-bottom: 28px;
-}
-
 /* Add padding-bottom when feedback panel exists */
 .message-with-intelligence:has(.feedback-panel) {
   padding-bottom: 48px; /* Increase padding to accommodate the wider input */
@@ -920,11 +844,6 @@ const submitFeedback = (message: Message) => {
     opacity: 1;
     transform: translateX(0);
   }
-}
-
-/* Update this style to remove intelligence button padding */
-.message-with-intelligence:has(.intelligence-button) {
-  padding-bottom: 28px;
 }
 
 .message-text {
@@ -1006,20 +925,6 @@ const submitFeedback = (message: Message) => {
   background-color: rgba(255, 255, 255, 0.05);
 }
 
-/* Remove intelligence button styles but keep other necessary styles */
-.message-with-intelligence {
-  position: relative;
-}
-
-.message-with-intelligence .message-text {
-  display: block;
-}
-
-/* Only keep the feedback panel padding */
-.message-with-intelligence:has(.feedback-panel) {
-  padding-bottom: 48px;
-}
-
 .feedback-submitted-container {
   display: flex;
   align-items: center;
@@ -1033,4 +938,4 @@ const submitFeedback = (message: Message) => {
   display: inline-flex;
   align-items: center;
 }
-</style> 
+</style>
