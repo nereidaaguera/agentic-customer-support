@@ -42,7 +42,8 @@ with mlflow.start_run():
         auth_policy=AuthPolicy(
             system_auth_policy=system_auth_policy,
             user_auth_policy=user_auth_policy
-        )
+        ),
+        infer_code_paths=True
     )
 
 print("Successfully logged the model to MLflow to run id: ", logged_agent_info.run_id)

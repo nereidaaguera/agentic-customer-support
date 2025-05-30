@@ -5,8 +5,6 @@ from uuid import uuid4
 import backoff
 import mlflow
 import openai
-from databricks_openai import VectorSearchRetrieverTool, UCFunctionToolkit
-from unitycatalog.ai.core.base import get_uc_function_client
 from mlflow.entities import SpanType
 from mlflow.pyfunc import ChatAgent
 from mlflow.types.agent import (
@@ -15,30 +13,23 @@ from mlflow.types.agent import (
     ChatAgentResponse,
     ChatContext,
 )
-from pydantic import BaseModel
 
 from typing import Optional
 
 import logging
 from databricks.sdk.credentials_provider import ModelServingUserCredentials
-from unitycatalog.ai.core.databricks import DatabricksFunctionClient
 
 
-import asyncio
-from contextlib import asynccontextmanager
 from databricks.sdk import WorkspaceClient
-from mcp import streamablehttp_client, ClientSession  # adjust imports to your package structure
-
+from tools import get_mcp_tool_infos
 
 logger = logging.getLogger(__name__)
 
 ############################################
 # Define your LLM endpoint and system prompt
 ############################################
-# TODO: Replace with your model serving endpoint
 LLM_ENDPOINT_NAME = "databricks-claude-3-7-sonnet"
 
-# TODO: Update with your system prompt
 SYSTEM_PROMPT = """
 You are a helpful assistant.
 """
@@ -54,7 +45,6 @@ class ToolCallingAgent(ChatAgent):
     """
     Class representing a tool-calling Agent
     """
-
 
     def __init__(self, llm_endpoint: str):
         """
@@ -99,8 +89,6 @@ class ToolCallingAgent(ChatAgent):
         Returns:
             Any: The tool's output.
         """
-        if tool_name not in self._tools_dict:
-            raise ValueError(f"Unknown tool: {tool_name}")
         return self._tools_dict[tool_name].exec_fn(**args)
     
     def initialize_tools(self):
@@ -147,10 +135,6 @@ class ToolCallingAgent(ChatAgent):
         self.initialize_clients()
         self.initialize_tools()
 
-        if len(messages) == 0:
-            raise ValueError(
-                "The list of `messages` passed to predict(...) must contain at least one message"
-            )
         all_messages = [
             ChatAgentMessage(role="system", content=SYSTEM_PROMPT)
         ] + messages

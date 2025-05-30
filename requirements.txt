@@ -27,7 +27,7 @@ databricks-agents==1.0.0rc1 ; python_version == "3.12"
 databricks-ai-bridge==0.5.1 ; python_version == "3.12"
 databricks-connect==16.3.2 ; python_version == "3.12"
 databricks-openai==0.4.1 ; python_version == "3.12"
-databricks-sdk==0.52.0 ; python_version == "3.12"
+git+https://github.com/aravind-segu/databricks-sdk-py.git@mcpSupport#egg=databricks-sdk[mcp]
 databricks-vectorsearch==0.56 ; python_version == "3.12"
 dataclasses-json==0.6.7 ; python_version == "3.12"
 deprecated==1.2.18 ; python_version == "3.12"
