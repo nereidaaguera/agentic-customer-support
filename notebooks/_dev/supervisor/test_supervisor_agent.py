@@ -21,9 +21,10 @@ print(f"Root path: {root_path}")
 
 if root_path:
     sys.path.append(root_path)
-    print(f"Added {root_path} to Python path")
 
 # COMMAND ----------
+
+import itertools
 
 from mlflow.types.responses import ResponsesAgentRequest
 
@@ -34,7 +35,7 @@ from telco_support_agent.agents.types import AgentType
 
 # COMMAND ----------
 
-print("Available agent types (enum):")
+print("Available agent types:")
 for agent_type in AgentType:
     print(f"  - {agent_type.name}: {agent_type.value}")
 
@@ -75,7 +76,7 @@ print(f"LLM parameters: {supervisor.llm_params}")
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Initialize Required UC Functions
+# MAGIC ## Init Required UC Functions
 
 # COMMAND ----------
 
@@ -145,7 +146,7 @@ for query in routing_test_queries:
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Test End-to-End Query Processing
+# MAGIC ## Test End-to-End Queries
 
 # COMMAND ----------
 
@@ -192,11 +193,26 @@ def test_end_to_end_query(query, custom_inputs, description=""):
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Customer input 
+# MAGIC ### Test Customer IDs
 
 # COMMAND ----------
-    
-custom_inputs = {"customer": "CUS-10001"}
+
+# mixed set of customer IDs for testing
+test_customers = [
+    "CUS-10001",  # Family  customer
+    "CUS-10002",  # Individual customer 
+    "CUS-10006",  # Student customer
+    "CUS-10023",  # Premium customer
+    "CUS-10048",  # Business customer
+    "CUS-10172",  # Platium customer
+    "CUS-11081",  # New customer
+    "CUS-10619",  # Long-term customer
+]
+
+customer_cycle = itertools.cycle(test_customers)
+
+def get_next_customer():
+    return next(customer_cycle)
 
 # COMMAND ----------
 
@@ -205,26 +221,19 @@ custom_inputs = {"customer": "CUS-10001"}
 
 # COMMAND ----------
 
-account_queries = [
-    ("What plan am I currently on?", "Account Plan Query"),
-    ("Is my autopay enabled in my subscriptions?", "Subscription Query")
+account_quality_queries = [
+    ("What plan am I currently on?", "Current Plan Query"),
+    ("Is my autopay enabled in my subscriptions?", "Autopay Status Query"),
+    ("What plan am I currently on and when does my contract expire?", "Plan and Contract Query"),
+    ("Show me all my active subscriptions and their status", "All Subscriptions Query"),
+    ("What's my customer segment and loyalty tier?", "Customer Profile Query"),
+    ("How long have I been a customer and what's my account status?", "Customer History Query"),
 ]
 
-for query, description in account_queries:
-    test_end_to_end_query(query, custom_inputs, description)
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### Test Tech Support Queries
-
-# COMMAND ----------
-
-tech_support_queries = [
-    ("I can make calls but my data isn't working. How do I fix this?", "Data Connection Issue"),
-]
-
-for query, description in tech_support_queries:
+for query, description in account_quality_queries:
+    customer_id = get_next_customer()
+    custom_inputs = {"customer": customer_id}
+    print(f"\n[Using Customer ID: {customer_id}]")
     test_end_to_end_query(query, custom_inputs, description)
 
 # COMMAND ----------
@@ -234,17 +243,39 @@ for query, description in tech_support_queries:
 
 # COMMAND ----------
 
-billing_queries = [
-    ("Why is my bill higher this month?", "Billing Inquiry"),
-    ("What are the charges on the customer's bill from 2025-04-01 to 2025-04-30?", "Billing Details Request"),
+billing_quality_queries = [
+    ("Why is my bill higher this month?", "Bill Change Inquiry"),
     ("When is my payment due?", "Payment Due Date"),
-    ("I see a charge for $14.99 that I don't recognize", "Billing Dispute"),
-    ("How much data did the customer use from 2025-04-01 to 2025-04-30?", "Usage Inquiry"),
-    ("Is there an unpaid amount for my billing?", "Payment Status Check"),
+    ("Show me my billing details for March 2025", "Specific Month Billing"),
+    ("What are the charges on my bill from 2025-04-01 to 2025-04-30?", "Date Range Billing"),
+    ("How much data, voice minutes, and SMS did I use in the current billing cycle?", "Current Usage Query"),
+    ("What's my usage breakdown for the past 3 months?", "Historical Usage Query"),
+    ("Why is my total amount different from my base amount this month?", "Billing Breakdown Query"),
 ]
 
-for query, description in billing_queries:
+for query, description in billing_quality_queries:
+    customer_id = get_next_customer()
+    custom_inputs = {"customer": customer_id}
+    print(f"\n[Using Customer ID: {customer_id}]")
     test_end_to_end_query(query, custom_inputs, description)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Test Tech Support Queries
+
+# COMMAND ----------
+
+tech_support_quality_queries = [
+    ("My iPhone keeps dropping calls during conversations", "Call Dropping Issue"),
+    ("I can't connect to wifi and my data isn't working either", "Connectivity Issue"),
+    ("How do I set up international roaming for my upcoming trip?", "Roaming Setup"),
+    ("My voicemail notifications aren't working properly", "Voicemail Issue"),
+    ("I'm getting poor signal strength at home, what can I do?", "Signal Strength Issue"),
+]
+
+for query, description in tech_support_quality_queries:
+    test_end_to_end_query(query, {}, description)
 
 # COMMAND ----------
 
@@ -253,12 +284,19 @@ for query, description in billing_queries:
 
 # COMMAND ----------
 
-product_queries = [
+product_quality_queries = [
     ("What's the difference between the Standard and Premium plans?", "Plan Comparison"),
-    ("Do I have a Google phone?", "Device Brand")
+    ("Compare the features and pricing of all available plans", "All Plans Comparison"),
+    ("What Samsung devices are currently available and their specifications?", "Samsung Devices Query"),
+    ("Are there any active promotions for iPhone upgrades?", "iPhone Promotions"),
+    ("What devices do I currently have on my account?", "Customer Devices Query"),
+    ("Which plans are compatible with 5G devices and what's the price difference?", "5G Plans Query"),
 ]
 
-for query, description in product_queries:
+for query, description in product_quality_queries:
+    customer_id = get_next_customer()
+    custom_inputs = {"customer": customer_id}
+    print(f"\n[Using Customer ID: {customer_id}]")
     test_end_to_end_query(query, custom_inputs, description)
 
 # COMMAND ----------
@@ -292,9 +330,9 @@ def display_streaming_response(model_input, description=""):
                             full_text += text
 
             elif "type" in item and item["type"] == "function_call":
-                print(f"\n[Function Call {i}]: {item["name"]}")
-                print(f"Arguments: {item["arguments"]}")
-                function_calls.append(f"{item["name"]}({item["arguments"]})")
+                print(f"\n[Function Call {i}]: {item['name']}")
+                print(f"Arguments: {item['arguments']}")
+                function_calls.append(f"{item['name']}({item['arguments']})")
 
             elif "type" in item and item["type"] == "function_call_output":
                 print(f"\n[Function Output {i}]:")
@@ -311,12 +349,23 @@ def display_streaming_response(model_input, description=""):
 # COMMAND ----------
 
 streaming_test_queries = [
-    (ResponsesAgentRequest(input=[{"role": "user", "content": "What are the details of my account?"}], custom_inputs=custom_inputs), "Account Query Streaming"),
-    (ResponsesAgentRequest(input=[{"role": "user", "content": "What's the difference between the Standard and Premium plans?"}], custom_inputs=custom_inputs), "Plan Comparison"),
-    (ResponsesAgentRequest(input=[{"role": "user", "content": "Why is my bill different this month?"}], custom_inputs=custom_inputs), "Billing Query Streaming (Not Implemented)"),
-    (ResponsesAgentRequest(input=[{"role": "user", "content": "What are the billing charges for the customer from 2025-04-01 to 2025-04-30?"}], custom_inputs=custom_inputs), "Billing Query Streaming (Not Implemented)"),
+    # Account queries
+    (ResponsesAgentRequest(input=[{"role": "user", "content": "What are the details of my account?"}], custom_inputs={"customer": get_next_customer()}), "Account Query Streaming"),
+    (ResponsesAgentRequest(input=[{"role": "user", "content": "Show me all my active subscriptions"}], custom_inputs={"customer": get_next_customer()}), "Subscriptions Streaming"),
+    
+    # Product queries
+    (ResponsesAgentRequest(input=[{"role": "user", "content": "What's the difference between the Standard and Premium plans?"}], custom_inputs={"customer": get_next_customer()}), "Plan Comparison Streaming"),
+    (ResponsesAgentRequest(input=[{"role": "user", "content": "What devices do I have on my account?"}], custom_inputs={"customer": get_next_customer()}), "Customer Devices Streaming"),
+    
+    # Billing queries
+    (ResponsesAgentRequest(input=[{"role": "user", "content": "What are my billing charges for April 2025?"}], custom_inputs={"customer": get_next_customer()}), "Billing Query Streaming"),
+    (ResponsesAgentRequest(input=[{"role": "user", "content": "How much data did I use last month?"}], custom_inputs={"customer": get_next_customer()}), "Usage Query Streaming"),
+    
+    # Tech support (no customer ID needed)
     (ResponsesAgentRequest(input=[{"role": "user", "content": "My phone won't connect to WiFi. How do I fix this?"}]), "Tech Support Streaming"),
 ]
 
 for request, description in streaming_test_queries:
+    if hasattr(request, 'custom_inputs') and request.custom_inputs and 'customer' in request.custom_inputs:
+        print(f"\n[Using Customer ID: {request.custom_inputs['customer']}]")
     display_streaming_response(request, description)
