@@ -146,35 +146,104 @@ class TelcoAgentService:
     ) -> AgentResponse:
         """Parse the response from Databricks into our format."""
         try:
+            # extract main response text
             response_text = ""
             agent_type = None
             tools_used = []
+            execution_steps = []
 
+            # parse output array to get execution details
             output = databricks_response.get("output", [])
 
             for item in output:
                 if item.get("type") == "message" and item.get("role") == "assistant":
+                    # extract text content from message
                     content = item.get("content", [])
                     for content_item in content:
                         if content_item.get("type") == "output_text":
                             response_text += content_item.get("text", "")
 
                 elif item.get("type") == "function_call":
-                    tools_used.append(
-                        {"name": item.get("name"), "arguments": item.get("arguments")}
+                    # capture function call details
+                    function_name = item.get("name", "unknown_function")
+                    function_args = item.get("arguments", "{}")
+                    call_id = item.get("call_id", "")
+
+                    try:
+                        if isinstance(function_args, str):
+                            parsed_args = json.loads(function_args)
+                        else:
+                            parsed_args = function_args
+                    except (json.JSONDecodeError, TypeError):
+                        parsed_args = {"raw_arguments": function_args}
+
+                    tool_call = {
+                        "name": function_name,
+                        "arguments": parsed_args,
+                        "call_id": call_id,
+                        "type": "function_call",
+                    }
+
+                    tools_used.append(tool_call)
+
+                    # add to execution steps for detailed view
+                    execution_steps.append(
+                        {
+                            "step_type": "tool_call",
+                            "tool_name": function_name,
+                            "description": f"Calling {function_name}",
+                            "arguments": parsed_args,
+                            "reasoning": f"Using {function_name} to retrieve relevant information",
+                        }
                     )
 
+                elif item.get("type") == "function_call_output":
+                    # capture function results
+                    call_id = item.get("call_id", "")
+                    output_data = item.get("output", "")
+
+                    try:
+                        if isinstance(output_data, str) and output_data.startswith("{"):
+                            parsed_output = json.loads(output_data)
+                        else:
+                            parsed_output = output_data
+                    except (json.JSONDecodeError, TypeError):
+                        parsed_output = output_data
+
+                    # add result to execution steps
+                    execution_steps.append(
+                        {
+                            "step_type": "tool_result",
+                            "call_id": call_id,
+                            "description": "Tool execution completed",
+                            "result": parsed_output,
+                            "reasoning": "Retrieved relevant information to answer the query",
+                        }
+                    )
+
+            # extract custom outputs for agent routing info
             custom_outputs = databricks_response.get("custom_outputs", {})
             routing_info = custom_outputs.get("routing", {})
             if routing_info:
                 agent_type = routing_info.get("agent_type")
 
+            # add routing to execution steps
+            if agent_type:
+                execution_steps.insert(
+                    0,
+                    {
+                        "step_type": "routing",
+                        "description": f"Query routed to {agent_type} agent",
+                        "reasoning": f"This query is best handled by the {agent_type} specialist",
+                    },
+                )
+
             return AgentResponse(
                 response=response_text
                 or "I apologize, but I couldn't generate a proper response. Please try again.",
                 agent_type=agent_type,
-                custom_outputs=custom_outputs,
-                tools_used=tools_used if tools_used else None,
+                custom_outputs={**custom_outputs, "execution_steps": execution_steps},
+                tools_used=tools_used,
             )
 
         except Exception as e:

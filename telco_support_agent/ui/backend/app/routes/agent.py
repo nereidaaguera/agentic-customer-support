@@ -98,6 +98,11 @@ async def chat(
             conversation_history=request.conversation_history,
         )
 
+        logger.info(f"Agent response tools_used: {response.tools_used}")
+        logger.info(
+            f"Agent response custom_outputs keys: {list(response.custom_outputs.keys()) if response.custom_outputs else 'None'}"
+        )
+
         logger.info(
             f"Successfully processed chat request for customer {request.customer_id}"
         )
@@ -107,7 +112,6 @@ async def chat(
         logger.error(f"Error processing chat request: {str(e)}")
         logger.error(f"Full traceback: {traceback.format_exc()}")
 
-        # Return more specific error information
         error_detail = f"Chat processing error: {str(e)}"
         raise HTTPException(status_code=500, detail=error_detail) from e
 

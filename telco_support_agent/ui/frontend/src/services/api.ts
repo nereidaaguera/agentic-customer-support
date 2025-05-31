@@ -67,29 +67,67 @@ const convertToConversationHistory = (messages: ApiMessage[]) => {
  * Convert backend response to frontend AgentResponse format
  */
 const convertBackendToAgentResponse = (backendResponse: any): AgentResponse => {
-  // Extract tools used from the backend response
   const tools: ToolCall[] = [];
   
-  if (backendResponse.tools_used) {
+  // Use execution_steps if available for more detailed information
+  const executionSteps = backendResponse.custom_outputs?.execution_steps || [];
+  
+  if (executionSteps.length > 0) {
+    executionSteps.forEach((step: any, index: number) => {
+      if (step.step_type === 'tool_call') {
+        tools.push({
+          tool_name: step.tool_name || `Tool ${index + 1}`,
+          description: step.description || `Called ${step.tool_name}`,
+          reasoning: step.reasoning || `Tool executed with arguments: ${JSON.stringify(step.arguments)}`,
+          type: 'EXTERNAL_API',
+          informations: [
+            step.tool_name,
+            ...(step.arguments ? [JSON.stringify(step.arguments, null, 2)] : [])
+          ]
+        });
+      } else if (step.step_type === 'tool_result') {
+        // Add result information to the last tool
+        if (tools.length > 0) {
+          const lastTool = tools[tools.length - 1];
+          lastTool.informations.push(
+            `Result: ${typeof step.result === 'string' ? step.result.substring(0, 200) + '...' : JSON.stringify(step.result).substring(0, 200) + '...'}`
+          );
+        }
+      }
+    });
+  } else if (backendResponse.tools_used) {
+    // Fallback to basic tools_used format
     backendResponse.tools_used.forEach((tool: any, index: number) => {
       tools.push({
         tool_name: tool.name || `Tool ${index + 1}`,
         description: `Called ${tool.name}`,
         reasoning: `Tool executed with arguments: ${JSON.stringify(tool.arguments)}`,
         type: 'EXTERNAL_API',
-        informations: [tool.name]
+        informations: [tool.name, JSON.stringify(tool.arguments, null, 2)]
       });
     });
   }
+
+  // Build final informations with more detail
+  const finalInformations = [
+    backendResponse.agent_type ? `Handled by ${backendResponse.agent_type} agent` : 'Processed by AI assistant'
+  ];
+
+  if (tools.length > 0) {
+    finalInformations.push(`Used ${tools.length} tool(s) to gather information`);
+  }
+
+  // Add routing information if available
+  const routingSteps = executionSteps.filter((step: any) => step.step_type === 'routing');
+  routingSteps.forEach((step: any) => {
+    finalInformations.push(step.description);
+  });
 
   return {
     question: '', // Will be set by caller
     tools: tools,
     final_answer: backendResponse.response,
-    final_informations: [
-      backendResponse.agent_type ? `Handled by ${backendResponse.agent_type} agent` : 'Processed by AI assistant',
-      ...(backendResponse.tools_used ? [`Used ${backendResponse.tools_used.length} tool(s)`] : [])
-    ],
+    final_informations: finalInformations,
     non_intelligent_answer: backendResponse.response
   };
 };
