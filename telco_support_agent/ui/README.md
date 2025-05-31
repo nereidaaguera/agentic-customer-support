@@ -33,11 +33,11 @@ pip install -r requirements.txt
 ### 2. Configure Local Development
 
 ```bash
-# Copy example configuration
+# copy example configuration
 cp app_local.yaml.example app_local.yaml
 
-# Edit app_local.yaml with your Databricks credentials
-# Required values:
+# edit app_local.yaml with your Databricks credentials
+# required values:
 # - DATABRICKS_HOST: Your workspace URL
 # - DATABRICKS_TOKEN: Your access token
 # - DATABRICKS_ENDPOINT_NAME: Your agent endpoint name
@@ -61,10 +61,10 @@ env:
 ```bash
 cd frontend
 
-# Install dependencies
+# install dependencies
 npm install
 
-# Start development server (runs on http://localhost:5173)
+# start development server (runs on http://localhost:5173)
 npm run dev
 ```
 
@@ -105,9 +105,6 @@ databricks configure
 ### Deploy
 
 ```bash
-# Create the app in Databricks
-databricks apps create telco-support-agent
-
 # Deploy with default settings
 ./deploy.sh
 
@@ -116,31 +113,6 @@ databricks apps create telco-support-agent
 
 # Deploy using specific Databricks profile
 ./deploy.sh "/Workspace/your-path/telco-support-agent" "my-telco-app" "PRODUCTION"
-```
-
-### Manual Deployment Steps
-
-If you prefer manual deployment:
-
-```bash
-# 1. Build frontend
-cd frontend
-npm run build
-cd ..
-
-# 2. Move static files
-rm -rf static/
-mv frontend/dist static/
-
-# 3. Create app in Databricks
-databricks apps create telco-support-agent
-
-# 4. Sync code to workspace
-databricks workspace import-dir . "/Workspace/your-path/telco-support-agent" --overwrite
-
-# 5. Deploy the app
-databricks apps deploy telco-support-agent \
-  --source-code-path "/Workspace/your-path/telco-support-agent"
 ```
 
 ## Configuration

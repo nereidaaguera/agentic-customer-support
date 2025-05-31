@@ -1,5 +1,6 @@
 """Main FastAPI application for Telco Support Agent UI."""
 
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -18,10 +19,18 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     print(f"Starting Telco Support Agent UI on {settings.environment}")
     print(f"Databricks endpoint: {settings.databricks_endpoint}")
+    print(f"App port: {settings.port}")
+    print(f"Working directory: {os.getcwd()}")
+
+    static_dir = Path(__file__).parent.parent.parent / "static"
+    if static_dir.exists():
+        print(f"Static directory found: {static_dir}")
+        print(f"Static files: {list(static_dir.iterdir())[:5]}...")  # First 5 files
+    else:
+        print(f"Static directory not found at: {static_dir}")
 
     yield
 
-    # Shutdown
     print("Shutting down Telco Support Agent UI")
 
 
@@ -49,9 +58,24 @@ def create_app() -> FastAPI:
     app.include_router(agent_router, prefix="/api")
 
     # Serve static files (frontend build)
-    static_dir = Path(__file__).parent.parent / "static"
-    if static_dir.exists():
-        app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
+    possible_static_dirs = [
+        Path(__file__).parent.parent.parent / "static",  # Root level
+        Path(__file__).parent.parent / "static",  # Backend level
+        Path.cwd() / "static",  # Current working directory
+    ]
+
+    static_dir = None
+    for dir_path in possible_static_dirs:
+        if dir_path.exists() and dir_path.is_dir():
+            static_dir = dir_path
+            print(f"Using static directory: {static_dir}")
+            break
+
+    if static_dir:
+        app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
+        print(f"Static files mounted from: {static_dir}")
+    else:
+        print("Warning: No static directory found, serving API only")
 
     return app
 
@@ -71,8 +95,8 @@ if __name__ == "__main__":
 
     settings = get_settings()
     uvicorn.run(
-        "main:app",
-        host=settings.host,
+        app,
+        host="0.0.0.0",  # noqa: S104
         port=settings.port,
-        reload=settings.environment == "development",
+        reload=False,
     )

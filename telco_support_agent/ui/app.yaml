@@ -1,15 +1,7 @@
-command: ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
-
-static_dir: static
+command: ["python", "main.py"]
 
 env:
   - name: 'ENV'
     value: 'prod'
   - name: 'TELCO_SUPPORT_AGENT_ENV'
     value: 'prod'
-  # any other environment variables needed by backend
-  # Example:
-  # - name: 'DATABRICKS_HOST'
-  #   valueFrom: 'secret/telco-support/databricks-host'
-  # - name: 'DATABRICKS_TOKEN'  
-  #   valueFrom: 'secret/telco-support/databricks-token'

@@ -17,11 +17,16 @@ class Settings(BaseSettings):
     # App settings
     environment: str = Field(default="development")
     host: str = Field(default="0.0.0.0")  # noqa: S104
-    port: int = Field(default=8000)
+    # Use DATABRICKS_APP_PORT if available, otherwise default to 8000
+    port: int = Field(
+        default_factory=lambda: int(os.getenv("DATABRICKS_APP_PORT", "8000"))
+    )
 
-    # Databricks settings
+    # Databricks settings - use environment variables when available
     databricks_host: str = Field(
-        default="https://db-ml-models-prod-us-west.cloud.databricks.com"
+        default_factory=lambda: os.getenv(
+            "DATABRICKS_HOST", "https://db-ml-models-prod-us-west.cloud.databricks.com"
+        )
     )
     databricks_token: str = Field(default="")
     databricks_endpoint_name: str = Field(default="telco-customer-support-agent")
