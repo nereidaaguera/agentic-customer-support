@@ -19,7 +19,7 @@ class Settings(BaseSettings):
 
     # App settings
     environment: str = Field(default="development")
-    host: str = Field(default="0.0.0.0")
+    host: str = Field(default="0.0.0.0")  # noqa: S104
     port: int = Field(
         default_factory=lambda: int(os.getenv("DATABRICKS_APP_PORT", "8000"))
     )

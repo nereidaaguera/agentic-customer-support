@@ -79,7 +79,7 @@ async def get_demo_customers(settings: Settings = Depends(get_settings)):
         logger.error(traceback.format_exc())
         raise HTTPException(
             status_code=500, detail=f"Error retrieving customers: {str(e)}"
-        )
+        ) from e
 
 
 @router.post("/chat", response_model=AgentResponse)
