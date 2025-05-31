@@ -37,7 +37,6 @@ class TelcoAgentService:
         """Initialize the service."""
         self.settings = settings
 
-        # Check if authentication is available
         if not settings.has_auth:
             logger.warning(
                 "No Databricks authentication configured. "
@@ -62,7 +61,6 @@ class TelcoAgentService:
         ):
             raise ValueError("OAuth credentials not available")
 
-        # Use the workspace host for OAuth token endpoint
         workspace_host = self.settings.databricks_host
         token_url = f"{workspace_host}/oidc/v1/token"
 
@@ -103,13 +101,11 @@ class TelcoAgentService:
         headers = {"Content-Type": "application/json"}
 
         if self.settings.auth_method == "oauth":
-            # Get OAuth token if we don't have one or need to refresh
             if not self.access_token:
                 try:
                     self.access_token = await self._get_oauth_token()
                 except Exception as e:
                     logger.error(f"Failed to get OAuth token: {e}")
-                    # Fallback: try using client secret directly (might work in some cases)
                     logger.info("Falling back to direct client secret usage")
                     headers["Authorization"] = (
                         f"Bearer {self.settings.databricks_client_secret}"
@@ -136,10 +132,7 @@ class TelcoAgentService:
         self, message: str, customer_id: str, conversation_history: list[ChatMessage]
     ) -> dict[str, Any]:
         """Build the payload for Databricks API."""
-        # Convert conversation history to the expected format
         input_messages = []
-
-        # Add conversation history
         for msg in conversation_history:
             input_messages.append({"role": msg.role, "content": msg.content})
 
@@ -153,29 +146,24 @@ class TelcoAgentService:
     ) -> AgentResponse:
         """Parse the response from Databricks into our format."""
         try:
-            # Extract the main response text
             response_text = ""
             agent_type = None
             tools_used = []
 
-            # Parse the output array
             output = databricks_response.get("output", [])
 
             for item in output:
                 if item.get("type") == "message" and item.get("role") == "assistant":
-                    # Extract text content from message
                     content = item.get("content", [])
                     for content_item in content:
                         if content_item.get("type") == "output_text":
                             response_text += content_item.get("text", "")
 
                 elif item.get("type") == "function_call":
-                    # Track tool usage
                     tools_used.append(
                         {"name": item.get("name"), "arguments": item.get("arguments")}
                     )
 
-            # Extract custom outputs for agent routing info
             custom_outputs = databricks_response.get("custom_outputs", {})
             routing_info = custom_outputs.get("routing", {})
             if routing_info:
@@ -208,7 +196,6 @@ class TelcoAgentService:
         if conversation_history is None:
             conversation_history = []
 
-        # Check if client is available
         if not self.client:
             return AgentResponse(
                 response=(
@@ -222,7 +209,6 @@ class TelcoAgentService:
             )
 
         try:
-            # Build the request payload
             payload = self._build_databricks_payload(
                 message, customer_id, conversation_history
             )
@@ -230,10 +216,8 @@ class TelcoAgentService:
             logger.info(f"Sending request to Databricks for customer {customer_id}")
             logger.debug(f"Payload: {json.dumps(payload, indent=2)}")
 
-            # Get headers with proper authentication
             headers = await self._get_headers()
 
-            # Make the request
             response = await self.client.post(
                 self.settings.databricks_endpoint, json=payload, headers=headers
             )
@@ -243,7 +227,6 @@ class TelcoAgentService:
 
             logger.debug(f"Databricks response: {json.dumps(response_data, indent=2)}")
 
-            # Parse and return the response
             return self._parse_agent_response(response_data)
 
         except httpx.HTTPStatusError as e:
@@ -251,14 +234,12 @@ class TelcoAgentService:
                 f"HTTP error from Databricks: {e.response.status_code} - {e.response.text}"
             )
 
-            # If 403, try to refresh token and retry once
             if e.response.status_code == 403 and self.settings.auth_method == "oauth":
                 logger.info("Got 403, attempting to refresh OAuth token and retry...")
                 try:
                     self.access_token = await self._get_oauth_token()
                     headers = await self._get_headers()
 
-                    # Retry the request
                     response = await self.client.post(
                         self.settings.databricks_endpoint, json=payload, headers=headers
                     )
@@ -308,22 +289,18 @@ class TelcoAgentService:
             conversation_history = []
 
         try:
-            # For now, simulate streaming with the regular response
             agent_response = await self.send_message(
                 message, customer_id, conversation_history
             )
 
-            # Simulate streaming by yielding chunks
             response_text = agent_response.response
             chunk_size = 10  # characters per chunk
 
             for i in range(0, len(response_text), chunk_size):
                 chunk = response_text[i : i + chunk_size]
                 yield f"data: {json.dumps({'text': chunk, 'done': False})}\n\n"
-                # Add small delay to simulate streaming
                 await asyncio.sleep(0.1)
 
-            # Send final metadata
             yield f"data: {json.dumps({'done': True, 'agent_type': agent_response.agent_type, 'tools_used': agent_response.tools_used})}\n\n"
 
         except Exception as e:
@@ -335,7 +312,6 @@ class TelcoAgentService:
             return False
 
         try:
-            # Send a simple test request
             test_payload = self._build_databricks_payload("Hello", "CUS-10001", [])
             headers = await self._get_headers()
 
