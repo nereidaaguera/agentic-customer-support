@@ -36,10 +36,92 @@ class TelcoAgentService:
     def __init__(self, settings: Settings):
         """Initialize the service."""
         self.settings = settings
-        self.client = httpx.AsyncClient(
-            timeout=httpx.Timeout(settings.request_timeout),
-            headers=settings.databricks_headers,
+
+        # Check if authentication is available
+        if not settings.has_auth:
+            logger.warning(
+                "No Databricks authentication configured. "
+                "Set DATABRICKS_TOKEN for local development or ensure app has OAuth credentials."
+            )
+            self.client = None
+            self.access_token = None
+        else:
+            self.client = httpx.AsyncClient(
+                timeout=httpx.Timeout(settings.request_timeout),
+            )
+            self.access_token = None
+            logger.info(
+                f"Initialized agent service with {settings.auth_method} authentication"
+            )
+
+    async def _get_oauth_token(self) -> str:
+        """Get OAuth access token using client credentials flow."""
+        if (
+            not self.settings.databricks_client_id
+            or not self.settings.databricks_client_secret
+        ):
+            raise ValueError("OAuth credentials not available")
+
+        # Use the workspace host for OAuth token endpoint
+        workspace_host = self.settings.databricks_host
+        token_url = f"{workspace_host}/oidc/v1/token"
+
+        logger.info(f"Getting OAuth token from: {token_url}")
+
+        data = {"grant_type": "client_credentials", "scope": "all-apis"}
+
+        auth = (
+            self.settings.databricks_client_id,
+            self.settings.databricks_client_secret,
         )
+
+        response = await self.client.post(
+            token_url,
+            data=data,
+            auth=auth,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+
+        if response.status_code != 200:
+            logger.error(
+                f"OAuth token request failed: {response.status_code} - {response.text}"
+            )
+            raise ValueError(f"Failed to get OAuth token: {response.status_code}")
+
+        token_data = response.json()
+        access_token = token_data.get("access_token")
+
+        if not access_token:
+            logger.error(f"No access token in response: {token_data}")
+            raise ValueError("No access token received from OAuth endpoint")
+
+        logger.info("Successfully obtained OAuth access token")
+        return access_token
+
+    async def _get_headers(self) -> dict[str, str]:
+        """Get headers with proper authentication."""
+        headers = {"Content-Type": "application/json"}
+
+        if self.settings.auth_method == "oauth":
+            # Get OAuth token if we don't have one or need to refresh
+            if not self.access_token:
+                try:
+                    self.access_token = await self._get_oauth_token()
+                except Exception as e:
+                    logger.error(f"Failed to get OAuth token: {e}")
+                    # Fallback: try using client secret directly (might work in some cases)
+                    logger.info("Falling back to direct client secret usage")
+                    headers["Authorization"] = (
+                        f"Bearer {self.settings.databricks_client_secret}"
+                    )
+                    return headers
+
+            headers["Authorization"] = f"Bearer {self.access_token}"
+
+        elif self.settings.auth_method == "token":
+            headers["Authorization"] = f"Bearer {self.settings.databricks_token}"
+
+        return headers
 
     async def __aenter__(self):
         """Async context manager entry."""
@@ -47,7 +129,8 @@ class TelcoAgentService:
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Async context manager exit."""
-        await self.client.aclose()
+        if self.client:
+            await self.client.aclose()
 
     def _build_databricks_payload(
         self, message: str, customer_id: str, conversation_history: list[ChatMessage]
@@ -125,6 +208,19 @@ class TelcoAgentService:
         if conversation_history is None:
             conversation_history = []
 
+        # Check if client is available
+        if not self.client:
+            return AgentResponse(
+                response=(
+                    "Chat functionality is currently unavailable. "
+                    "Please configure Databricks authentication to enable agent responses. "
+                    "The demo customer list and UI are still available for testing."
+                ),
+                agent_type="error",
+                custom_outputs={"error": "no_authentication"},
+                tools_used=None,
+            )
+
         try:
             # Build the request payload
             payload = self._build_databricks_payload(
@@ -134,9 +230,12 @@ class TelcoAgentService:
             logger.info(f"Sending request to Databricks for customer {customer_id}")
             logger.debug(f"Payload: {json.dumps(payload, indent=2)}")
 
+            # Get headers with proper authentication
+            headers = await self._get_headers()
+
             # Make the request
             response = await self.client.post(
-                self.settings.databricks_endpoint, json=payload
+                self.settings.databricks_endpoint, json=payload, headers=headers
             )
 
             response.raise_for_status()
@@ -151,15 +250,52 @@ class TelcoAgentService:
             logger.error(
                 f"HTTP error from Databricks: {e.response.status_code} - {e.response.text}"
             )
-            raise Exception(f"Agent service error: {e.response.status_code}") from e
+
+            # If 403, try to refresh token and retry once
+            if e.response.status_code == 403 and self.settings.auth_method == "oauth":
+                logger.info("Got 403, attempting to refresh OAuth token and retry...")
+                try:
+                    self.access_token = await self._get_oauth_token()
+                    headers = await self._get_headers()
+
+                    # Retry the request
+                    response = await self.client.post(
+                        self.settings.databricks_endpoint, json=payload, headers=headers
+                    )
+                    response.raise_for_status()
+                    response_data = response.json()
+                    return self._parse_agent_response(response_data)
+
+                except Exception as retry_error:
+                    logger.error(f"Retry after token refresh failed: {retry_error}")
+
+            return AgentResponse(
+                response=f"Service temporarily unavailable (HTTP {e.response.status_code}). Please try again.",
+                agent_type="error",
+                custom_outputs={
+                    "error": "http_error",
+                    "status_code": e.response.status_code,
+                },
+                tools_used=None,
+            )
 
         except httpx.RequestError as e:
             logger.error(f"Request error to Databricks: {e}")
-            raise Exception("Unable to connect to agent service") from e
+            return AgentResponse(
+                response="Unable to connect to agent service. Please check your connection and try again.",
+                agent_type="error",
+                custom_outputs={"error": "connection_error"},
+                tools_used=None,
+            )
 
         except Exception as e:
             logger.error(f"Unexpected error: {e}")
-            raise Exception(f"Agent processing error: {str(e)}") from e
+            return AgentResponse(
+                response=f"An unexpected error occurred: {str(e)}",
+                agent_type="error",
+                custom_outputs={"error": "unexpected_error"},
+                tools_used=None,
+            )
 
     async def send_message_stream(
         self,
@@ -167,13 +303,12 @@ class TelcoAgentService:
         customer_id: str,
         conversation_history: list[ChatMessage] = None,
     ) -> AsyncGenerator[str, None]:
-        """Send a message with streaming response (if supported by endpoint)."""
+        """Send a message with streaming response."""
         if conversation_history is None:
             conversation_history = []
 
         try:
-            # For now, we'll simulate streaming by sending the regular response
-            # If your Databricks endpoint supports streaming, you can modify this
+            # For now, simulate streaming with the regular response
             agent_response = await self.send_message(
                 message, customer_id, conversation_history
             )
@@ -196,12 +331,16 @@ class TelcoAgentService:
 
     async def health_check(self) -> bool:
         """Check if the Databricks endpoint is healthy."""
+        if not self.client:
+            return False
+
         try:
             # Send a simple test request
             test_payload = self._build_databricks_payload("Hello", "CUS-10001", [])
+            headers = await self._get_headers()
 
             response = await self.client.post(
-                self.settings.databricks_endpoint, json=test_payload
+                self.settings.databricks_endpoint, json=test_payload, headers=headers
             )
 
             return response.status_code == 200
@@ -212,4 +351,5 @@ class TelcoAgentService:
 
     async def close(self):
         """Close the HTTP client."""
-        await self.client.aclose()
+        if self.client:
+            await self.client.aclose()
