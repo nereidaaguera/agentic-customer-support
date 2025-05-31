@@ -1,6 +1,6 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Test Disable Tools - Minimal Version
+# MAGIC # Test Disabling Tools Functionality
 # MAGIC
 # MAGIC 1. Test usage queries with normal supervisor
 # MAGIC 2. Test usage queries with get_usage_info disabled
@@ -56,8 +56,9 @@ print("Created supervisor with get_usage_info disable")
 # COMMAND ----------
 
 usage_queries = [
+    "Show me my billing details for March 2025",
     "What are the charges on my bill from 2025-04-01 to 2025-04-30?",
-    "How much data did the customer use from 2025-04-01 to 2025-04-30?",  
+    "What's was my usage for the month of April 2025?",
 ]
 
 test_customer = "CUS-10001"

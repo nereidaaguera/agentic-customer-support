@@ -10,7 +10,7 @@ def register_get_billing_info():
     try:
         sql = """
         CREATE OR REPLACE FUNCTION telco_customer_support_dev.agent.get_billing_info(
-          customer_id_input STRING COMMENT 'The customer ID in the format CUS-XXXXX', -- avoid using param name that is the same as table column name
+          customer STRING COMMENT 'The customer ID in the format CUS-XXXXX',
           billing_start_date STRING COMMENT 'The billing_start_date in the format YYYY-MM-DD',
           billing_end_date STRING COMMENT 'The billing_end_date in the format YYYY-MM-DD'
         )
@@ -39,7 +39,7 @@ def register_get_billing_info():
                   )
                 )
                 FROM telco_customer_support_dev.bronze.billing as billing_table
-                WHERE billing_table.customer_id = customer_id_input -- avoid using param name that is the same as table column name
+                WHERE billing_table.customer_id = customer
                   AND billing_date >= billing_start_date
                   AND billing_date < billing_end_date
         """
@@ -54,7 +54,7 @@ def register_get_usage_info():
     try:
         sql = """
         CREATE OR REPLACE FUNCTION telco_customer_support_dev.agent.get_usage_info(
-          customer_id_input STRING COMMENT 'The customer ID in the format CUS-XXXXX',
+          customer STRING COMMENT 'The customer ID in the format CUS-XXXXX',
           usage_start_date STRING COMMENT 'The usage start date in the format YYYY-MM-DD',
           usage_end_date STRING COMMENT 'The usage end date in the format YYYY-MM-DD'
         )
@@ -82,7 +82,7 @@ def register_get_usage_info():
         )
         FROM telco_customer_support_dev.bronze.usage u
         JOIN telco_customer_support_dev.bronze.subscriptions s ON u.subscription_id = s.subscription_id
-        WHERE s.customer_id = customer_id_input
+        WHERE s.customer_id = customer
           AND u.date >= usage_start_date
           AND u.date < usage_end_date
         GROUP BY u.subscription_id

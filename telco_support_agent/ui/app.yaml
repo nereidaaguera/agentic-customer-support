@@ -1,0 +1,7 @@
+command: ["python", "main.py"]
+
+env:
+  - name: 'ENV'
+    value: 'prod'
+  - name: 'TELCO_SUPPORT_AGENT_ENV'
+    value: 'prod'
