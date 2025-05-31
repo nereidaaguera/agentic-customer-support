@@ -124,7 +124,7 @@ def _collect_config_artifacts() -> dict[str, str]:
 
 def _get_supervisor_resources(environment: str) -> list[Resource]:
     """Get all resources needed by the supervisor agent."""
-    from telco_support_agent.agents.config import config_manager, get_uc_config
+    from telco_support_agent.utils.config import config_manager, get_uc_config
 
     resources = []
 

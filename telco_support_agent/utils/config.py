@@ -6,35 +6,52 @@ from typing import Any, Optional
 
 import yaml
 from mlflow.artifacts import download_artifacts
+from pydantic import BaseModel
 
 from telco_support_agent.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 
+
+class UCConfig(BaseModel):
+    data_catalog: str
+    data_schema: str
+    agent_catalog: str
+    agent_schema: str
+
+
 ENV = os.environ.get("TELCO_SUPPORT_AGENT_ENV", "dev")
+
 
 UNITY_CATALOG_CONFIG = {
     "dev": {
-        "catalog": "telco_customer_support_dev",
-        "schema": "bronze",
+        "data_catalog": "telco_customer_support_dev",
+        "data_schema": "bronze",
+        "agent_catalog": "telco_customer_support_dev",
+        "agent_schema": "agent",
     },
     "prod": {
-        "catalog": "telco_customer_support_prod",
-        "schema": "bronze",
+        "data_catalog": "telco_customer_support_prod",
+        "data_schema": "bronze",
+        "agent_catalog": "telco_customer_support_prod",
+        "agent_schema": "agent",
     },
 }
 
 
-def get_uc_config(env: str = ENV) -> dict[str, str]:
+def get_uc_config(env: str = ENV) -> UCConfig:
     """Get Unity Catalog configuration for the specified environment.
 
     Args:
         env: Environment name (dev, prod)
 
     Returns:
-        Dictionary with catalog and schema configuration
+        UCConfig with catalog and schema configuration for data and agent.
     """
-    return UNITY_CATALOG_CONFIG.get(env, UNITY_CATALOG_CONFIG["dev"])
+    if env == "prod":
+        return UCConfig(**UNITY_CATALOG_CONFIG.get("prod"))
+
+    return UCConfig(**UNITY_CATALOG_CONFIG.get("dev"))
 
 
 class ConfigManager:

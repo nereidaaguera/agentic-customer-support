@@ -13,7 +13,7 @@ import mlflow
 from databricks_openai import VectorSearchRetrieverTool
 from mlflow.entities import SpanType
 
-from telco_support_agent.agents.config import get_uc_config
+from telco_support_agent.utils.config import get_uc_config
 from telco_support_agent.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)

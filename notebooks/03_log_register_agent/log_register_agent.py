@@ -54,7 +54,6 @@ print(f"  Input Example: {config['input_example']}")
 # COMMAND ----------
 
 from telco_support_agent.tools import initialize_tools
-from telco_support_agent.agents.config import config_manager
 
 print("Initializing required UC functions...")
 
