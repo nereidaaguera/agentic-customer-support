@@ -19,6 +19,7 @@ class UCConfig(BaseModel):
 
 
 ENV = os.environ.get("TELCO_SUPPORT_AGENT_ENV", "dev")
+UC_CONFIG_FILE = "uc_config.yaml"
 
 
 class ConfigManager:
@@ -26,7 +27,6 @@ class ConfigManager:
 
     _instance = None
     _configs = {}
-    UC_CONFIG_FILE = "uc_config.yaml"
 
     def __new__(cls):
         """Implement as singleton to cache configurations."""
@@ -49,10 +49,10 @@ class ConfigManager:
     def get_uc_config(self):
         """Initialize uc config if not already initialized."""
         if not self.uc_config:
-            uc_config_file_path = self._find_config_file(self.UC_CONFIG_FILE)
+            uc_config_file_path = self._find_config_file(UC_CONFIG_FILE)
             if uc_config_file_path is None:
                 raise FileNotFoundError(
-                    f"No configuration file found: {self.UC_CONFIG_FILE}"
+                    f"No configuration file found: {UC_CONFIG_FILE}"
                 )
 
             try:
@@ -61,7 +61,7 @@ class ConfigManager:
                     self.uc_config = UCConfig(**config[self._environment])
             except Exception as e:
                 raise ValueError(
-                    f"Error loading configuration {self.UC_CONFIG_FILE}: {str(e)}"
+                    f"Error loading configuration {UC_CONFIG_FILE}: {str(e)}"
                 ) from e
 
         return self.uc_config

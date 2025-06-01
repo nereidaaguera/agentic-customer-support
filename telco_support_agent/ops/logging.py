@@ -15,6 +15,7 @@ from mlflow.models.resources import (
 from mlflow.types.responses import ResponsesAgentRequest
 
 from telco_support_agent import PACKAGE_DIR, PROJECT_ROOT
+from telco_support_agent.utils.config import UC_CONFIG_FILE
 from telco_support_agent.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
@@ -119,6 +120,13 @@ def _collect_config_artifacts() -> dict[str, str]:
             artifacts[artifact_key] = str(config_file)
             logger.info(f"Adding config artifact: {artifact_key}")
 
+    uc_config_path = PROJECT_ROOT / "configs" / UC_CONFIG_FILE
+    uc_config_key = f"configs/{UC_CONFIG_FILE}"
+
+    logger.info(f"Adding uc config file as artifact: {uc_config_key}")
+
+    artifacts[uc_config_key] = str(uc_config_path)
+
     return artifacts
 
 
@@ -214,3 +222,7 @@ def _log_config_dicts() -> None:
                 mlflow.log_dict(config_dict, f"configs/agents/{config_file.name}")
         except Exception as e:
             logger.warning(f"Error logging config {config_file.name}: {e}")
+    # Log UC config file
+    with open(PROJECT_ROOT / "configs" / UC_CONFIG_FILE) as f:
+        uc_config_dict = yaml.safe_load(f)
+        mlflow.log_dict(uc_config_dict, f"configs/{UC_CONFIG_FILE}")
