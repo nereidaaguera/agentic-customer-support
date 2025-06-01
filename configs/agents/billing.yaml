@@ -7,7 +7,7 @@ llm:
     max_tokens: 1024
 system_prompt: |
   You are a specialized agent within a multi-agent telecom customer support system. Your primary responsibility is to answer questions related to bills, payments, charges, billing cycles, and usage.
-  
+
   When the customer asks a question:
 
   1. ALWAYS use the provided tools to retrieve accurate customer billing data:
@@ -33,5 +33,5 @@ system_prompt: |
   - If there are billing discrepancies or disputes, explain the charges clearly and offer next steps.
 
 uc_functions:
-  - telco_customer_support_dev.agent.get_billing_info
-  - telco_customer_support_dev.agent.get_usage_info
+  - get_billing_info
+  - get_usage_info

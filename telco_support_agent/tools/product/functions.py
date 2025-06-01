@@ -2,14 +2,16 @@
 
 from unitycatalog.ai.core.databricks import DatabricksFunctionClient
 
+from telco_support_agent.utils.config import UCConfig, config_manager
+
 client = DatabricksFunctionClient()
 
 
-def register_plans_info():
+def register_plans_info(uc_config: UCConfig):
     """Register the get_plans_info UC function."""
     try:
-        sql = """
-            CREATE OR REPLACE FUNCTION telco_customer_support_dev.agent.get_plans_info(
+        sql = f"""
+            CREATE OR REPLACE FUNCTION {uc_config.agent["catalog"]}.{uc_config.agent["schema"]}.get_plans_info(
             )
             RETURNS STRING
             COMMENT 'Provides comprehensive information about available subscription plans, including features, pricing, and benefits.
@@ -26,7 +28,7 @@ def register_plans_info():
                 'plan_description', description
               ))
             )
-            FROM telco_customer_support_dev.bronze.plans
+            FROM {uc_config.data["catalog"]}.{uc_config.data["schema"]}.plans
             """
         client.create_function(sql_function_body=sql)
         print("Registered get_plans_info UC function")
@@ -34,11 +36,11 @@ def register_plans_info():
         print(f"Error registering get_plans_info: {str(e)}")
 
 
-def register_devices_info():
+def register_devices_info(uc_config: UCConfig):
     """Register the get_devices_info UC function."""
     try:
-        sql = """
-            CREATE OR REPLACE FUNCTION telco_customer_support_dev.agent.get_devices_info(
+        sql = f"""
+            CREATE OR REPLACE FUNCTION {uc_config.agent["catalog"]}.{uc_config.agent["schema"]}.get_devices_info(
             )
             RETURNS STRING
             COMMENT 'Provides comprehensive information about available devices, including specifications, features, and capabilities.
@@ -58,7 +60,7 @@ def register_devices_info():
               )
               )
             )
-            FROM telco_customer_support_dev.bronze.devices
+            FROM {uc_config.data["catalog"]}.{uc_config.data["schema"]}.devices
             """
         client.create_function(sql_function_body=sql)
         print("Registered get_devices_info UC function")
@@ -66,11 +68,11 @@ def register_devices_info():
         print(f"Error registering get_devices_info: {str(e)}")
 
 
-def register_promos_info():
+def register_promos_info(uc_config: UCConfig):
     """Register the get_promotions_info UC function."""
     try:
-        sql = """
-            CREATE OR REPLACE FUNCTION telco_customer_support_dev.agent.get_promotions_info(
+        sql = f"""
+            CREATE OR REPLACE FUNCTION {uc_config.agent["catalog"]}.{uc_config.agent["schema"]}.get_promotions_info(
             )
             RETURNS STRING
             COMMENT 'Provides detailed information about current and past promotions, including promotion name, discount type and value, validity period, description, and active status.
@@ -88,7 +90,7 @@ def register_promos_info():
               )
               )
             )
-            FROM telco_customer_support_dev.bronze.promotions
+            FROM {uc_config.data["catalog"]}.{uc_config.data["schema"]}.promotions
             """
         client.create_function(sql_function_body=sql)
         print("Registered get_promotions_info UC function")
@@ -96,11 +98,13 @@ def register_promos_info():
         print(f"Error registering get_promotions_info: {str(e)}")
 
 
-def register_customer_devices_info():
+def register_customer_devices_info(uc_config: UCConfig):
     """Register the get_customer_devices UC function."""
     try:
-        sql = """
-            CREATE OR REPLACE FUNCTION telco_customer_support_dev.agent.get_customer_devices(
+        data_catalog = uc_config.data["catalog"]
+        data_schema = uc_config.data["schema"]
+        sql = f"""
+            CREATE OR REPLACE FUNCTION {uc_config.agent["catalog"]}.{uc_config.agent["schema"]}.get_customer_devices(
                 customer STRING COMMENT 'The customer ID in the format CUS-XXXXX'
             )
             RETURNS STRING
@@ -128,8 +132,8 @@ def register_customer_devices_info():
                         )
                     )
                 )
-            FROM telco_customer_support_dev.bronze.subscriptions s
-            JOIN telco_customer_support_dev.bronze.devices d ON s.device_id = d.device_id
+            FROM {data_catalog}.{data_schema}.subscriptions s
+            JOIN {data_catalog}.{data_schema}.devices d ON s.device_id = d.device_id
             WHERE s.customer_id = customer
             GROUP BY s.customer_id
             LIMIT 1
@@ -141,7 +145,8 @@ def register_customer_devices_info():
 
 
 # call registration functions
-register_plans_info()
-register_devices_info()
-register_promos_info()
-register_customer_devices_info()
+uc_config = config_manager.get_uc_config()
+register_plans_info(uc_config)
+register_devices_info(uc_config)
+register_promos_info(uc_config)
+register_customer_devices_info(uc_config)

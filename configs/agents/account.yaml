@@ -26,5 +26,5 @@ system_prompt: |
   - Format your responses in a user-friendly way.
 
 uc_functions:
-  - telco_customer_support_dev.agent.get_customer_info
-  - telco_customer_support_dev.agent.get_customer_subscriptions
+  - get_customer_info
+  - get_customer_subscriptions

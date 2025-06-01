@@ -13,7 +13,7 @@ import mlflow
 from databricks_openai import VectorSearchRetrieverTool
 from mlflow.entities import SpanType
 
-from telco_support_agent.utils.config import get_uc_config
+from telco_support_agent.utils.config import config_manager
 from telco_support_agent.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
@@ -40,10 +40,9 @@ class KnowledgeBaseRetriever:
         self.num_results = num_results
         self.environment = environment
 
-        uc_config = get_uc_config(environment)
-        catalog = uc_config["catalog"]
+        uc_config = config_manager.get_uc_config()
 
-        self.index_name = f"{catalog}.agent.knowledge_base_index"
+        self.index_name = f"{uc_config.agent['catalog']}.{uc_config.agent['schema']}.knowledge_base_index"
 
         self.columns = [
             "kb_id",
@@ -191,10 +190,11 @@ class SupportTicketsRetriever:
         self.num_results = num_results
         self.environment = environment
 
-        uc_config = get_uc_config(environment)
-        catalog = uc_config["catalog"]
+        uc_config = config_manager.get_uc_config()
 
-        self.index_name = f"{catalog}.agent.support_tickets_index"
+        self.index_name = (
+            f"{uc_config['catalog']}.{uc_config['schema']}.support_tickets_index"
+        )
 
         self.columns = [
             "ticket_id",

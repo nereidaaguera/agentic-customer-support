@@ -2,14 +2,16 @@
 
 from unitycatalog.ai.core.databricks import DatabricksFunctionClient
 
+from telco_support_agent.utils.config import UCConfig, config_manager
+
 client = DatabricksFunctionClient()
 
 
-def register_get_billing_info():
+def register_get_billing_info(uc_config: UCConfig):
     """Register the get_billing_info UC function."""
     try:
-        sql = """
-        CREATE OR REPLACE FUNCTION telco_customer_support_dev.agent.get_billing_info(
+        sql = f"""
+        CREATE OR REPLACE FUNCTION {uc_config.agent["catalog"]}.{uc_config.agent["schema"]}.get_billing_info(
           customer STRING COMMENT 'The customer ID in the format CUS-XXXXX',
           billing_start_date STRING COMMENT 'The billing_start_date in the format YYYY-MM-DD',
           billing_end_date STRING COMMENT 'The billing_end_date in the format YYYY-MM-DD'
@@ -38,7 +40,7 @@ def register_get_billing_info():
                     )
                   )
                 )
-                FROM telco_customer_support_dev.bronze.billing as billing_table
+                FROM {uc_config.data["catalog"]}.{uc_config.data["schema"]}.billing as billing_table
                 WHERE billing_table.customer_id = customer
                   AND billing_date >= billing_start_date
                   AND billing_date < billing_end_date
@@ -49,11 +51,13 @@ def register_get_billing_info():
         print(f"Error registering get_billing_info: {str(e)}")
 
 
-def register_get_usage_info():
+def register_get_usage_info(uc_config: UCConfig):
     """Register the get_usage_info UC function for usage details."""
     try:
-        sql = """
-        CREATE OR REPLACE FUNCTION telco_customer_support_dev.agent.get_usage_info(
+        data_catalog = uc_config.data["catalog"]
+        data_schema = uc_config.data["schema"]
+        sql = f"""
+        CREATE OR REPLACE FUNCTION {uc_config.agent["catalog"]}.{uc_config.agent["schema"]}.get_usage_info(
           customer STRING COMMENT 'The customer ID in the format CUS-XXXXX',
           usage_start_date STRING COMMENT 'The usage start date in the format YYYY-MM-DD',
           usage_end_date STRING COMMENT 'The usage end date in the format YYYY-MM-DD'
@@ -80,8 +84,8 @@ def register_get_usage_info():
             )
           )
         )
-        FROM telco_customer_support_dev.bronze.usage u
-        JOIN telco_customer_support_dev.bronze.subscriptions s ON u.subscription_id = s.subscription_id
+        FROM {data_catalog}.{data_schema}.usage u
+        JOIN {data_catalog}.{data_schema}.subscriptions s ON u.subscription_id = s.subscription_id
         WHERE s.customer_id = customer
           AND u.date >= usage_start_date
           AND u.date < usage_end_date
@@ -95,5 +99,6 @@ def register_get_usage_info():
 
 
 # call registration functions
-register_get_billing_info()
-register_get_usage_info()
+uc_config = config_manager.get_uc_config()
+register_get_billing_info(uc_config)
+register_get_usage_info(uc_config)
