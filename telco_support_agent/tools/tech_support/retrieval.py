@@ -192,9 +192,7 @@ class SupportTicketsRetriever:
 
         uc_config = config_manager.get_uc_config()
 
-        self.index_name = (
-            f"{uc_config['catalog']}.{uc_config['schema']}.support_tickets_index"
-        )
+        self.index_name = f"{uc_config.agent['catalog']}.{uc_config.agent['schema']}.support_tickets_index"
 
         self.columns = [
             "ticket_id",
