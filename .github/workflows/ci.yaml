@@ -2,6 +2,10 @@ name: CI
 
 on: [push, pull_request]
 
+env:
+  DATABRICKS_CLIENT_ID: ${{secrets.DEV_DATABRICKS_CLIENT_ID}}
+  DATABRICKS_CLIENT_SECRET: ${{secrets.DEV_DATABRICKS_CLIENT_SECRET}}
+
 jobs:
   lint:
     runs-on:
@@ -53,7 +57,7 @@ jobs:
         with:
           fail_ci_if_error: false
   deploy:
-    if: github.ref == 'refs/heads/manfred/uc_config'
+    if: github.ref == 'refs/heads/manfred/adding_dabs'
     runs-on:
       group: databricks-field-eng-protected-runner-group
       labels: linux-ubuntu-latest
