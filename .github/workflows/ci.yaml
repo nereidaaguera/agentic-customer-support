@@ -1,6 +1,10 @@
 name: CI
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
   lint:
@@ -52,22 +56,3 @@ jobs:
         uses: codecov/codecov-action@v3
         with:
           fail_ci_if_error: false
-  deploy:
-    if: github.ref == 'refs/heads/manfred/uc_config'
-    runs-on:
-      group: databricks-field-eng-protected-runner-group
-      labels: linux-ubuntu-latest
-    needs:
-      - test
-    environment: databricks
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup databricks CLI
-        uses: databricks/setup-cli@main
-
-      - name: Deploy bundle
-        run: databricks bundle deploy --target dev
-        env:
-          DATABRICKS_BUNDLE_ENV: dev
