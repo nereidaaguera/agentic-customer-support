@@ -18,9 +18,6 @@ DOMAIN_FUNCTION_MAP = {
         "get_billing_info",
         "get_usage_info",
     ],
-    AgentType.TECH_SUPPORT.value: [
-        # TODO: add tech support functions
-    ],
     AgentType.PRODUCT.value: [
         "get_plans_info",
         "get_devices_info",
