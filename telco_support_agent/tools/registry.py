@@ -20,6 +20,7 @@ DOMAIN_FUNCTION_MAP = {
     AgentType.BILLING.value: [
         f"{DEFAULT_CATALOG}.{DEFAULT_SCHEMA}.get_billing_info",
         f"{DEFAULT_CATALOG}.{DEFAULT_SCHEMA}.get_usage_info",
+        "system.ai.python_exec",
     ],
     AgentType.TECH_SUPPORT.value: [
         # TODO: add tech support functions
