@@ -11,17 +11,17 @@ def register_get_billing_info():
         sql = """
         CREATE OR REPLACE FUNCTION telco_customer_support_dev.agent.get_billing_info(
           -- customer_id_input STRING COMMENT 'The customer ID in the format CUS-XXXXX',
-          -- billing_start_date_input STRING DEFAULT date_format(date_trunc("month", current_date()), "yyyy-MM-dd") COMMENT 'The billing start date in YYYY-MM-DD format. Defaults to first day of current month.',
-          -- billing_end_date_input STRING DEFAULT date_format(date_trunc("month", add_months(current_date(), 1)), "yyyy-MM-dd") COMMENT 'The billing end date in YYYY-MM-DD format. Defaults to first day of next month.',
+          -- billing_start_date_input STRING DEFAULT date_format(date_trunc("month", current_date()), "yyyy-MM-dd") COMMENT 'The billing start date in YYYY-MM-DD format. Defaults to 2025-06-01.',
+          -- billing_end_date_input STRING DEFAULT date_format(date_trunc("month", add_months(current_date(), 1)), "yyyy-MM-dd") COMMENT 'The billing end date in YYYY-MM-DD format. Defaults to 2025-06-30.',
           -- additional_charges_input FLOAT DEFAULT NULL COMMENT 'Filter on additional_charges. If NULL, only rows with non-NULL additional_charges are included.',
           -- total_amount_input FLOAT DEFAULT NULL COMMENT 'Filter on total_amount. If NULL, only rows with non-NULL total_amount are included.',
           -- status_input STRING DEFAULT NULL COMMENT 'Billing status. Possible values: Paid, Unpaid, Late, Partial. Defaults to Paid. If NULL, return rows of all statuses.'
-          customer_id_input STRING COMMENT 'The customer ID in the format CUS-XXXXX',
+          customer STRING COMMENT 'The customer ID in the format CUS-XXXXX',
           billing_start_date_input STRING COMMENT 'The billing start date in YYYY-MM-DD format. Defaults to first day of current month.',
           billing_end_date_input STRING COMMENT 'The billing end date in YYYY-MM-DD format. Defaults to first day of next month.',
-          additional_charges_input FLOAT COMMENT 'Filter on additional_charges. If NULL, only rows with non-NULL additional_charges are included. Default is NULL.',
-          total_amount_input FLOAT COMMENT 'Filter on total_amount. If NULL, only rows with non-NULL total_amount are included. Default is NULL.',
-          status_input STRING COMMENT 'Billing status. Possible values: Paid, Unpaid, Late, Partial. Defaults to Paid. If NULL, return rows of all statuses. Default is NULL.'
+          additional_charges_input FLOAT COMMENT 'Filter on additional_charges. Must be non negative. If 0., only rows with non-NULL additional_charges are included. Default is 0.', -- use 0. as default value to match the float type
+          total_amount_input FLOAT COMMENT 'Filter on total_amount. Must be non negative. If 0., only rows with non-NULL total_amount are included. Default is 0.',-- use 0. as default value to match the float type
+          status_input STRING COMMENT 'Billing status. Possible values: Paid, Unpaid, Late, Partial, All. Defaults to All. If All, return rows of all statuses.'
         )
         RETURNS STRING
         COMMENT 'Retrieves all columns of the billing table for all rows for a customer within the specified date range, with optional filters for additional_charges, total_amount, and status. \nExample usage:\n SELECT telco_customer_support_dev.agent.get_billing_info("CUS-10601","2025-06-01","2025-06-01",Null,Null,"Paid")' -- use single quote for comment and double quote for strings variables inside the comment
@@ -45,23 +45,23 @@ def register_get_billing_info():
                 )
               )
         FROM telco_customer_support_prod.bronze.billing AS billing_table
-        WHERE billing_table.customer_id = customer_id_input
+        WHERE billing_table.customer_id = customer
           AND billing_table.billing_date >= billing_start_date_input
           AND billing_table.billing_date < billing_end_date_input
           AND (
-                (additional_charges_input IS NULL AND billing_table.additional_charges IS NOT NULL)
+                (additional_charges_input = 0. AND billing_table.additional_charges IS NOT NULL)
                 OR
-                (additional_charges_input IS NOT NULL AND ABS(billing_table.additional_charges - additional_charges_input) <= 1) -- use approx within $1
+                (additional_charges_input >0. AND ABS(billing_table.additional_charges - additional_charges_input) <= 1) -- use approx within $1
               )
           AND (
-                (total_amount_input IS NULL AND billing_table.total_amount IS NOT NULL)
+                (total_amount_input =0. AND billing_table.total_amount IS NOT NULL)
                 OR
-                (total_amount_input IS NOT NULL AND ABS(billing_table.total_amount - total_amount_input) <= 1) -- use approx within $1
+                (total_amount_input >0. AND ABS(billing_table.total_amount - total_amount_input) <= 1) -- use approx within $1
               )
           AND (
-                (status_input IS NULL AND billing_table.status IS NOT NULL)
+                (status_input = "All" AND billing_table.status IS NOT NULL)
                 OR
-                (status_input IS NOT NULL AND billing_table.status = status_input)
+                (status_input != "All" AND billing_table.status = status_input)
           )
         """
         client.create_function(sql_function_body=sql)
