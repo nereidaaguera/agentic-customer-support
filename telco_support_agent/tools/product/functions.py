@@ -1,17 +1,27 @@
 """UC functions for product-related operations."""
 
+from databricks.sdk import WorkspaceClient
 from unitycatalog.ai.core.databricks import DatabricksFunctionClient
 
 from telco_support_agent.utils.config import UCConfig, config_manager
+from telco_support_agent.utils.logging_utils import get_logger
+from telco_support_agent.utils.uc_permissions import grant_function_permissions
+
+logger = get_logger(__name__)
 
 client = DatabricksFunctionClient()
+workspace_client = WorkspaceClient()
 
 
 def register_plans_info(uc_config: UCConfig):
     """Register the get_plans_info UC function."""
+    function_name = (
+        f"{uc_config.agent['catalog']}.{uc_config.agent['schema']}.get_plans_info"
+    )
+
     try:
         sql = f"""
-            CREATE OR REPLACE FUNCTION {uc_config.agent["catalog"]}.{uc_config.agent["schema"]}.get_plans_info(
+            CREATE OR REPLACE FUNCTION {function_name}(
             )
             RETURNS STRING
             COMMENT 'Provides comprehensive information about available subscription plans, including features, pricing, and benefits.
@@ -30,17 +40,31 @@ def register_plans_info(uc_config: UCConfig):
             )
             FROM {uc_config.data["catalog"]}.{uc_config.data["schema"]}.plans
             """
+
         client.create_function(sql_function_body=sql)
-        print("Registered get_plans_info UC function")
+        print(f"Registered {function_name} UC function")
+
+        # grant permissions
+        if grant_function_permissions(function_name, uc_config, workspace_client):
+            print(f"Granted permissions on {function_name}")
+        else:
+            print(
+                f"Warning: Some permissions may not have been granted on {function_name}"
+            )
+
     except Exception as e:
         print(f"Error registering get_plans_info: {str(e)}")
 
 
 def register_devices_info(uc_config: UCConfig):
     """Register the get_devices_info UC function."""
+    function_name = (
+        f"{uc_config.agent['catalog']}.{uc_config.agent['schema']}.get_devices_info"
+    )
+
     try:
         sql = f"""
-            CREATE OR REPLACE FUNCTION {uc_config.agent["catalog"]}.{uc_config.agent["schema"]}.get_devices_info(
+            CREATE OR REPLACE FUNCTION {function_name}(
             )
             RETURNS STRING
             COMMENT 'Provides comprehensive information about available devices, including specifications, features, and capabilities.
@@ -62,17 +86,31 @@ def register_devices_info(uc_config: UCConfig):
             )
             FROM {uc_config.data["catalog"]}.{uc_config.data["schema"]}.devices
             """
+
         client.create_function(sql_function_body=sql)
-        print("Registered get_devices_info UC function")
+        print(f"Registered {function_name} UC function")
+
+        # grant permissions
+        if grant_function_permissions(function_name, uc_config, workspace_client):
+            print(f"Granted permissions on {function_name}")
+        else:
+            print(
+                f"Warning: Some permissions may not have been granted on {function_name}"
+            )
+
     except Exception as e:
         print(f"Error registering get_devices_info: {str(e)}")
 
 
 def register_promos_info(uc_config: UCConfig):
     """Register the get_promotions_info UC function."""
+    function_name = (
+        f"{uc_config.agent['catalog']}.{uc_config.agent['schema']}.get_promotions_info"
+    )
+
     try:
         sql = f"""
-            CREATE OR REPLACE FUNCTION {uc_config.agent["catalog"]}.{uc_config.agent["schema"]}.get_promotions_info(
+            CREATE OR REPLACE FUNCTION {function_name}(
             )
             RETURNS STRING
             COMMENT 'Provides detailed information about current and past promotions, including promotion name, discount type and value, validity period, description, and active status.
@@ -92,24 +130,38 @@ def register_promos_info(uc_config: UCConfig):
             )
             FROM {uc_config.data["catalog"]}.{uc_config.data["schema"]}.promotions
             """
+
         client.create_function(sql_function_body=sql)
-        print("Registered get_promotions_info UC function")
+        print(f"Registered {function_name} UC function")
+
+        # grant permissions
+        if grant_function_permissions(function_name, uc_config, workspace_client):
+            print(f"Granted permissions on {function_name}")
+        else:
+            print(
+                f"Warning: Some permissions may not have been granted on {function_name}"
+            )
+
     except Exception as e:
         print(f"Error registering get_promotions_info: {str(e)}")
 
 
 def register_customer_devices_info(uc_config: UCConfig):
     """Register the get_customer_devices UC function."""
+    function_name = (
+        f"{uc_config.agent['catalog']}.{uc_config.agent['schema']}.get_customer_devices"
+    )
+
     try:
         data_catalog = uc_config.data["catalog"]
         data_schema = uc_config.data["schema"]
         sql = f"""
-            CREATE OR REPLACE FUNCTION {uc_config.agent["catalog"]}.{uc_config.agent["schema"]}.get_customer_devices(
+            CREATE OR REPLACE FUNCTION {function_name}(
                 customer STRING COMMENT 'The customer ID in the format CUS-XXXXX'
             )
             RETURNS STRING
-            COMMENT 'Returns detailed information about all devices linked to a customer’s subscription,
-            including device types, statuses, and capacity. Use this tool to answer questions about which devices are active on a customer’s account,
+            COMMENT 'Returns detailed information about all devices linked to a customer's subscription,
+            including device types, statuses, and capacity. Use this tool to answer questions about which devices are active on a customer's account,
             their subscription status, and their connection to particular services—distinct from tools that provide standalone device specifications.'
             RETURN
             SELECT to_json(
@@ -138,8 +190,18 @@ def register_customer_devices_info(uc_config: UCConfig):
             GROUP BY s.customer_id
             LIMIT 1
             """
+
         client.create_function(sql_function_body=sql)
-        print("Registered get_customer_devices UC function")
+        print(f"Registered {function_name} UC function")
+
+        # grant permissions
+        if grant_function_permissions(function_name, uc_config, workspace_client):
+            print(f"Granted permissions on {function_name}")
+        else:
+            print(
+                f"Warning: Some permissions may not have been granted on {function_name}"
+            )
+
     except Exception as e:
         print(f"Error registering get_customer_devices: {str(e)}")
 
