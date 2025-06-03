@@ -10,7 +10,7 @@ def register_get_billing_info():
     try:
         sql = """
         CREATE OR REPLACE FUNCTION telco_customer_support_dev.agent.get_billing_info(
-          -- customer_id_input STRING COMMENT 'The customer ID in the format CUS-XXXXX',
+          -- customer STRING COMMENT 'The customer ID in the format CUS-XXXXX',
           -- billing_start_date_input STRING DEFAULT date_format(date_trunc("month", current_date()), "yyyy-MM-dd") COMMENT 'The billing start date in YYYY-MM-DD format. Defaults to 2025-06-01.',
           -- billing_end_date_input STRING DEFAULT date_format(date_trunc("month", add_months(current_date(), 1)), "yyyy-MM-dd") COMMENT 'The billing end date in YYYY-MM-DD format. Defaults to 2025-06-30.',
           -- additional_charges_input FLOAT DEFAULT NULL COMMENT 'Filter on additional_charges. If NULL, only rows with non-NULL additional_charges are included.',
@@ -19,8 +19,8 @@ def register_get_billing_info():
           customer STRING COMMENT 'The customer ID in the format CUS-XXXXX',
           billing_start_date_input STRING COMMENT 'The billing start date in YYYY-MM-DD format. Defaults to first day of current month.',
           billing_end_date_input STRING COMMENT 'The billing end date in YYYY-MM-DD format. Defaults to first day of next month.',
-          additional_charges_input FLOAT COMMENT 'Filter on additional_charges. Must be non negative. If 0., only rows with non-NULL additional_charges are included. Default is 0.', -- use 0. as default value to match the float type
-          total_amount_input FLOAT COMMENT 'Filter on total_amount. Must be non negative. If 0., only rows with non-NULL total_amount are included. Default is 0.',-- use 0. as default value to match the float type
+          additional_charges_input FLOAT COMMENT 'Filter on additional_charges. Must be non negative. If 0., only rows with non-NULL additional_charges are included. Default is float 0.0', -- use 0. as default value to match the float type
+          total_amount_input FLOAT COMMENT 'Filter on total_amount. Must be non negative. If 0., only rows with non-NULL total_amount are included. Default is float 0.0',-- use 0. as default value to match the float type
           status_input STRING COMMENT 'Billing status. Possible values: Paid, Unpaid, Late, Partial, All. Defaults to All. If All, return rows of all statuses.'
         )
         RETURNS STRING
