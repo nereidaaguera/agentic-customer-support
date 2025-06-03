@@ -347,10 +347,11 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             return cls._config_cache[agent_type]
 
         try:
-            from telco_support_agent.agents.config import config_manager
+            from telco_support_agent.utils.config import config_manager
 
             config_dict = config_manager.get_config(agent_type)
-            config = AgentConfig(**config_dict)
+            uc_config = config_manager.get_uc_config()
+            config = AgentConfig(**config_dict, uc_config=uc_config)
             cls._config_cache[agent_type] = config
 
             return config
@@ -366,8 +367,16 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         """
         try:
             # get UC functions for the agent / sub-agent's domain
+            catalog = self.config.uc_config.agent["catalog"]
+            schema = self.config.uc_config.agent["schema"]
+
             function_names = (
-                self.config.uc_functions if hasattr(self.config, "uc_functions") else []
+                (
+                    f"{catalog}.{schema}.{function_name}"
+                    for function_name in self.config.uc_functions
+                )
+                if hasattr(self.config, "uc_functions")
+                else []
             )
 
             if not function_names:

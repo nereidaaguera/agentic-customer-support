@@ -46,6 +46,6 @@ system_prompt: |
   - When interpreting temporal queries, confirm the date range you're using (e.g., "I'm checking your billing for October 2024 (October 1-31, 2024)")
 
 uc_functions:
-  - telco_customer_support_dev.agent.get_billing_info
-  - telco_customer_support_dev.agent.get_usage_info
-  - system.ai.python_exec
+  - get_billing_info
+  - get_usage_info
+  - system.ai.python_exec  

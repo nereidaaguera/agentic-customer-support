@@ -17,7 +17,6 @@ import os
 import sys
 
 root_path = os.path.abspath(os.path.join(os.getcwd(), "../.."))
-print(f"Root path: {root_path}")
 
 if root_path:
     sys.path.append(root_path)
@@ -28,7 +27,7 @@ import itertools
 
 from mlflow.types.responses import ResponsesAgentRequest
 
-from telco_support_agent.agents.config import config_manager
+from telco_support_agent.utils.config import config_manager
 from telco_support_agent.agents.supervisor import SupervisorAgent
 from telco_support_agent.tools import initialize_tools
 from telco_support_agent.agents.types import AgentType

@@ -1,30 +1,36 @@
 """UC functions for billing-related operations."""
 
+from databricks.sdk import WorkspaceClient
 from unitycatalog.ai.core.databricks import DatabricksFunctionClient
 
+from telco_support_agent.utils.config import UCConfig, config_manager
+from telco_support_agent.utils.logging_utils import get_logger
+from telco_support_agent.utils.uc_permissions import grant_function_permissions
+
+logger = get_logger(__name__)
+
 client = DatabricksFunctionClient()
+workspace_client = WorkspaceClient()
 
 
-def register_get_billing_info():
+def register_get_billing_info(uc_config: UCConfig):
     """Register the get_billing_info UC function."""
+    function_name = (
+        f"{uc_config.agent['catalog']}.{uc_config.agent['schema']}.get_billing_info"
+    )
+
     try:
-        sql = """
-        CREATE OR REPLACE FUNCTION telco_customer_support_dev.agent.get_billing_info(
-          -- customer STRING COMMENT 'The customer ID in the format CUS-XXXXX',
-          -- billing_start_date_input STRING DEFAULT date_format(date_trunc("month", current_date()), "yyyy-MM-dd") COMMENT 'The billing start date in YYYY-MM-DD format. Defaults to 2025-06-01.',
-          -- billing_end_date_input STRING DEFAULT date_format(date_trunc("month", add_months(current_date(), 1)), "yyyy-MM-dd") COMMENT 'The billing end date in YYYY-MM-DD format. Defaults to 2025-06-30.',
-          -- additional_charges_input FLOAT DEFAULT NULL COMMENT 'Filter on additional_charges. If NULL, only rows with non-NULL additional_charges are included.',
-          -- total_amount_input FLOAT DEFAULT NULL COMMENT 'Filter on total_amount. If NULL, only rows with non-NULL total_amount are included.',
-          -- status_input STRING DEFAULT NULL COMMENT 'Billing status. Possible values: Paid, Unpaid, Late, Partial. Defaults to Paid. If NULL, return rows of all statuses.'
+        sql = f"""
+        CREATE OR REPLACE FUNCTION {function_name}(
           customer STRING COMMENT 'The customer ID in the format CUS-XXXXX',
           billing_start_date_input STRING COMMENT 'The billing start date in YYYY-MM-DD format. Defaults to first day of current month.',
           billing_end_date_input STRING COMMENT 'The billing end date in YYYY-MM-DD format. Defaults to first day of next month.',
-          additional_charges_input FLOAT COMMENT 'Filter on additional_charges. Must be non negative. If 0., only rows with non-NULL additional_charges are included. Default is float 0.0', -- use 0. as default value to match the float type
-          total_amount_input FLOAT COMMENT 'Filter on total_amount. Must be non negative. If 0., only rows with non-NULL total_amount are included. Default is float 0.0',-- use 0. as default value to match the float type
+          additional_charges_input FLOAT COMMENT 'Filter on additional_charges. Must be non negative. If 0., only rows with non-NULL additional_charges are included. Default is float 0.0',
+          total_amount_input FLOAT COMMENT 'Filter on total_amount. Must be non negative. If 0., only rows with non-NULL total_amount are included. Default is float 0.0',
           status_input STRING COMMENT 'Billing status. Possible values: Paid, Unpaid, Late, Partial, All. Defaults to All. If All, return rows of all statuses.'
         )
         RETURNS STRING
-        COMMENT 'Retrieves all columns of the billing table for all rows for a customer within the specified date range, with optional filters for additional_charges, total_amount, and status. \nExample usage:\n SELECT telco_customer_support_dev.agent.get_billing_info("CUS-10601","2025-06-01","2025-06-01",Null,Null,"Paid")' -- use single quote for comment and double quote for strings variables inside the comment
+        COMMENT 'Retrieves all columns of the billing table for all rows for a customer within the specified date range, with optional filters for additional_charges, total_amount, and status. Example usage: SELECT {function_name}("CUS-10601","2025-06-01","2025-06-01",NULL,NULL,"Paid")'
         RETURN
         SELECT to_json(
                 collect_list(
@@ -44,19 +50,19 @@ def register_get_billing_info():
                   )
                 )
               )
-        FROM telco_customer_support_prod.bronze.billing AS billing_table
+        FROM {uc_config.data["catalog"]}.{uc_config.data["schema"]}.billing AS billing_table
         WHERE billing_table.customer_id = customer
           AND billing_table.billing_date >= billing_start_date_input
           AND billing_table.billing_date < billing_end_date_input
           AND (
                 (additional_charges_input = 0. AND billing_table.additional_charges IS NOT NULL)
                 OR
-                (additional_charges_input >0. AND ABS(billing_table.additional_charges - additional_charges_input) <= 1) -- use approx within $1
+                (additional_charges_input > 0. AND ABS(billing_table.additional_charges - additional_charges_input) <= 1)
               )
           AND (
-                (total_amount_input =0. AND billing_table.total_amount IS NOT NULL)
+                (total_amount_input = 0. AND billing_table.total_amount IS NOT NULL)
                 OR
-                (total_amount_input >0. AND ABS(billing_table.total_amount - total_amount_input) <= 1) -- use approx within $1
+                (total_amount_input > 0. AND ABS(billing_table.total_amount - total_amount_input) <= 1)
               )
           AND (
                 (status_input = "All" AND billing_table.status IS NOT NULL)
@@ -64,17 +70,33 @@ def register_get_billing_info():
                 (status_input != "All" AND billing_table.status = status_input)
           )
         """
+
         client.create_function(sql_function_body=sql)
-        print("Registered get_billing_info UC function")
+        print(f"Registered {function_name} UC function")
+
+        # grant permissions
+        if grant_function_permissions(function_name, uc_config, workspace_client):
+            print(f"Granted permissions on {function_name}")
+        else:
+            print(
+                f"Warning: Some permissions may not have been granted on {function_name}"
+            )
+
     except Exception as e:
         print(f"Error registering get_billing_info: {str(e)}")
 
 
-def register_get_usage_info():
+def register_get_usage_info(uc_config: UCConfig):
     """Register the get_usage_info UC function for usage details."""
+    function_name = (
+        f"{uc_config.agent['catalog']}.{uc_config.agent['schema']}.get_usage_info"
+    )
+
     try:
-        sql = """
-        CREATE OR REPLACE FUNCTION telco_customer_support_dev.agent.get_usage_info(
+        data_catalog = uc_config.data["catalog"]
+        data_schema = uc_config.data["schema"]
+        sql = f"""
+        CREATE OR REPLACE FUNCTION {function_name}(
           customer STRING COMMENT 'The customer ID in the format CUS-XXXXX',
           usage_start_date STRING COMMENT 'The usage start date in the format YYYY-MM-DD',
           usage_end_date STRING COMMENT 'The usage end date in the format YYYY-MM-DD'
@@ -101,20 +123,31 @@ def register_get_usage_info():
             )
           )
         )
-        FROM telco_customer_support_dev.bronze.usage u
-        JOIN telco_customer_support_dev.bronze.subscriptions s ON u.subscription_id = s.subscription_id
+        FROM {data_catalog}.{data_schema}.usage u
+        JOIN {data_catalog}.{data_schema}.subscriptions s ON u.subscription_id = s.subscription_id
         WHERE s.customer_id = customer
           AND u.date >= usage_start_date
           AND u.date < usage_end_date
         GROUP BY u.subscription_id
         LIMIT 1
         """
+
         client.create_function(sql_function_body=sql)
-        print("Registered get_usage_info UC function")
+        print(f"Registered {function_name} UC function")
+
+        # grant permissions
+        if grant_function_permissions(function_name, uc_config, workspace_client):
+            print(f"Granted permissions on {function_name}")
+        else:
+            print(
+                f"Warning: Some permissions may not have been granted on {function_name}"
+            )
+
     except Exception as e:
         print(f"Error registering get_usage_info: {str(e)}")
 
 
 # call registration functions
-register_get_billing_info()
-register_get_usage_info()
+uc_config = config_manager.get_uc_config()
+register_get_billing_info(uc_config)
+register_get_usage_info(uc_config)
