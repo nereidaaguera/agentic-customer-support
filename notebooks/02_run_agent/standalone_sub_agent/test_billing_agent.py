@@ -96,7 +96,7 @@ test_query("What are the charges on my bill for customer CUS-10001 from 2025-04-
 test_queries = [
     "What are the charges on my bill for customer CUS-10001 from 2025-04-01 to 2025-04-30?",
     "When is my payment due for customer CUS-10002?",
-    "I see a charge for $14.99 that I don't recognize. My customer ID is CUS-10003 and show me my bill for March 2025",
+    "I see an additional charge for $39 in my May bill that I don't recognize. My customer ID is CUS-11094 and show me my bill", ## validated customer ID and additional charge
     "How much data did customer CUS-10001 use from 2025-04-01 to 2025-04-30?",
     "Is there an unpaid amount for customer CUS-10001 from 2025-04-01 to 2025-04-30?",
     "Show me my billing history for customer CUS-10002 for the last 3 months"
