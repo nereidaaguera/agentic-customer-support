@@ -24,8 +24,7 @@ def register_plans_info(uc_config: UCConfig):
             CREATE OR REPLACE FUNCTION {function_name}(
             )
             RETURNS STRING
-            COMMENT 'Provides comprehensive information about available subscription plans, including features, pricing, and benefits.
-            Use this tool to answer questions about plan options, compare different plans, and assist users in selecting the plan that best meets their needs.'
+            COMMENT 'Provides comprehensive information about available subscription plans, including features, pricing, and benefits. Use this tool to answer questions about plan options, compare different plans, and assist users in selecting the plan that best meets their needs.'
             RETURN
             SELECT to_json(
               collect_list(named_struct(
@@ -67,8 +66,7 @@ def register_devices_info(uc_config: UCConfig):
             CREATE OR REPLACE FUNCTION {function_name}(
             )
             RETURNS STRING
-            COMMENT 'Provides comprehensive information about available devices, including specifications, features, and capabilities.
-            Use this tool to answer questions about device models, compare device characteristics, and support users in selecting the most suitable device for their needs.'
+            COMMENT 'Provides comprehensive information about available devices, including specifications, features, and capabilities. Use this tool to answer questions about device models, compare device characteristics, and support users in selecting the most suitable device for their needs.'
             RETURN
             SELECT to_json(
               collect_list(named_struct(
@@ -79,7 +77,7 @@ def register_devices_info(uc_config: UCConfig):
                 'monthly_installment', monthly_installment,
                 'storage_gb', storage_gb,
                 'release_date', release_date,
-                'is_5g_compatible',is_5g_compatible,
+                'is_5g_compatible', is_5g_compatible,
                 'is_active', is_active
               )
               )
@@ -113,8 +111,7 @@ def register_promos_info(uc_config: UCConfig):
             CREATE OR REPLACE FUNCTION {function_name}(
             )
             RETURNS STRING
-            COMMENT 'Provides detailed information about current and past promotions, including promotion name, discount type and value, validity period, description, and active status.
-            Use this tool to answer questions about available discounts, promotion periods, and to compare promotional offers.'
+            COMMENT 'Provides detailed information about current and past promotions, including promotion name, discount type and value, validity period, description, and active status. Use this tool to answer questions about available discounts, promotion periods, and to compare promotional offers.'
             RETURN
             SELECT to_json(
               collect_list(named_struct(
@@ -160,9 +157,7 @@ def register_customer_devices_info(uc_config: UCConfig):
                 customer STRING COMMENT 'The customer ID in the format CUS-XXXXX'
             )
             RETURNS STRING
-            COMMENT 'Returns detailed information about all devices linked to a customer's subscription,
-            including device types, statuses, and capacity. Use this tool to answer questions about which devices are active on a customer's account,
-            their subscription status, and their connection to particular services—distinct from tools that provide standalone device specifications.'
+            COMMENT 'Returns detailed information about all devices linked to a customer subscription, including device types, statuses, and capacity. Use this tool to answer questions about which devices are active on a customer account, their subscription status, and their connection to particular services—distinct from tools that provide standalone device specifications.'
             RETURN
             SELECT to_json(
                     named_struct(
@@ -178,7 +173,7 @@ def register_customer_devices_info(uc_config: UCConfig):
                         'monthly_installment', monthly_installment,
                         'storage_gb', storage_gb,
                         'release_date', release_date,
-                        'is_5g_compatible',is_5g_compatible,
+                        'is_5g_compatible', is_5g_compatible,
                         'is_active', is_active
                         )
                         )
