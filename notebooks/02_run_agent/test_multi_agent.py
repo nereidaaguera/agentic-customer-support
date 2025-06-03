@@ -17,7 +17,6 @@ import os
 import sys
 
 root_path = os.path.abspath(os.path.join(os.getcwd(), "../.."))
-print(f"Root path: {root_path}")
 
 if root_path:
     sys.path.append(root_path)
