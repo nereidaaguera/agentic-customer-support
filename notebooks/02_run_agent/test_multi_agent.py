@@ -279,7 +279,10 @@ billing_quality_queries = [
     ("I see an additional charge for $39 in my May bill that I don't recognize. show me my bill", "CUS-11094", "Unrecognized Charge"), ## validated customer ID and additional charge
     ("How much data did I use from 2025-04-01 to 2025-04-30?", "CUS-10001", "Current Usage Query"),
     ("Is there an unpaid amount from 2025-04-01 to 2025-04-30?", "CUS-10001", "Payment Status"),
-    ("Show me my billing history for the last 3 months", "CUS-10002", "Historical Usage Query"),
+    ("Show me my billing history for the last 3 months", "CUS-10002", "Historical Billing Query"),
+    ("When will my current payment be due", "CUS-10002", "Payment Due Date"), ## test query for the current month
+    ("Break down the total amount of my latest billing Statement", "CUS-10002", "Bill breakdown"),  ## test temporal interpretation of queries
+    ("How much SMS did I use in the last 3 months", "CUS-10002", "Historical Usage Query"),  ## test temporal interpretation of queries
 ]
 for query, customer_id, description in billing_quality_queries:
     custom_inputs = {"customer": customer_id}
