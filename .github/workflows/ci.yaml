@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ manfred/adding_dabs ]
   pull_request:
     branches: [ main ]
 
