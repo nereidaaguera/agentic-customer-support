@@ -49,7 +49,8 @@ You are a helpful assistant.
 ##################
 MCP_SERVER_URLS = [
     "https://telco-outage-server-3888667486068890.aws.databricksapps.com/api/mcp/",
-    # "https://db-ml-models-prod-us-west.cloud.databricks.com/api/2.0/mcp/functions/system/ai",
+    "https://db-ml-models-prod-us-west.cloud.databricks.com/api/2.0/mcp/functions/system/ai",
+    "https://db-ml-models-prod-us-west.cloud.databricks.com/api/2.0/mcp/vector-search/telco_customer_support_dev/agent",
 ]
 
 class ToolCallingAgent(ChatAgent):

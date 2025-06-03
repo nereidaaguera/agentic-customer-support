@@ -7,7 +7,7 @@ databricks auth login --profile $DB_CLI_PROFILE --host https://db-ml-models-prod
 
 ## Env setup
 First, set up a Python 3.12 environment as described in the root directory README.md, then set environment 
-variables and install dependencies:
+variables and install dependencies. Run the following commands from the root directory of the repo:
 
 ```bash
 export DATABRICKS_CONFIG_PROFILE="$DB_CLI_PROFILE"
