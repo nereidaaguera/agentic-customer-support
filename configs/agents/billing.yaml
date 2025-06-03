@@ -48,4 +48,3 @@ system_prompt: |
 uc_functions:
   - get_billing_info
   - get_usage_info
-  - system.ai.python_exec  

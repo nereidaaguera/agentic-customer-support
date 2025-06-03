@@ -17,7 +17,6 @@ DOMAIN_FUNCTION_MAP = {
     AgentType.BILLING.value: [
         "get_billing_info",
         "get_usage_info",
-        "system.ai.python_exec"      
     ],
     AgentType.PRODUCT.value: [
         "get_plans_info",
