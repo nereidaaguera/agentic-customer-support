@@ -63,15 +63,17 @@ for tool in billing_agent.tools:
 
 # COMMAND ----------
 
-def test_query(query):
+def test_query(query,customer_id):
     print(f"\n=== TESTING QUERY: \"{query}\" ===\n")
 
     request = ResponsesAgentRequest(
-        input=[{"role": "user", "content": query}]
+        input=[{"role": "user", "content": query}],
+        custom_inputs={"customer": customer_id}
     )
 
     try:
         response = billing_agent.predict(request)
+
         if response and hasattr(response, 'output') and response.output:
             output_item = response.output[-1]
             if "content" in output_item and isinstance(output_item["content"], list):
@@ -89,20 +91,20 @@ def test_query(query):
 
 # COMMAND ----------
 
-test_query("What are the charges on my bill for customer CUS-10001 from 2025-04-01 to 2025-04-30?")
+test_query("What are the charges on my bill for from 2025-04-01 to 2025-04-30?", "CUS-10001")
 
 # COMMAND ----------
 
 test_queries = [
-    "What are the charges on my bill for customer CUS-10001 from 2025-04-01 to 2025-04-30?",
-    "When is my payment due for customer CUS-10002?",
-    "I see an additional charge for $39 in my May bill that I don't recognize. My customer ID is CUS-11094 and show me my bill", ## validated customer ID and additional charge
-    "How much data did customer CUS-10001 use from 2025-04-01 to 2025-04-30?",
-    "Is there an unpaid amount for customer CUS-10001 from 2025-04-01 to 2025-04-30?",
-    "Show me my billing history for customer CUS-10002 for the last 3 months"
+    ("What are the charges on my bill for customer CUS-10001 from 2025-04-01 to 2025-04-30?", "CUS-10001"),
+    ("When is my June payment due", "CUS-10001"),
+    ("I see an additional charge for $39 in my May bill that I don't recognize. show me my bill", "CUS-11094"), ## validated customer ID and additional charge
+    ("How much data did I use from 2025-04-01 to 2025-04-30?", "CUS-10001"),
+    ("Is there an unpaid amount from 2025-04-01 to 2025-04-30?", "CUS-10001"),
+    ("Show me my billing history for the last 3 months", "CUS-10002"),
 ]
 
 # COMMAND ----------
 
-for query in test_queries:
-    test_query(query)
+for query, customer_id in test_queries:
+    test_query(query, customer_id)
