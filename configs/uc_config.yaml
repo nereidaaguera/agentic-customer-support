@@ -6,6 +6,13 @@ dev:
     catalog: telco_customer_support_dev
     schema: agent
     model_name: telco_customer_support_agent
+    # permissions for UC functions
+    permissions:
+      groups:
+        - telco-customer-support-dev
+      privileges:
+        - EXECUTE
+
 prod:
   data:
     catalog: telco_customer_support_prod
@@ -14,3 +21,8 @@ prod:
     catalog: telco_customer_support_prod
     schema: agent
     model_name: telco_customer_support_agent
+    permissions:
+      groups:
+        - telco-customer-support-prod
+      privileges:
+        - EXECUTE
