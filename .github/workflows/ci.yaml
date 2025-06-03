@@ -61,7 +61,7 @@ jobs:
         with:
           fail_ci_if_error: false
   deploy:
-    if: github.ref == 'refs/heads/manfred/adding_dabs'
+    if: github.ref_name == 'manfred/adding_dabs'
     runs-on:
       group: databricks-field-eng-protected-runner-group
       labels: linux-ubuntu-latest
