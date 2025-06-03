@@ -10,12 +10,18 @@ def register_get_billing_info():
     try:
         sql = """
         CREATE OR REPLACE FUNCTION telco_customer_support_dev.agent.get_billing_info(
+          -- customer_id_input STRING COMMENT 'The customer ID in the format CUS-XXXXX',
+          -- billing_start_date_input STRING DEFAULT date_format(date_trunc("month", current_date()), "yyyy-MM-dd") COMMENT 'The billing start date in YYYY-MM-DD format. Defaults to first day of current month.',
+          -- billing_end_date_input STRING DEFAULT date_format(date_trunc("month", add_months(current_date(), 1)), "yyyy-MM-dd") COMMENT 'The billing end date in YYYY-MM-DD format. Defaults to first day of next month.',
+          -- additional_charges_input FLOAT DEFAULT NULL COMMENT 'Filter on additional_charges. If NULL, only rows with non-NULL additional_charges are included.',
+          -- total_amount_input FLOAT DEFAULT NULL COMMENT 'Filter on total_amount. If NULL, only rows with non-NULL total_amount are included.',
+          -- status_input STRING DEFAULT NULL COMMENT 'Billing status. Possible values: Paid, Unpaid, Late, Partial. Defaults to Paid. If NULL, return rows of all statuses.'
           customer_id_input STRING COMMENT 'The customer ID in the format CUS-XXXXX',
-          billing_start_date_input STRING DEFAULT date_format(date_trunc('month', current_date()), 'yyyy-MM-dd') COMMENT 'The billing start date in YYYY-MM-DD format. Defaults to first day of current month.',
-          billing_end_date_input STRING DEFAULT date_format(date_trunc('month', add_months(current_date(), 1)), 'yyyy-MM-dd') COMMENT 'The billing end date in YYYY-MM-DD format. Defaults to first day of next month.',
-          additional_charges_input FLOAT DEFAULT NULL COMMENT 'Filter on additional_charges. If NULL, only rows with non-NULL additional_charges are included.',
-          total_amount_input FLOAT DEFAULT NULL COMMENT 'Filter on total_amount. If NULL, only rows with non-NULL total_amount are included.',
-          status_input STRING DEFAULT NULL COMMENT 'Billing status. Possible values: Paid, Unpaid, Late, Partial. Defaults to Paid. If NULL, return rows of all statuses.'
+          billing_start_date_input STRING COMMENT 'The billing start date in YYYY-MM-DD format. Defaults to first day of current month.',
+          billing_end_date_input STRING COMMENT 'The billing end date in YYYY-MM-DD format. Defaults to first day of next month.',
+          additional_charges_input FLOAT COMMENT 'Filter on additional_charges. If NULL, only rows with non-NULL additional_charges are included. Default is NULL.',
+          total_amount_input FLOAT COMMENT 'Filter on total_amount. If NULL, only rows with non-NULL total_amount are included. Default is NULL.',
+          status_input STRING COMMENT 'Billing status. Possible values: Paid, Unpaid, Late, Partial. Defaults to Paid. If NULL, return rows of all statuses. Default is NULL.'
         )
         RETURNS STRING
         COMMENT 'Retrieves all columns of the billing table for all rows for a customer within the specified date range, with optional filters for additional_charges, total_amount, and status. \nExample usage:\n SELECT telco_customer_support_dev.agent.get_billing_info("CUS-10601","2025-06-01","2025-06-01",Null,Null,"Paid")' -- use single quote for comment and double quote for strings variables inside the comment
