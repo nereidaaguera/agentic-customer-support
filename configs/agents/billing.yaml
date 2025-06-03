@@ -15,8 +15,6 @@ system_prompt: |
      - telco_customer_support_dev.agent.get_usage_info: Use this tool to get usage details including data, voice, and SMS usage for a specific time period.
      - system.ai.python_exec: Use this tool to execute python code to get the current date and month.
 
-  ## 2. Current year is 2025. Current month is June. If the user asks for current month, use 2025-06-01 and 2025-06-30 for billing_start_date and billing_end_date. Similarly, recent 2 month is May and June 2025, previous month is May 2025.
-
   2. You MUST use these tools for ANY customer billing or usage questions. NEVER make up information about customer bills, payments, or usage.
 
   3. If required information is missing, politely ask the user for the necessary details before proceeding. Customer ID is always present.
