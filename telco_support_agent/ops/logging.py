@@ -15,6 +15,7 @@ from mlflow.models.resources import (
 from mlflow.types.responses import ResponsesAgentRequest
 
 from telco_support_agent import PACKAGE_DIR, PROJECT_ROOT
+from telco_support_agent.utils.config import UC_CONFIG_FILE
 from telco_support_agent.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
@@ -119,12 +120,19 @@ def _collect_config_artifacts() -> dict[str, str]:
             artifacts[artifact_key] = str(config_file)
             logger.info(f"Adding config artifact: {artifact_key}")
 
+    uc_config_path = PROJECT_ROOT / "configs" / UC_CONFIG_FILE
+    uc_config_key = f"configs/{UC_CONFIG_FILE}"
+
+    logger.info(f"Adding uc config file as artifact: {uc_config_key}")
+
+    artifacts[uc_config_key] = str(uc_config_path)
+
     return artifacts
 
 
 def _get_supervisor_resources(environment: str) -> list[Resource]:
     """Get all resources needed by the supervisor agent."""
-    from telco_support_agent.agents.config import config_manager, get_uc_config
+    from telco_support_agent.utils.config import config_manager
 
     resources = []
 
@@ -150,23 +158,26 @@ def _get_supervisor_resources(environment: str) -> list[Resource]:
                 llm_endpoints.add(endpoint)
                 logger.info(f"Added LLM endpoint: {endpoint}")
 
+    uc_config = config_manager.get_uc_config()
+    agent_catalog = uc_config.agent["catalog"]
+    agent_schema = uc_config.agent["schema"]
+
     # UC functions
     uc_functions = set()
     for _, config in agent_configs.items():
         if "uc_functions" in config:
             for func_name in config["uc_functions"]:
-                if func_name not in uc_functions:
-                    resources.append(DatabricksFunction(function_name=func_name))
-                    uc_functions.add(func_name)
-                    logger.info(f"Added UC function: {func_name}")
+                uc_func_name = f"{agent_catalog}.{agent_schema}.{func_name}"
+                if uc_func_name not in uc_functions:
+                    resources.append(DatabricksFunction(function_name=uc_func_name))
+                    uc_functions.add(uc_func_name)
+                    logger.info(f"Added UC function: {uc_func_name}")
 
     # Vector Search indexes
-    uc_config = get_uc_config(environment)
-    catalog = uc_config["catalog"]
 
     vector_indexes = [
-        f"{catalog}.agent.knowledge_base_index",
-        f"{catalog}.agent.support_tickets_index",
+        f"{agent_catalog}.{agent_schema}.knowledge_base_index",
+        f"{agent_catalog}.{agent_schema}.support_tickets_index",
     ]
 
     for index_name in vector_indexes:
@@ -211,3 +222,7 @@ def _log_config_dicts() -> None:
                 mlflow.log_dict(config_dict, f"configs/agents/{config_file.name}")
         except Exception as e:
             logger.warning(f"Error logging config {config_file.name}: {e}")
+    # Log UC config file
+    with open(PROJECT_ROOT / "configs" / UC_CONFIG_FILE) as f:
+        uc_config_dict = yaml.safe_load(f)
+        mlflow.log_dict(uc_config_dict, f"configs/{UC_CONFIG_FILE}")

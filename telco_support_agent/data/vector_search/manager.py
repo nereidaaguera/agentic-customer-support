@@ -11,6 +11,7 @@ import yaml
 from databricks.vector_search.client import VectorSearchClient
 from databricks.vector_search.index import VectorSearchIndex
 
+from telco_support_agent.utils.config import config_manager
 from telco_support_agent.utils.logging_utils import get_logger, setup_logging
 from telco_support_agent.utils.spark_utils import spark
 
@@ -58,18 +59,20 @@ class VectorSearchManager:
 
     def _setup_names(self) -> None:
         """Setup full table and index names from config."""
-        env = self.config["environment"]
-        catalog = env["catalog"]
-        source_schema = env["source_schema"]
-        agent_schema = env["agent_schema"]
+        uc_config = config_manager.get_uc_config()
+
+        data_catalog = uc_config.data["catalog"]
+        data_schema = uc_config.data["schema"]
+        agent_catalog = uc_config.agent["catalog"]
+        agent_schema = uc_config.agent["schema"]
 
         # source tables
-        self.kb_table = f"{catalog}.{source_schema}.{self.config['indexes']['knowledge_base']['source_table']}"
-        self.tickets_table = f"{catalog}.{source_schema}.{self.config['indexes']['support_tickets']['source_table']}"
+        self.kb_table = f"{data_catalog}.{data_schema}.{self.config['indexes']['knowledge_base']['source_table']}"
+        self.tickets_table = f"{data_catalog}.{data_schema}.{self.config['indexes']['support_tickets']['source_table']}"
 
         # index names
-        self.kb_index_name = f"{catalog}.{agent_schema}.{self.config['indexes']['knowledge_base']['name']}"
-        self.tickets_index_name = f"{catalog}.{agent_schema}.{self.config['indexes']['support_tickets']['name']}"
+        self.kb_index_name = f"{agent_catalog}.{agent_schema}.{self.config['indexes']['knowledge_base']['name']}"
+        self.tickets_index_name = f"{agent_catalog}.{agent_schema}.{self.config['indexes']['support_tickets']['name']}"
 
         # vector search endpoint
         self.endpoint_name = self.config["endpoint"]["name"]

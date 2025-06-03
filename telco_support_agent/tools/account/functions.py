@@ -2,14 +2,16 @@
 
 from unitycatalog.ai.core.databricks import DatabricksFunctionClient
 
+from telco_support_agent.utils.config import UCConfig, config_manager
+
 client = DatabricksFunctionClient()
 
 
-def register_customer_info():
+def register_customer_info(uc_config: UCConfig):
     """Register the get_customer_info UC function."""
     try:
-        sql = """
-        CREATE OR REPLACE FUNCTION telco_customer_support_dev.agent.get_customer_info(
+        sql = f"""
+        CREATE OR REPLACE FUNCTION {uc_config.agent["catalog"]}.{uc_config.agent["schema"]}.get_customer_info(
           customer STRING COMMENT 'The customer ID in the format CUS-XXXXX'
         )
         RETURNS STRING
@@ -31,7 +33,7 @@ def register_customer_info():
             )
           )
         )
-        FROM telco_customer_support_dev.bronze.customers
+        FROM {uc_config.data["catalog"]}.{uc_config.data["schema"]}.customers
         WHERE customer_id = customer
         LIMIT 1
         """
@@ -41,11 +43,13 @@ def register_customer_info():
         print(f"Error registering get_customer_info: {str(e)}")
 
 
-def register_customer_subscriptions():
+def register_customer_subscriptions(uc_config: UCConfig):
     """Register the get_customer_subscriptions UC function."""
     try:
-        sql = """
-        CREATE OR REPLACE FUNCTION telco_customer_support_dev.agent.get_customer_subscriptions(
+        data_catalog = uc_config.data["catalog"]
+        data_schema = uc_config.data["schema"]
+        sql = f"""
+        CREATE OR REPLACE FUNCTION {uc_config.agent["catalog"]}.{uc_config.agent["schema"]}.get_customer_subscriptions(
           customer STRING COMMENT 'The customer ID in the format CUS-XXXXX'
         )
         RETURNS STRING
@@ -75,8 +79,8 @@ def register_customer_subscriptions():
               )
             )
           )
-          FROM telco_customer_support_dev.bronze.subscriptions s
-          JOIN telco_customer_support_dev.bronze.plans p ON s.plan_id = p.plan_id
+          FROM {data_catalog}.{data_schema}.subscriptions s
+          JOIN {data_catalog}.{data_schema}.plans p ON s.plan_id = p.plan_id
           WHERE s.customer_id = customer
           GROUP BY s.customer_id
           LIMIT 1
@@ -89,5 +93,6 @@ def register_customer_subscriptions():
 
 
 # call registration functions
-register_customer_info()
-register_customer_subscriptions()
+uc_config = config_manager.get_uc_config()
+register_customer_info(uc_config)
+register_customer_subscriptions(uc_config)

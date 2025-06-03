@@ -25,6 +25,7 @@ print(f"Added {project_root} to Python path")
 # COMMAND ----------
 
 from telco_support_agent.ops.deployment import deploy_agent, AgentDeploymentError
+from telco_support_agent.utils.config import config_manager
 from telco_support_agent.ops.registry import get_latest_model_version
 
 # COMMAND ----------
@@ -44,16 +45,16 @@ print(yaml.dump(deploy_agent_config, sort_keys=False, default_flow_style=False))
 
 # COMMAND ----------
 
-uc_config = deploy_agent_config["uc_model"]
+uc_config = config_manager.get_uc_config()
 deployment_config = deploy_agent_config.get("deployment", {})
 environment_vars = deploy_agent_config.get("environment_vars", {})
 permissions = deploy_agent_config.get("permissions")
 instructions = deploy_agent_config.get("instructions")
 
-uc_model_name = f"{uc_config['catalog']}.{uc_config['schema']}.{uc_config['model_name']}"
+uc_model_name = f"{uc_config.agent['catalog']}.{uc_config.agent['schema']}.{uc_config.agent['model_name']}"
 
-if "version" in uc_config:
-    model_version = uc_config["version"]
+if "version" in uc_config.agent:
+    model_version = uc_config.agent["version"]
     print(f"Using specified model version: {model_version}")
 else:
     model_version = get_latest_model_version(uc_model_name)
@@ -65,7 +66,7 @@ else:
 
 # MAGIC %md
 # MAGIC ## Pre-deployment Validation
-# MAGIC 
+# MAGIC
 # MAGIC Load and test the registered model before deployment.
 
 # COMMAND ----------
@@ -76,21 +77,21 @@ print(f"Loading model: {model_uri}")
 try:
     loaded_model = mlflow.pyfunc.load_model(model_uri)
     print("✅ Model loaded successfully")
-    
+
     test_input = {
         "input": [{"role": "user", "content": "What plan am I currently on?"}],
         "custom_inputs": {"customer": "CUS-10001"}
     }
-    
+
     print("Testing model prediction...")
     response = loaded_model.predict(test_input)
-    
+
     if response and "output" in response and len(response["output"]) > 0:
         print("✅ Model prediction successful")
         print("Proceeding with deployment...")
     else:
         raise ValueError("Model returned empty or invalid response")
-        
+
 except Exception as e:
     print(f"❌ Pre-deployment validation failed: {str(e)}")
     raise RuntimeError("Model validation failed. Deployment aborted.") from e
@@ -127,7 +128,7 @@ try:
         scale_to_zero_enabled=deployment_config.get("scale_to_zero_enabled", False),
         environment_vars=environment_vars if environment_vars else None,
         workload_size=deployment_config.get("workload_size", "Small"),
-        wait_for_ready=deployment_config.get("wait_for_ready", True), 
+        wait_for_ready=deployment_config.get("wait_for_ready", True),
         permissions=permissions,
         instructions=instructions,
         budget_policy_id=deployment_config.get("budget_policy_id"),
@@ -162,7 +163,7 @@ print("="*50)
 
 # MAGIC %md
 # MAGIC ## Test Deployed Endpoint
-# MAGIC 
+# MAGIC
 # MAGIC Verify deployed endpoint works correctly
 
 # COMMAND ----------
@@ -181,7 +182,7 @@ test_cases = [
     },
     {
         "input": [{"role": "user", "content": "Show me my billing details for this month"}],
-        "custom_inputs": {"customer": "CUS-10002"}, 
+        "custom_inputs": {"customer": "CUS-10002"},
         "description": "Billing query with customer ID"
     },
     {
@@ -197,34 +198,34 @@ test_cases = [
 
 for i, test_case in enumerate(test_cases, 1):
     print(f"\n--- Test Case {i}: {test_case['description']} ---")
-    
+
     try:
         request_data = {
             "input": test_case["input"],
             "databricks_options": {"return_trace": True}
         }
-        
+
         if "custom_inputs" in test_case:
             request_data["custom_inputs"] = test_case["custom_inputs"]
             print(f"Custom inputs: {test_case['custom_inputs']}")
-        
+
         response = client.predict(
             endpoint=deployment_result.endpoint_name,
             inputs=request_data
         )
 
         print("✅ Query successful!")
-        
+
         for output in response["output"]:
             if "content" in output:
                 for content in output["content"]:
                     if "text" in content:
                         print(f"Response: {content['text'][:200]}...")
                         break
-        
+
         if "custom_outputs" in response:
             print(f"Custom outputs: {response['custom_outputs']}")
-                        
+
     except Exception as e:
         print(f"❌ Query failed: {str(e)}")
 

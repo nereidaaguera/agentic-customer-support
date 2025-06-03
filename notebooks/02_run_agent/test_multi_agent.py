@@ -28,7 +28,7 @@ import itertools
 
 from mlflow.types.responses import ResponsesAgentRequest
 
-from telco_support_agent.agents.config import config_manager
+from telco_support_agent.utils.config import config_manager
 from telco_support_agent.agents.supervisor import SupervisorAgent
 from telco_support_agent.tools import initialize_tools
 from telco_support_agent.agents.types import AgentType
@@ -200,7 +200,7 @@ def test_end_to_end_query(query, custom_inputs, description=""):
 # mixed set of customer IDs for testing
 test_customers = [
     "CUS-10001",  # Family  customer
-    "CUS-10002",  # Individual customer 
+    "CUS-10002",  # Individual customer
     "CUS-10006",  # Student customer
     "CUS-10023",  # Premium customer
     "CUS-10048",  # Business customer
@@ -352,15 +352,15 @@ streaming_test_queries = [
     # Account queries
     (ResponsesAgentRequest(input=[{"role": "user", "content": "What are the details of my account?"}], custom_inputs={"customer": get_next_customer()}), "Account Query Streaming"),
     (ResponsesAgentRequest(input=[{"role": "user", "content": "Show me all my active subscriptions"}], custom_inputs={"customer": get_next_customer()}), "Subscriptions Streaming"),
-    
+
     # Product queries
     (ResponsesAgentRequest(input=[{"role": "user", "content": "What's the difference between the Standard and Premium plans?"}], custom_inputs={"customer": get_next_customer()}), "Plan Comparison Streaming"),
     (ResponsesAgentRequest(input=[{"role": "user", "content": "What devices do I have on my account?"}], custom_inputs={"customer": get_next_customer()}), "Customer Devices Streaming"),
-    
+
     # Billing queries
     (ResponsesAgentRequest(input=[{"role": "user", "content": "What are my billing charges for April 2025?"}], custom_inputs={"customer": get_next_customer()}), "Billing Query Streaming"),
     (ResponsesAgentRequest(input=[{"role": "user", "content": "How much data did I use last month?"}], custom_inputs={"customer": get_next_customer()}), "Usage Query Streaming"),
-    
+
     # Tech support (no customer ID needed)
     (ResponsesAgentRequest(input=[{"role": "user", "content": "My phone won't connect to WiFi. How do I fix this?"}]), "Tech Support Streaming"),
 ]

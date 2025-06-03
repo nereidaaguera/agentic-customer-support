@@ -25,6 +25,7 @@ print(f"Added {project_root} to Python path")
 # COMMAND ----------
 
 from telco_support_agent.agents.supervisor import SupervisorAgent
+from telco_support_agent.utils.config import config_manager
 from telco_support_agent.ops.logging import log_agent
 from telco_support_agent.ops.registry import register_agent_to_uc
 
@@ -40,10 +41,13 @@ CONFIG_PATH = "../../configs/log_register_agent.yaml"
 with open(CONFIG_PATH) as f:
     config = yaml.safe_load(f)
 
+uc_config = config_manager.get_uc_config()
+uc_model_name = f"{uc_config.agent['catalog']}.{uc_config.agent['schema']}.{uc_config.agent['model_name']}"
+
 print("Configuration:")
 print(f"  Name: {config['name']}")
 print(f"  Description: {config['description']}")
-print(f"  UC Model: {config['uc_registration']['catalog']}.{config['uc_registration']['schema']}.{config['uc_registration']['model_name']}")
+print(f"  UC Model: {uc_model_name}")
 print(f"  Input Example: {config['input_example']}")
 
 # COMMAND ----------
@@ -54,7 +58,6 @@ print(f"  Input Example: {config['input_example']}")
 # COMMAND ----------
 
 from telco_support_agent.tools import initialize_tools
-from telco_support_agent.agents.config import config_manager
 
 print("Initializing required UC functions...")
 
@@ -138,9 +141,6 @@ print("✅ Logged model works correctly")
 # COMMAND ----------
 
 print("Registering to Unity Catalog...")
-
-uc_config = config["uc_registration"]
-uc_model_name = f"{uc_config['catalog']}.{uc_config['schema']}.{uc_config['model_name']}"
 
 model_version = register_agent_to_uc(
     model_uri=logged_model_info.model_uri,
