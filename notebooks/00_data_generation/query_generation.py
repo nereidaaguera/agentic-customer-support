@@ -68,6 +68,86 @@ deploy_client = get_deploy_client("databricks")
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC ## Response Formatting Utilities
+
+# COMMAND ----------
+
+class ResponseFormatter:
+    """Utility class for formatting agent responses for better readability."""
+    
+    @staticmethod
+    def extract_assistant_message(response: Dict[str, Any]) -> str:
+        """Extract the main assistant message from the response."""
+        if not response or 'output' not in response:
+            return "No response content found"
+        
+        for output_item in response['output']:
+            if output_item.get('type') == 'message' and output_item.get('role') == 'assistant':
+                if 'content' in output_item:
+                    for content in output_item['content']:
+                        if content.get('type') == 'output_text':
+                            return content.get('text', '')
+        
+        return "No assistant message found"
+    
+    @staticmethod
+    def extract_function_calls(response: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Extract function calls made by the agent."""
+        function_calls = []
+        
+        if not response or 'output' not in response:
+            return function_calls
+        
+        for output_item in response['output']:
+            if output_item.get('type') == 'function_call':
+                function_calls.append({
+                    'name': output_item.get('name', '').split('__')[-1],  # Get short name
+                    'call_id': output_item.get('call_id'),
+                    'arguments': output_item.get('arguments', '{}')
+                })
+        
+        return function_calls
+    
+    @staticmethod
+    def extract_custom_outputs(response: Dict[str, Any]) -> Dict[str, Any]:
+        """Extract custom outputs from the response."""
+        return response.get('custom_outputs', {})
+    
+    @staticmethod
+    def format_response_summary(response: Dict[str, Any], execution_time: float) -> str:
+        """Create a formatted summary of the agent response."""
+        if not response:
+            return "❌ No response received"
+        
+        assistant_message = ResponseFormatter.extract_assistant_message(response)
+        function_calls = ResponseFormatter.extract_function_calls(response)
+        custom_outputs = ResponseFormatter.extract_custom_outputs(response)
+        
+        summary_lines = []
+        summary_lines.append(f"⏱️  Execution Time: {execution_time:.2f}s")
+        
+        routing_info = custom_outputs.get('routing', {})
+        if routing_info:
+            agent_type = routing_info.get('agent_type', 'unknown')
+            summary_lines.append(f"🤖 Routed to: {agent_type.upper()} agent")
+        
+        customer_id = custom_outputs.get('customer')
+        if customer_id:
+            summary_lines.append(f"👤 Customer: {customer_id}")
+        
+        if function_calls:
+            summary_lines.append(f"🔧 Function Calls: {len(function_calls)}")
+            for fc in function_calls:
+                summary_lines.append(f"   • {fc['name']}")
+        
+        if assistant_message:
+            summary_lines.append(f"💬 Response: {assistant_message}")
+        
+        return "\n".join(summary_lines)
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC ## Query Generation Templates / Logic
 
 # COMMAND ----------
@@ -305,11 +385,18 @@ class TelcoAgentClient:
         self.deploy_client = deploy_client
         
     @retry(tries=3, delay=2, backoff=2)
-    def query_agent(self, query: str, custom_inputs: Dict[str, Any] = None) -> Dict[str, Any]:
-        """Send query to the agent endpoint."""
+    def query_agent(self, query: str, custom_inputs: Dict[str, Any] = None) -> Tuple[Dict[str, Any], str]:
+        """Send query to the agent endpoint and return response with trace ID.
+        
+        Returns:
+            Tuple of (response, trace_id)
+        """
         
         payload = {
-            "input": [{"role": "user", "content": query}]
+            "input": [{"role": "user", "content": query}],
+            "databricks_options": {
+                "return_trace": True
+            }
         }
         
         if custom_inputs:
@@ -320,7 +407,23 @@ class TelcoAgentClient:
                 endpoint=self.endpoint_name,
                 inputs=payload
             )
-            return response
+            
+            # Extract trace ID from response
+            trace_id = None
+            if isinstance(response, dict):
+                databricks_output = response.get('databricks_output', {})
+                if 'trace' in databricks_output:
+                    trace_info = databricks_output['trace']
+                    if isinstance(trace_info, dict):
+                        trace_id = trace_info.get('request_id')
+                
+                if not trace_id:
+                    trace_id = response.get('id') or response.get('databricks_request_id')
+                    if isinstance(databricks_output, dict):
+                        trace_id = trace_id or databricks_output.get('databricks_request_id')
+            
+            return response, trace_id
+            
         except Exception as e:
             print(f"Request failed: {e}")
             raise
@@ -510,21 +613,25 @@ class FeedbackGenerator:
 
 # COMMAND ----------
 
-from mlflow.entities.assessment import AssessmentSourceType, AssessmentSource
-
 class FeedbackLogger:
     """Handle feedback logging with proper trace management."""
     
     @staticmethod
-    def log_feedback_for_query(feedbacks: List[Dict[str, Any]], trace_id: Optional[str] = None) -> None:
-        """Log feedback items with proper trace context."""
-        if not trace_id:
-            trace_id = mlflow.get_last_active_trace_id()
+    def log_feedback_for_query(feedbacks: List[Dict[str, Any]], trace_id: str) -> bool:
+        """Log feedback items.
         
+        Returns:
+            True if all feedback was logged successfully, False otherwise
+        """
         if not trace_id:
-            print("No trace ID available for feedback logging")
-            return
-            
+            print("❌ No trace ID provided for feedback logging")
+            return False
+        
+        success_count = 0
+        total_count = len(feedbacks)
+        
+        print(f"📝 Logging {total_count} feedback items to trace {trace_id}")
+        
         for feedback in feedbacks:
             try:
                 feedback_name = feedback["name"]
@@ -545,10 +652,14 @@ class FeedbackLogger:
                     rationale=feedback_rationale,
                 )
                 
-                print(f"Logged {feedback_name}: {feedback_value}")
+                success_count += 1
+                print(f"  ✅ {feedback_name}: {feedback_value} (by {feedback_source})")
                     
             except Exception as e:
-                print(f"Failed to log {feedback['name']}: {e}")
+                print(f"  ❌ Failed to log {feedback.get('name', 'unknown')}: {e}")
+        
+        print(f"📊 Feedback logging complete: {success_count}/{total_count} successful")
+        return success_count == total_count
 
 # COMMAND ----------
 
@@ -566,6 +677,7 @@ class SyntheticQueryEngine:
         self.client = TelcoAgentClient()
         self.feedback_generator = FeedbackGenerator()
         self.feedback_logger = FeedbackLogger()
+        self.formatter = ResponseFormatter()
         
     def generate_query_batch(self) -> List[Tuple[str, Dict[str, Any], Dict[str, Any]]]:
         """Generate a batch of diverse queries."""
@@ -628,17 +740,21 @@ class SyntheticQueryEngine:
             start_time = time.time()
             
             try:
-                print(f"Executing: {query[:100]}...")
+                print(f"🔍 Executing: {query}...")
                 
-                response = self.client.query_agent(query, custom_inputs)
+                # Get response and trace ID
+                response, trace_id = self.client.query_agent(query, custom_inputs)
                 execution_time = time.time() - start_time
                 
-                # get the trace ID from the agent call
-                trace_id = mlflow.get_last_active_trace_id()
-                   
-                # generate and log feedback to the trace
+                # Generate feedback
                 feedbacks = self.feedback_generator.generate_feedback(query, response, metadata)
-                self.feedback_logger.log_feedback_for_query(feedbacks, trace_id)
+                
+                # Log feedback
+                feedback_success = False
+                if trace_id:
+                    feedback_success = self.feedback_logger.log_feedback_for_query(feedbacks, trace_id)
+                else:
+                    print("⚠️  No trace ID available - skipping feedback logging")
                 
                 return {
                     "query": query,
@@ -647,6 +763,7 @@ class SyntheticQueryEngine:
                     "response": response,
                     "execution_time": execution_time,
                     "feedbacks": feedbacks,
+                    "feedback_logged": feedback_success,
                     "success": True,
                     "error": None,
                     "trace_id": trace_id
@@ -655,7 +772,7 @@ class SyntheticQueryEngine:
             except Exception as e:
                 execution_time = time.time() - start_time
                 error_msg = str(e)
-                print(f"Query failed: {error_msg}")
+                print(f"❌ Query failed: {error_msg}")
                 
                 return {
                     "query": query,
@@ -664,6 +781,7 @@ class SyntheticQueryEngine:
                     "response": None,
                     "execution_time": execution_time,
                     "feedbacks": [],
+                    "feedback_logged": False,
                     "success": False,
                     "error": error_msg,
                     "trace_id": None
@@ -687,6 +805,7 @@ class SyntheticQueryEngine:
         total_queries = len(results)
         successful_queries = sum(1 for r in results if r["success"])
         failed_queries = total_queries - successful_queries
+        feedback_logged = sum(1 for r in results if r.get("feedback_logged", False))
         
         if successful_queries > 0:
             avg_execution_time = sum(r["execution_time"] for r in results if r["success"]) / successful_queries
@@ -710,6 +829,7 @@ class SyntheticQueryEngine:
         print(f"Failed: {failed_queries}")
         print(f"Success Rate: {(successful_queries/total_queries)*100:.1f}%")
         print(f"Average Execution Time: {avg_execution_time:.2f}s")
+        print(f"Feedback Logged: {feedback_logged}/{successful_queries}")
         
         print(f"\nCategory Breakdown:")
         for category, stats in category_stats.items():
@@ -751,7 +871,10 @@ def generate_sample_queries_for_testing():
         if custom_inputs:
             print(f"   Custom Inputs: {custom_inputs}")
         print(f"   Request JSON:")
-        request = {"input": [{"role": "user", "content": query}]}
+        request = {
+            "input": [{"role": "user", "content": query}],
+            "databricks_options": {"return_trace": True}
+        }
         if custom_inputs:
             request["custom_inputs"] = custom_inputs
         print(f"   {json.dumps(request, indent=2)}")
@@ -767,38 +890,44 @@ def test_single_query():
     client = TelcoAgentClient()
     feedback_gen = FeedbackGenerator()
     feedback_logger = FeedbackLogger()
+    formatter = ResponseFormatter()
     
     # generate a single query
     test_query = "Customer wants to know what plan they're currently on and when their contract expires"
     test_custom_inputs = {"customer": generator.generate_customer_id()}
     
-    print(f"Test query: {test_query}")
-    print(f"Custom inputs: {test_custom_inputs}")
+    print(f"📋 Test query: {test_query}")
+    print(f"👤 Custom inputs: {test_custom_inputs}")
     
     try:
-        # execute query (this creates a trace)
-        print("\nExecuting query...")
+        # execute query
+        print(f"\nExecuting query...")
         start_time = time.time()
-        response = client.query_agent(test_query, test_custom_inputs)
+        response, trace_id = client.query_agent(test_query, test_custom_inputs)
         execution_time = time.time() - start_time
         
-        # get the trace ID from the agent call
-        trace_id = mlflow.get_last_active_trace_id()
+        print(f"✅ Query completed successfully!")
         print(f"Trace ID: {trace_id}")
-        print(f"Execution time: {execution_time:.2f}s")
-
-        # generate feedback
-        print("\nGenerating feedback...")
-        metadata = {"category": "account", "persona": "test", "scenario": "test"}
-        feedbacks = feedback_gen.generate_feedback(test_query, response, metadata)
         
-        # log feedback to trace (not run)
-        print("Logging feedback...")
-        feedback_logger.log_feedback_for_query(feedbacks, trace_id)
+        # Format and display response summary
+        print(f"\n📊 RESPONSE SUMMARY:")
+        print(f"{formatter.format_response_summary(response, execution_time)}")
         
-        print(f"\nResponse: {response}")
+        # Generate and log feedback
+        if trace_id:
+            print(f"\n📝 Generating and logging feedback...")
+            metadata = {"category": "account", "persona": "test", "scenario": "test"}
+            feedbacks = feedback_gen.generate_feedback(test_query, response, metadata)
+            feedback_success = feedback_logger.log_feedback_for_query(feedbacks, trace_id)
             
-        print("\n✅ Single query test completed successfully!")
+            if feedback_success:
+                print(f"✅ All feedback logged successfully!")
+            else:
+                print(f"⚠️  Some feedback logging failed")
+        else:
+            print(f"⚠️  No trace ID - cannot log feedback")
+        
+        print(f"\n✅ Single query test completed successfully!")
         return True
         
     except Exception as e:
@@ -812,19 +941,20 @@ def test_small_batch():
     
     # create a small test engine
     test_engine = SyntheticQueryEngine(num_queries=5)
+    formatter = ResponseFormatter()
     
     # generate small batch
-    print("Generating test queries...")
+    print("🔧 Generating test queries...")
     queries = test_engine.generate_query_batch()
     
-    print(f"Generated {len(queries)} test queries:")
+    print(f"📝 Generated {len(queries)} test queries:")
     for i, (query, custom_inputs, metadata) in enumerate(queries):
         print(f"\n{i+1}. [{metadata['category'].upper()}] {query}")
         if custom_inputs:
-            print(f"    Custom inputs: {custom_inputs}")
+            print(f"    🔑 Custom inputs: {custom_inputs}")
     
     # execute the batch
-    print(f"\nExecuting test batch...")
+    print(f"\n🚀 Executing test batch...")
     results = test_engine.execute_query_batch(queries, max_workers=2)
     
     # show results
@@ -833,28 +963,24 @@ def test_small_batch():
     # show detailed results for successful queries
     successful_results = [r for r in results if r["success"]]
     if successful_results:
-        print("\nDETAILED RESULTS:")
+        print(f"\n📋 DETAILED RESULTS:")
         for i, result in enumerate(successful_results[:2]):  # show first 2
-            print(f"\nQuery {i+1}: {result['query']}")
-            print(f"Execution time: {result['execution_time']:.2f}s")
-            print(f"Trace ID: {result.get('trace_id', 'N/A')}")
-            print(f"Feedbacks generated: {len(result['feedbacks'])}")
-            for feedback in result['feedbacks']:
-                print(f"  - {feedback['name']}: {feedback['value']}")
+            print(f"\n{'='*50}")
+            print(f"Query {i+1}: {result['query']}")
+            print(f"🆔 Trace ID: {result.get('trace_id', 'N/A')}")
+            print(f"📊 Feedbacks: {len(result['feedbacks'])} generated, logged: {result.get('feedback_logged', False)}")
             
-            # show partial response
-            if result['response'] and 'output' in result['response']:
-                for output_item in result['response']['output']:
-                    if output_item.get('type') == 'message':
-                        if 'content' in output_item:
-                            for content in output_item['content']:
-                                if content.get('type') == 'output_text':
-                                    response_text = content.get('text', '')[:200]
-                                    print(f"  Response preview: {response_text}...")
-                                    break
-                        break
+            if result['response']:
+                print(f"\n{formatter.format_response_summary(result['response'], result['execution_time'])}")
+            
+            if result['feedbacks']:
+                print(f"\n📝 Feedback Details:")
+                for feedback in result['feedbacks']:
+                    status = "✅" if feedback['value'] else "❌"
+                    print(f"  {status} {feedback['name']}: {feedback['value']} (by {feedback['source']})")
+                    print(f"    💭 {feedback['rationale']}")
     
-        return results
+    return results
 
 # COMMAND ----------
 
@@ -879,7 +1005,7 @@ def run_synthetic_query_batch(num_queries: int = QUERIES_PER_BATCH) -> Dict[str,
     print(f"Generated {len(queries)} queries")
     
     # execute batch
-    print("Executing query batch...")
+    print("🚀 Executing query batch...")
     results = engine.execute_query_batch(queries)
     
     # calculate total time
@@ -893,6 +1019,7 @@ def run_synthetic_query_batch(num_queries: int = QUERIES_PER_BATCH) -> Dict[str,
         "total_queries": len(queries),
         "successful_queries": sum(1 for r in results if r["success"]),
         "failed_queries": sum(1 for r in results if not r["success"]),
+        "feedback_logged": sum(1 for r in results if r.get("feedback_logged", False)),
         "total_execution_time": batch_total_time,
         "total_feedbacks": sum(len(r["feedbacks"]) for r in results if r["success"]),
         "results": results
@@ -927,28 +1054,30 @@ def run_continuous_simulation(batches: int = 3, delay_between_batches: int = 300
             print(f"❌ Batch {batch_num} failed: {e}")
             continue
         
-        simulation_total_time = time.time() - simulation_start_time
-        
-        # log simulation summary
-        total_queries = sum(s["total_queries"] for s in all_summaries)
-        total_successful = sum(s["successful_queries"] for s in all_summaries)
-        total_feedbacks = sum(s["total_feedbacks"] for s in all_summaries)
-        
-        print(f"\n{'='*60}")
-        print(f"SIMULATION COMPLETED")
-        print(f"{'='*60}")
-        print(f"Total batches: {len(all_summaries)}")
-        print(f"Total queries: {total_queries}")
-        print(f"Total successful: {total_successful}")
-        print(f"Total feedbacks: {total_feedbacks}")
-        print(f"Total time: {simulation_total_time:.2f}s")
-        print(f"{'='*60}")
-        
-        return {
-            "batches_completed": len(all_summaries),
-            "total_simulation_time": simulation_total_time,
-            "batch_summaries": all_summaries
-        }
+    simulation_total_time = time.time() - simulation_start_time
+    
+    # log simulation summary
+    total_queries = sum(s["total_queries"] for s in all_summaries)
+    total_successful = sum(s["successful_queries"] for s in all_summaries)
+    total_feedbacks = sum(s["total_feedbacks"] for s in all_summaries)
+    total_feedback_logged = sum(s["feedback_logged"] for s in all_summaries)
+    
+    print(f"\n{'='*60}")
+    print(f"SIMULATION COMPLETED")
+    print(f"{'='*60}")
+    print(f"Total batches: {len(all_summaries)}")
+    print(f"Total queries: {total_queries}")
+    print(f"Total successful: {total_successful}")
+    print(f"Total feedbacks: {total_feedbacks}")
+    print(f"Feedback logged: {total_feedback_logged}")
+    print(f"Total time: {simulation_total_time:.2f}s")
+    print(f"{'='*60}")
+    
+    return {
+        "batches_completed": len(all_summaries),
+        "total_simulation_time": simulation_total_time,
+        "batch_summaries": all_summaries
+    }
 
 # COMMAND ----------
 
@@ -986,7 +1115,7 @@ test_results = test_small_batch()
 #     batch_summary = run_synthetic_query_batch(num_queries=QUERIES_PER_BATCH)
 #     print(f"Batch summary: {batch_summary}")
 # else:
-#     print("Skipping full batch due to test failures")
+#     print("❌ Skipping full batch due to test failures")
 
 # COMMAND ----------
 
@@ -1004,4 +1133,4 @@ test_results = test_small_batch()
 #     simulation_summary = run_continuous_simulation(batches=3, delay_between_batches=300)
 #     print(f"Simulation summary: {simulation_summary}")
 # else:
-#     print("Skipping continuous simulation due to test failures")
+#     print("❌ Skipping continuous simulation due to test failures")
