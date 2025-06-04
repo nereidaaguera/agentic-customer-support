@@ -37,6 +37,8 @@ jobs:
     runs-on:
       group: databricks-field-eng-protected-runner-group
       labels: linux-ubuntu-latest
+    needs:
+      - deploy
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
