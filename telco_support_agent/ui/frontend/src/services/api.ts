@@ -39,6 +39,14 @@ export const agentResultsEmitter = {
  * Maps technical tool names to user-friendly names with icons
  */
 const humanizeToolName = (technicalName: string): string => {
+  // Handle Unity Catalog function names with double underscores
+  let cleanTechnicalName = technicalName;
+  if (technicalName.includes('__')) {
+    // Split on __ and take the last part
+    const parts = technicalName.split('__');
+    cleanTechnicalName = parts[parts.length - 1];
+  }
+  
   const toolNameMap: Record<string, string> = {
     'knowledge_base_vector_search': '📚 Knowledge Base Search',
     'support_tickets_vector_search': '🎫 Support History Search',
@@ -52,13 +60,13 @@ const humanizeToolName = (technicalName: string): string => {
     'get_customer_devices': '📲 Customer Devices'
   };
   
-  // If we have a mapping, use it
-  if (toolNameMap[technicalName]) {
-    return toolNameMap[technicalName];
+  // If we have a mapping for the clean name, use it
+  if (toolNameMap[cleanTechnicalName]) {
+    return toolNameMap[cleanTechnicalName];
   }
   
   // Otherwise, create a fallback by cleaning up the technical name
-  const cleanName = technicalName.replace(/_/g, ' ');
+  const cleanName = cleanTechnicalName.replace(/_/g, ' ');
   const titleCase = cleanName.replace(/\b\w/g, letter => letter.toUpperCase());
   return `🔧 ${titleCase}`;
 };
@@ -67,6 +75,13 @@ const humanizeToolName = (technicalName: string): string => {
  * Creates human-friendly descriptions based on tool name and context
  */
 const createToolDescription = (toolName: string, toolArgs?: any): string => {
+  // Handle Unity Catalog function names with double underscores
+  let cleanToolName = toolName;
+  if (toolName.includes('__')) {
+    const parts = toolName.split('__');
+    cleanToolName = parts[parts.length - 1];
+  }
+  
   const descriptions: Record<string, string> = {
     'knowledge_base_vector_search': 'Searching help articles and guides',
     'support_tickets_vector_search': 'Looking through support ticket history',
@@ -80,9 +95,9 @@ const createToolDescription = (toolName: string, toolArgs?: any): string => {
     'get_customer_devices': 'Checking registered devices'
   };
   
-  let baseDescription = descriptions[toolName];
+  let baseDescription = descriptions[cleanToolName];
   if (!baseDescription) {
-    const cleanName = toolName.replace(/_/g, ' ');
+    const cleanName = cleanToolName.replace(/_/g, ' ');
     baseDescription = `Processing ${cleanName}`;
   }
   
@@ -104,23 +119,30 @@ const createToolDescription = (toolName: string, toolArgs?: any): string => {
  * Creates natural, conversational reasoning text
  */
 const createNaturalReasoning = (toolName: string, toolArgs?: any): string => {
+  // Handle Unity Catalog function names with double underscores
+  let cleanToolName = toolName;
+  if (toolName.includes('__')) {
+    const parts = toolName.split('__');
+    cleanToolName = parts[parts.length - 1];
+  }
+  
   const reasoningTemplates: Record<string, string> = {
     'knowledge_base_vector_search': 'I need to search through our help documentation to find the most relevant guides and instructions',
     'support_tickets_vector_search': 'Let me check our support history to see if similar issues have been resolved before',
     'get_customer_info': 'I\'ll look up your account details to provide personalized assistance',
-    'get_customer_subscriptions': 'Checking your current subscriptions to understand your services',
-    'get_billing_info': 'Retrieving your billing information to answer your payment-related question',
-    'get_usage_info': 'Analyzing your usage data to provide accurate information about your consumption',
-    'get_plans_info': 'Looking up our current plan offerings to help you compare options',
-    'get_devices_info': 'Checking our device catalog to provide detailed specifications',
-    'get_promotions_info': 'Searching for current promotions and offers that might benefit you',
-    'get_customer_devices': 'Reviewing the devices registered to your account'
+    'get_customer_subscriptions': 'Let me check your current subscriptions to understand your services',
+    'get_billing_info': 'I\'ll retrieve your billing information to answer your payment-related question',
+    'get_usage_info': 'Let me analyze your usage data to provide accurate information about your consumption',
+    'get_plans_info': 'I\'ll look up our current plan offerings to help you compare options',
+    'get_devices_info': 'Let me check our device catalog to provide detailed specifications',
+    'get_promotions_info': 'I\'ll search for current promotions and offers that might benefit you',
+    'get_customer_devices': 'Let me review the devices registered to your account'
   };
   
-  let reasoning = reasoningTemplates[toolName];
+  let reasoning = reasoningTemplates[cleanToolName];
   if (!reasoning) {
-    const cleanName = toolName.replace(/_/g, ' ');
-    reasoning = `Processing your request using ${cleanName}`;
+    const cleanName = cleanToolName.replace(/_/g, ' ');
+    reasoning = `Let me process your request using ${cleanName}`;
   }
   
   // Add specific context for search queries
@@ -135,6 +157,13 @@ const createNaturalReasoning = (toolName: string, toolArgs?: any): string => {
  * Summarizes tool results in a user-friendly way
  */
 const summarizeToolResults = (toolName: string, result: any, toolArgs?: any): string[] => {
+  // Handle Unity Catalog function names with double underscores
+  let cleanToolName = toolName;
+  if (toolName.includes('__')) {
+    const parts = toolName.split('__');
+    cleanToolName = parts[parts.length - 1];
+  }
+  
   const summaries: string[] = [];
   
   // Add the humanized tool name as first item
@@ -145,7 +174,7 @@ const summarizeToolResults = (toolName: string, result: any, toolArgs?: any): st
     if (result.includes('page_content')) {
       const matches = result.match(/ID: ([\w-]+)/g);
       const count = matches ? matches.length : 1;
-      summaries.push(`✅ Found ${count} relevant ${toolName.includes('knowledge') ? 'help article' + (count > 1 ? 's' : '') : 'support ticket' + (count > 1 ? 's' : '')}`);
+      summaries.push(`✅ Found ${count} relevant ${cleanToolName.includes('knowledge') ? 'help article' + (count > 1 ? 's' : '') : 'support ticket' + (count > 1 ? 's' : '')}`);
     } else if (result.length > 100) {
       summaries.push(`✅ Retrieved detailed information (${Math.ceil(result.length / 100)} sections)`);
     } else {
@@ -154,20 +183,36 @@ const summarizeToolResults = (toolName: string, result: any, toolArgs?: any): st
   } else if (Array.isArray(result)) {
     summaries.push(`✅ Found ${result.length} record${result.length !== 1 ? 's' : ''}`);
   } else if (typeof result === 'object' && result !== null) {
-    const keys = Object.keys(result);
-    if (keys.length > 0) {
-      summaries.push(`✅ Retrieved ${keys.length} data field${keys.length !== 1 ? 's' : ''}`);
+    // Handle specific data structures based on tool type
+    if (cleanToolName === 'get_customer_subscriptions' && result.subscriptions) {
+      const subscriptions = result.subscriptions;
+      const activeCount = subscriptions.filter((sub: any) => sub.status === 'Active').length;
+      summaries.push(`✅ Found ${activeCount} active subscription${activeCount !== 1 ? 's' : ''}`);
+      
+      // Add plan names if available
+      const planNames = subscriptions
+        .filter((sub: any) => sub.status === 'Active')
+        .map((sub: any) => sub.plan?.plan_name)
+        .filter(Boolean);
+      if (planNames.length > 0) {
+        summaries.push(`📋 Plans: ${planNames.join(', ')}`);
+      }
+    } else if (cleanToolName === 'get_billing_info' && result.billing_records) {
+      summaries.push(`✅ Retrieved ${result.billing_records.length} billing record${result.billing_records.length !== 1 ? 's' : ''}`);
+    } else if (cleanToolName === 'get_customer_info' && result.customer_id) {
+      summaries.push(`✅ Retrieved account information for ${result.customer_id}`);
+    } else {
+      // Generic object handling
+      const keys = Object.keys(result);
+      if (keys.length > 0) {
+        summaries.push(`✅ Retrieved ${keys.length} data field${keys.length !== 1 ? 's' : ''}`);
+      }
     }
   }
   
   // Add query context if available
   if (toolArgs?.query) {
     summaries.push(`🔍 Search term: "${toolArgs.query}"`);
-  }
-  
-  // Add expandable technical details for power users
-  if (typeof result === 'string' && result.length > 200) {
-    summaries.push(`🔧 Technical details available (click to expand)`);
   }
   
   return summaries;
