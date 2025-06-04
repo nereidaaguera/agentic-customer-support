@@ -4,14 +4,6 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:
-    inputs:
-      skip_ci_evals:
-        description: 'Skip CI evaluation'
-        required: false
-        default: false  # by default, do not skip CI evals
-        type: boolean
-
 jobs:
   deploy:
     name: Deploy infra

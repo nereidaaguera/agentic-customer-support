@@ -4,14 +4,6 @@ on:
   push:
     branches:
       - manfred/adding_dabs
-  workflow_dispatch:
-    inputs:
-      skip_ci_evals:
-        description: 'Skip CI evaluation'
-        required: false
-        default: false  # by default, do not skip CI evals
-        type: boolean
-
 jobs:
   deploy:
     name: Deploy infra
@@ -37,4 +29,4 @@ jobs:
       - name: Deploy Bundle to Dev
         id: deploy
         run: |
-          databricks bundle deploy --var=skip_ci_evals=${{ github.event.inputs.skip_ci_evals || 'false' }}
+          databricks bundle deploy

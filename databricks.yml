@@ -15,7 +15,17 @@ targets:
     default: true
     workspace:
       host: https://db-ml-models-prod-us-west.cloud.databricks.com
+    run_as:
+      service_principal_name: telco-customer-support-sp-dev
+    variables:
+      env: ${bundle.target}
+      experiment_name: /Workspace/telco_support_agent/dev/experiments
   prod:
     default: false
     workspace:
       host: https://db-ml-models-prod-us-west.cloud.databricks.com
+    run_as:
+      service_principal_name: telco-customer-support-sp-prod
+    variables:
+      env: ${bundle.target}
+      experiment_name: /Workspace/telco_support_agent/prod/experiments
