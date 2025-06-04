@@ -1,0 +1,36 @@
+name: Dev Databricks Infra CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      skip_ci_evals:
+        description: 'Skip CI evaluation'
+        required: false
+        default: false  # by default, do not skip CI evals
+        type: boolean
+
+jobs:
+  deploy:
+    name: Deploy infra
+    environment: prod
+    env:
+      DATABRICKS_CLIENT_ID: ${{secrets.PROD_DATABRICKS_CLIENT_ID}}
+      DATABRICKS_CLIENT_SECRET: ${{secrets.PROD_DATABRICKS_CLIENT_SECRET}}
+      DATABRICKS_BUNDLE_TARGET: prod
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: databricks/setup-cli@main
+      - name: Validate Bundle for Dev
+        id: validate
+        run: |
+          databricks bundle validate
+      - name: Deploy Bundle to Dev
+        id: deploy
+        run: |
+          databricks bundle deploy --var=skip_ci_evals=${{ github.event.inputs.skip_ci_evals || 'false' }}
