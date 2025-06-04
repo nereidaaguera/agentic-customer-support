@@ -25,6 +25,7 @@ EXCLUDED_PACKAGES = {
     # Pre-installed in Databricks Runtime - causes conflicts if reinstalled
     'databricks-connect',
     'databricks-cli',
+    'py4j',
 }
 
 packages = {}
