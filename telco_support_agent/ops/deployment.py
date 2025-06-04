@@ -127,8 +127,8 @@ def cleanup_old_deployments(
     endpoint_name: str,
     keep_previous_count: int = 1,
     max_deletion_attempts: int = 3,
-    wait_between_attempts: int = 60,
-    wait_after_deletion: int = 180,
+    wait_between_attempts: int = 30,
+    wait_after_deletion: int = 10,
     raise_on_error: bool = False,
 ) -> dict[str, Any]:
     """Clean up older deployed agent versions.
@@ -142,8 +142,8 @@ def cleanup_old_deployments(
         endpoint_name: The name of the endpoint
         keep_previous_count: Number of previous versions to keep (default: 1)
         max_deletion_attempts: Maximum number of attempts to delete a version (default: 3)
-        wait_between_attempts: Seconds to wait between deletion attempts (default: 60)
-        wait_after_deletion: Seconds to wait after successful deletion (default: 180)
+        wait_between_attempts: Seconds to wait between deletion attempts (default: 30)
+        wait_after_deletion: Seconds to wait after successful deletion (default: 10)
         raise_on_error: Whether to raise exceptions on cleanup errors (default: False)
 
     Returns:
