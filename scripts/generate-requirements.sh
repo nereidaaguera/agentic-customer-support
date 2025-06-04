@@ -15,11 +15,16 @@ from pathlib import Path
 req_file = Path("requirements.txt")
 lines = req_file.read_text().strip().split('\n')
 
-# Platform-specific packages to exclude for Linux/Databricks
+# Packages to exclude for Databricks compatibility
 EXCLUDED_PACKAGES = {
-    'pywin32',      # Windows only
-    'colorama',     # Often Windows-specific in Poetry exports
-    'waitress',     # Sometimes Windows-specific
+    # Windows-specific packages
+    'pywin32',
+    'colorama',
+    'waitress',
+    
+    # Pre-installed in Databricks Runtime - causes conflicts if reinstalled
+    'databricks-connect',
+    'databricks-cli',
 }
 
 packages = {}
