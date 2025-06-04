@@ -39,17 +39,6 @@ TODO
 1. **Add the dependency using Poetry**: `poetry add package-name`
 2. **Regenerate requirements.txt**: `./scripts/generate-requirements.sh`
 
-### Manual Alternative
-If you need to generate requirements.txt manually:
-
-```bash
-# Generate with Poetry (includes platform markers)
-poetry export --format=requirements.txt --output=requirements.txt --without-hashes --only main
-
-# clean platform markers
-sed -i '' 's/ ; .*//' requirements.txt
-```
-
 ## Pull Request Process
 
 1. Update the README.md or documentation with details of changes if appropriate
