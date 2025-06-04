@@ -23,21 +23,22 @@ def register_get_billing_info(uc_config: UCConfig):
         sql = f"""
         CREATE OR REPLACE FUNCTION {function_name}(
           customer STRING COMMENT 'The customer ID in the format CUS-XXXXX',
-          billing_start_date STRING COMMENT 'The billing_start_date in the format YYYY-MM-DD',
-          billing_end_date STRING COMMENT 'The billing_end_date in the format YYYY-MM-DD'
+          billing_start_date_input STRING COMMENT 'The billing start date in YYYY-MM-DD format. Defaults to first day of current month.',
+          billing_end_date_input STRING COMMENT 'The billing end date in YYYY-MM-DD format. Defaults to first day of next month.',
+          additional_charges_input FLOAT COMMENT 'Filter on additional_charges. Must be non negative. If 0., only rows with non-NULL additional_charges are included. Default is float 0.0',
+          total_amount_input FLOAT COMMENT 'Filter on total_amount. Must be non negative. If 0., only rows with non-NULL total_amount are included. Default is float 0.0',
+          status_input STRING COMMENT 'Billing status. Possible values: Paid, Unpaid, Late, Partial, All. Defaults to All. If All, return rows of all statuses.'
         )
         RETURNS STRING
-        COMMENT 'Retrieves all columns of the billing table for all rows for a customer within the specified date range'
+        COMMENT 'Retrieves all columns of the billing table for all rows for a customer within the specified date range, with optional filters for additional_charges, total_amount, and status. Example usage: SELECT {function_name}("CUS-10601","2025-06-01","2025-06-01",NULL,NULL,"Paid")'
         RETURN
         SELECT to_json(
                 collect_list(
-                -- use collect list to aggregate rows
                   named_struct(
                     'customer_id', customer_id,
                     'billing_id', billing_id,
                     'subscription_id', subscription_id,
                     'billing_date', cast(billing_date as string),
-                    'due_date', cast(due_date as string),
                     'base_amount', cast(base_amount as string),
                     'additional_charges', cast(additional_charges as string),
                     'tax_amount', cast(tax_amount as string),
@@ -45,15 +46,29 @@ def register_get_billing_info(uc_config: UCConfig):
                     'payment_amount', cast(payment_amount as string),
                     'payment_date', cast(payment_date as string),
                     'payment_method', payment_method,
-                    'status', status,
-                    'billing_cycle', billing_cycle
-                    )
+                    'status', status
                   )
                 )
-                FROM {uc_config.data["catalog"]}.{uc_config.data["schema"]}.billing as billing_table
-                WHERE billing_table.customer_id = customer
-                  AND billing_date >= billing_start_date
-                  AND billing_date < billing_end_date
+              )
+        FROM {uc_config.data["catalog"]}.{uc_config.data["schema"]}.billing AS billing_table
+        WHERE billing_table.customer_id = customer
+          AND billing_table.billing_date >= billing_start_date_input
+          AND billing_table.billing_date < billing_end_date_input
+          AND (
+                (additional_charges_input = 0. AND billing_table.additional_charges IS NOT NULL)
+                OR
+                (additional_charges_input > 0. AND ABS(billing_table.additional_charges - additional_charges_input) <= 1)
+              )
+          AND (
+                (total_amount_input = 0. AND billing_table.total_amount IS NOT NULL)
+                OR
+                (total_amount_input > 0. AND ABS(billing_table.total_amount - total_amount_input) <= 1)
+              )
+          AND (
+                (status_input = "All" AND billing_table.status IS NOT NULL)
+                OR
+                (status_input != "All" AND billing_table.status = status_input)
+          )
         """
 
         client.create_function(sql_function_body=sql)
