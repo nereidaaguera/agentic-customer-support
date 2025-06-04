@@ -1,7 +1,7 @@
 # Databricks notebook source
 # MAGIC %md
 # MAGIC # Synthetic Query Generator
-# MAGIC 
+# MAGIC
 # MAGIC Notebook to generate synthetic queries to test telco support agent endpoint.
 # MAGIC Can be scheduled as a Databricks job to continuously simulate customer interactions.
 
@@ -9,7 +9,7 @@
 
 # MAGIC %pip install -r ../../requirements.txt -q
 # MAGIC %pip install mlflow databricks-agents --upgrade --pre
-# MAGIC %pip install retry textstat
+# MAGIC %pip install retry
 # MAGIC dbutils.library.restartPython()
 
 # COMMAND ----------
@@ -27,9 +27,7 @@ from dataclasses import dataclass
 import mlflow
 from retry import retry
 from mlflow.deployments import get_deploy_client
-from databricks.agents.evals import judges
-from mlflow.entities.assessment import AssessmentSource, AssessmentSourceType
-import textstat
+from mlflow.entities.assessment import AssessmentSourceType, AssessmentSource, AssessmentError
 
 root_path = os.path.abspath(os.path.join(os.getcwd(), "../.."))
 if root_path:
@@ -44,7 +42,6 @@ from telco_support_agent.data.config import CONFIG
 
 # COMMAND ----------
 
-# Config
 AGENT_ENDPOINT_NAME = "telco-customer-support-agent"
 LLM_ENDPOINT = "databricks-claude-3-7-sonnet"
 MAX_WORKERS = 5  # parallel query execution
@@ -60,7 +57,7 @@ AGENT_NAMES = [
     "Sarah Chen", "Michael Rodriguez", "Jessica Williams", "David Park",
     "Emily Johnson", "Robert Taylor", "Amanda Davis", "James Wilson",
     "Maria Garcia", "Christopher Lee", "Ashley Brown", "Daniel Kim",
-    "Lisa Anderson", "Kevin Martinez", "Rachel Thompson", "Brandon White"
+    "Lisa Anderson", "Kevin Martinez", "Rachel Thompson", "Brandon White",
 ]
 
 print(f"Customer ID range: CUS-{CUSTOMER_ID_START:05d} to CUS-{CUSTOMER_ID_END:05d}")
@@ -84,7 +81,6 @@ class QueryContext:
     persona_context: str
     business_scenario: str
 
-# Query generation templates organized by agent category
 QUERY_TEMPLATES = {
     "account": {
         "contexts": [
@@ -191,7 +187,7 @@ class QueryGenerator:
         
     @retry(tries=3, delay=2)
     def _call_llm(self, system_prompt: str, user_prompt: str) -> str:
-        """Call LLM with retry logic."""
+        """Call LLM endpoint with retry logic."""
         try:
             response = self.deploy_client.predict(
                 endpoint=self.llm_endpoint,
@@ -341,7 +337,7 @@ class FeedbackGenerator:
     
     def __init__(self):
         self.agent_names = AGENT_NAMES.copy()
-        random.shuffle(self.agent_names)  # Randomize order
+        random.shuffle(self.agent_names)  # randomize order
         
     def get_random_agent(self) -> str:
         """Get a random agent name."""
@@ -360,7 +356,8 @@ class FeedbackGenerator:
             self._generate_accuracy_feedback,
             self._generate_clarity_feedback,
             self._generate_completeness_feedback,
-            self._generate_response_time_feedback,
+            self._generate_relevance_feedback,
+            self._generate_data_usage_feedback,
         ]
         
         selected_feedback_types = random.sample(feedback_types, min(num_feedbacks, len(feedback_types)))
@@ -381,10 +378,7 @@ class FeedbackGenerator:
         return {
             "name": "helpfulness",
             "value": is_helpful,
-            "source": AssessmentSource(
-                source_type=AssessmentSourceType.HUMAN,
-                source_id=agent_name
-            ),
+            "source": agent_name,
             "rationale": random.choice([
                 "Response directly addressed the customer's question with actionable information",
                 "Customer seemed satisfied with the level of detail provided",
@@ -397,154 +391,164 @@ class FeedbackGenerator:
             ])
         }
     
-    def _generate_response_time_feedback(self, query: str, response: Dict[str, Any], 
-                                       metadata: Dict[str, Any], agent_name: str) -> Dict[str, Any]:
-        """Generate response time feedback."""
-        # random response time between 1-10 seconds, mostly good
-        response_time = random.uniform(1.2, 8.5)
-        is_fast_enough = response_time < 6.0
+    def _generate_accuracy_feedback(self, query: str, response: Dict[str, Any], 
+                                  metadata: Dict[str, Any], agent_name: str) -> Dict[str, Any]:
+        """Generate accuracy feedback."""
+        # 90% accurate feedback
+        is_accurate = random.random() < 0.90
         
         return {
-            "name": "response_time_seconds",
-            "value": round(response_time, 1),
-            "source": AssessmentSource(
-                source_type=AssessmentSourceType.HUMAN,
-                source_id=agent_name
-            ),
-            "rationale": f"Response generated in {response_time:.1f} seconds" + (
-                " - within expected range" if is_fast_enough else " - slightly slower than optimal"
-            )
+            "name": "accuracy",
+            "value": is_accurate,
+            "source": agent_name,
+            "rationale": random.choice([
+                "Information provided was consistent with company policies",
+                "Data retrieved appeared correct based on customer account",
+                "Technical guidance was sound and appropriate",
+                "Billing information matched customer records"
+            ]) if is_accurate else random.choice([
+                "Minor discrepancy noted in billing calculation",
+                "One piece of information needed verification",
+                "Policy reference could be more current"
+            ])
         }
     
-    def _generate_judge_feedback(self, query: str, response: Dict[str, Any], trace_id: str) -> List[Dict[str, Any]]:
-        """Generate judge-based feedback evaluations."""
-        feedbacks = []
+    def _generate_clarity_feedback(self, query: str, response: Dict[str, Any], 
+                                 metadata: Dict[str, Any], agent_name: str) -> Dict[str, Any]:
+        """Generate clarity feedback."""
+        # 80% clear feedback
+        is_clear = random.random() < 0.80
         
-        try:
-            # get trace for judge evaluation
-            trace = mlflow.get_trace(trace_id)
-            if not trace:
-                return feedbacks
-                
-            request = trace.data.spans[0].get_attribute('mlflow.spanInputs')
-            response_data = trace.data.spans[0].get_attribute('mlflow.spanOutputs')
-            
-            # professionalism evaluation
-            try:
-                professionalism = judges.guideline_adherence(
-                    request=request,
-                    response=response_data,
-                    guidelines=[
-                        "The response should be professional and respectful.",
-                        "The response should be appropriate for customer service."
-                    ],
-                    assessment_name="professionalism"
-                )
-                
-                feedbacks.append({
-                    "name": "professionalism",
-                    "value": professionalism.value == "yes",
-                    "source": professionalism.source,
-                    "rationale": professionalism.rationale,
-                    "trace_id": trace_id
-                })
-            except Exception as e:
-                print(f"Professionalism evaluation failed: {e}")
-            
-            # accuracy evaluation 
-            try:
-                accuracy = judges.guideline_adherence(
-                    request=request,
-                    response=response_data,
-                    guidelines=[
-                        "The response should provide accurate information based on the customer's query.",
-                        "The response should not contain factual errors."
-                    ],
-                    assessment_name="accuracy"
-                )
-                
-                feedbacks.append({
-                    "name": "accuracy", 
-                    "value": accuracy.value == "yes",
-                    "source": accuracy.source,
-                    "rationale": accuracy.rationale,
-                    "trace_id": trace_id
-                })
-            except Exception as e:
-                print(f"Accuracy evaluation failed: {e}")
-                
-        except Exception as e:
-            print(f"Judge feedback generation failed: {e}")
-            
-        return feedbacks
-    
-    def _generate_reading_ease_feedback(self, response: Dict[str, Any], agent_name: str) -> List[Dict[str, Any]]:
-        """Generate reading ease feedback using textstat."""
-        feedbacks = []
-        
-        try:
-            # extract response text
-            response_text = self._extract_response_text(response)
-            if not response_text:
-                return feedbacks
-                
-            # calculate reading ease
-            reading_ease = textstat.flesch_reading_ease(response_text)
-            
-            # categorize reading ease
-            if reading_ease >= 90:
-                reading_ease_bucket = "Very Easy"
-            elif reading_ease >= 80:
-                reading_ease_bucket = "Easy"
-            elif reading_ease >= 70:
-                reading_ease_bucket = "Fairly Easy"
-            elif reading_ease >= 60:
-                reading_ease_bucket = "Standard"
-            elif reading_ease >= 50:
-                reading_ease_bucket = "Fairly Difficult"
-            elif reading_ease >= 30:
-                reading_ease_bucket = "Difficult"
-            else:
-                reading_ease_bucket = "Very Confusing"
-            
-            feedbacks.extend([
-                {
-                    "name": "reading_ease_score",
-                    "value": reading_ease,
-                    "source": AssessmentSource(
-                        source_type=AssessmentSourceType.CODE,
-                        source_id="textstat.flesch_reading_ease"
-                    ),
-                    "rationale": f"Flesch reading ease score: {reading_ease:.1f}"
-                },
-                {
-                    "name": "reading_ease_category",
-                    "value": reading_ease_bucket,
-                    "source": AssessmentSource(
-                        source_type=AssessmentSourceType.CODE,
-                        source_id="textstat.flesch_reading_ease"
-                    ),
-                    "rationale": f"Reading difficulty level: {reading_ease_bucket}"
-                }
+        return {
+            "name": "clarity",
+            "value": is_clear,
+            "source": agent_name,
+            "rationale": random.choice([
+                "Response was easy to understand and well-structured",
+                "Technical terms were explained appropriately",
+                "Step-by-step instructions were clear and logical",
+                "Customer could easily follow the guidance provided"
+            ]) if is_clear else random.choice([
+                "Some technical language could be simplified",
+                "Response structure could be more organized",
+                "Customer asked for clarification on certain points"
             ])
-            
-        except Exception as e:
-            print(f"Reading ease calculation failed: {e}")
-            
-        return feedbacks
+        }
     
-    def _extract_response_text(self, response: Dict[str, Any]) -> str:
-        """Extract main response text from agent response."""
-        try:
-            if "output" in response:
-                for item in response["output"]:
-                    if item.get("type") == "message" and "content" in item:
-                        for content in item["content"]:
-                            if content.get("type") == "output_text":
-                                return content.get("text", "")
-            return ""
-        except Exception:
-            return ""
+    def _generate_completeness_feedback(self, query: str, response: Dict[str, Any], 
+                                      metadata: Dict[str, Any], agent_name: str) -> Dict[str, Any]:
+        """Generate completeness feedback."""
+        # 80% complete feedback
+        is_complete = random.random() < 0.8
+        
+        return {
+            "name": "completeness",
+            "value": is_complete,
+            "source": agent_name,
+            "rationale": random.choice([
+                "All aspects of the customer's question were addressed",
+                "Response included relevant additional information",
+                "Follow-up options were clearly provided",
+                "No further questions were needed from the customer"
+            ]) if is_complete else random.choice([
+                "Customer had follow-up questions about specific details",
+                "One aspect of the inquiry could have been expanded",
+                "Additional context would have been helpful"
+            ])
+        }
+    
+    def _generate_relevance_feedback(self, query: str, response: Dict[str, Any], 
+                                   metadata: Dict[str, Any], agent_name: str) -> Dict[str, Any]:
+        """Generate relevance feedback for telco-specific queries."""
+        # 85% relevant feedback
+        is_relevant = random.random() < 0.85
+        
+        category = metadata.get("category", "unknown")
+        
+        return {
+            "name": "relevance_to_query",
+            "value": is_relevant,
+            "source": agent_name,
+            "rationale": random.choice([
+                f"Response addressed the {category} query with appropriate telco-specific information",
+                f"Answer was well-suited to the customer's {category} needs",
+                f"Response included relevant {category} details and next steps",
+                f"Content was appropriate for a {category} support interaction"
+            ]) if is_relevant else random.choice([
+                f"Response could have been more specific to {category} domain",
+                f"Some {category} context was missing from the response",
+                f"Answer was too generic for this {category} query"
+            ])
+        }
+    
+    def _generate_data_usage_feedback(self, query: str, response: Dict[str, Any], 
+                                    metadata: Dict[str, Any], agent_name: str) -> Dict[str, Any]:
+        """Generate feedback on proper use of customer data."""
+        # 90% proper data usage
+        proper_data_use = random.random() < 0.90
+        
+        return {
+            "name": "proper_data_usage",
+            "value": proper_data_use,
+            "source": agent_name,
+            "rationale": random.choice([
+                "Agent appropriately used customer-specific data in response",
+                "Response referenced correct customer account information",
+                "Customer data was used securely and appropriately",
+                "Agent accessed only necessary customer information"
+            ]) if proper_data_use else random.choice([
+                "Could have used more specific customer data in response",
+                "Response was too generic given available customer context",
+                "Some relevant customer information was not utilized"
+            ])
+        }
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Feedback Logger
+
+# COMMAND ----------
+
+from mlflow.entities.assessment import AssessmentSourceType, AssessmentSource
+
+class FeedbackLogger:
+    """Handle feedback logging with proper trace management."""
+    
+    @staticmethod
+    def log_feedback_for_query(feedbacks: List[Dict[str, Any]], trace_id: Optional[str] = None) -> None:
+        """Log feedback items with proper trace context."""
+        if not trace_id:
+            trace_id = mlflow.get_last_active_trace_id()
+        
+        if not trace_id:
+            print("No trace ID available for feedback logging")
+            return
+            
+        for feedback in feedbacks:
+            try:
+                feedback_name = feedback["name"]
+                feedback_value = feedback["value"]
+                feedback_source = feedback["source"]
+                feedback_rationale = feedback["rationale"]
+                
+                source = AssessmentSource(
+                    source_type=AssessmentSourceType.HUMAN,
+                    source_id=feedback_source,
+                )
+                
+                mlflow.log_feedback(
+                    trace_id=trace_id,
+                    name=feedback_name,
+                    source=source,
+                    value=feedback_value,
+                    rationale=feedback_rationale,
+                )
+                
+                print(f"Logged {feedback_name}: {feedback_value}")
+                    
+            except Exception as e:
+                print(f"Failed to log {feedback['name']}: {e}")
 
 # COMMAND ----------
 
@@ -561,6 +565,7 @@ class SyntheticQueryEngine:
         self.generator = QueryGenerator()
         self.client = TelcoAgentClient()
         self.feedback_generator = FeedbackGenerator()
+        self.feedback_logger = FeedbackLogger()
         
     def generate_query_batch(self) -> List[Tuple[str, Dict[str, Any], Dict[str, Any]]]:
         """Generate a batch of diverse queries."""
@@ -624,23 +629,16 @@ class SyntheticQueryEngine:
             
             try:
                 print(f"Executing: {query[:100]}...")
-                response = self.client.query_agent(query, custom_inputs)
                 
+                response = self.client.query_agent(query, custom_inputs)
                 execution_time = time.time() - start_time
                 
-                # generate and log feedback
+                # get the trace ID from the agent call
+                trace_id = mlflow.get_last_active_trace_id()
+                   
+                # generate and log feedback to the trace
                 feedbacks = self.feedback_generator.generate_feedback(query, response, metadata)
-                
-                try:
-                    for feedback in feedbacks:
-                        mlflow.log_feedback(
-                            name=feedback["name"],
-                            value=feedback["value"],
-                            source=feedback["source"],
-                            rationale=feedback["rationale"]
-                        )
-                except Exception as e:
-                    print(f"Failed to log feedback: {e}")
+                self.feedback_logger.log_feedback_for_query(feedbacks, trace_id)
                 
                 return {
                     "query": query,
@@ -650,7 +648,8 @@ class SyntheticQueryEngine:
                     "execution_time": execution_time,
                     "feedbacks": feedbacks,
                     "success": True,
-                    "error": None
+                    "error": None,
+                    "trace_id": trace_id
                 }
                 
             except Exception as e:
@@ -666,7 +665,8 @@ class SyntheticQueryEngine:
                     "execution_time": execution_time,
                     "feedbacks": [],
                     "success": False,
-                    "error": error_msg
+                    "error": error_msg,
+                    "trace_id": None
                 }
         
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -693,7 +693,6 @@ class SyntheticQueryEngine:
         else:
             avg_execution_time = 0
         
-        # category breakdown
         category_stats = {}
         for result in results:
             category = result["metadata"]["category"]
@@ -717,6 +716,7 @@ class SyntheticQueryEngine:
             success_rate = (stats["success"] / stats["total"]) * 100 if stats["total"] > 0 else 0
             print(f"  {category.title()}: {stats['success']}/{stats['total']} ({success_rate:.1f}%)")
         
+        # feedback summary
         total_feedbacks = sum(len(r["feedbacks"]) for r in results if r["success"])
         print(f"\nFeedback Generated: {total_feedbacks} items")
         
@@ -725,3 +725,291 @@ class SyntheticQueryEngine:
             for result in results:
                 if not result["success"]:
                     print(f"  - {result['query'][:80]}... | Error: {result['error']}")
+        
+        print(f"{'='*60}\n")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Test Functions
+
+# COMMAND ----------
+
+def generate_sample_queries_for_testing():
+    """Generate a few sample queries for manual testing."""
+    
+    engine = SyntheticQueryEngine(num_queries=5)
+    queries = engine.generate_query_batch()
+    
+    print("SAMPLE QUERIES FOR TESTING")
+    print("=" * 50)
+    
+    for i, (query, custom_inputs, metadata) in enumerate(queries):
+        print(f"{i+1}. Category: {metadata['category'].upper()}")
+        print(f"   Persona: {metadata['persona']}")
+        print(f"   Query: {query}")
+        if custom_inputs:
+            print(f"   Custom Inputs: {custom_inputs}")
+        print(f"   Request JSON:")
+        request = {"input": [{"role": "user", "content": query}]}
+        if custom_inputs:
+            request["custom_inputs"] = custom_inputs
+        print(f"   {json.dumps(request, indent=2)}")
+        print()
+
+def test_single_query():
+    """Test a single query manually."""
+    print("MANUAL SINGLE QUERY TEST")
+    print("=" * 40)
+    
+    # create components
+    generator = QueryGenerator()
+    client = TelcoAgentClient()
+    feedback_gen = FeedbackGenerator()
+    feedback_logger = FeedbackLogger()
+    
+    # generate a single query
+    test_query = "Customer wants to know what plan they're currently on and when their contract expires"
+    test_custom_inputs = {"customer": generator.generate_customer_id()}
+    
+    print(f"Test query: {test_query}")
+    print(f"Custom inputs: {test_custom_inputs}")
+    
+    try:
+        # execute query (this creates a trace)
+        print("\nExecuting query...")
+        start_time = time.time()
+        response = client.query_agent(test_query, test_custom_inputs)
+        execution_time = time.time() - start_time
+        
+        # get the trace ID from the agent call
+        trace_id = mlflow.get_last_active_trace_id()
+        print(f"Trace ID: {trace_id}")
+        print(f"Execution time: {execution_time:.2f}s")
+
+        # generate feedback
+        print("\nGenerating feedback...")
+        metadata = {"category": "account", "persona": "test", "scenario": "test"}
+        feedbacks = feedback_gen.generate_feedback(test_query, response, metadata)
+        
+        # log feedback to trace (not run)
+        print("Logging feedback...")
+        feedback_logger.log_feedback_for_query(feedbacks, trace_id)
+        
+        # show response
+        print(f"\nResponse structure: {list(response.keys())}")
+        if 'output' in response:
+            print(f"Output items: {len(response['output'])}")
+        if 'custom_outputs' in response:
+            print(f"Custom outputs: {list(response['custom_outputs'].keys())}")
+            
+        print("\n✅ Single query test completed successfully!")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Single query test failed: {e}")
+        return False
+
+def test_small_batch():
+    """Test the system with a small batch of queries."""
+    print("TESTING WITH SMALL BATCH")
+    print("=" * 50)
+    
+    # create a small test engine
+    test_engine = SyntheticQueryEngine(num_queries=5)
+    
+    # generate small batch
+    print("Generating test queries...")
+    queries = test_engine.generate_query_batch()
+    
+    print(f"Generated {len(queries)} test queries:")
+    for i, (query, custom_inputs, metadata) in enumerate(queries):
+        print(f"\n{i+1}. [{metadata['category'].upper()}] {query}")
+        if custom_inputs:
+            print(f"    Custom inputs: {custom_inputs}")
+    
+    # execute the batch
+    print(f"\nExecuting test batch...")
+    results = test_engine.execute_query_batch(queries, max_workers=2)
+    
+    # show results
+    test_engine.log_batch_summary(results)
+    
+    # show detailed results for successful queries
+    successful_results = [r for r in results if r["success"]]
+    if successful_results:
+        print("\nDETAILED RESULTS:")
+        for i, result in enumerate(successful_results[:2]):  # show first 2
+            print(f"\nQuery {i+1}: {result['query']}")
+            print(f"Execution time: {result['execution_time']:.2f}s")
+            print(f"Trace ID: {result.get('trace_id', 'N/A')}")
+            print(f"Feedbacks generated: {len(result['feedbacks'])}")
+            for feedback in result['feedbacks']:
+                print(f"  - {feedback['name']}: {feedback['value']}")
+            
+            # show partial response
+            if result['response'] and 'output' in result['response']:
+                for output_item in result['response']['output']:
+                    if output_item.get('type') == 'message':
+                        if 'content' in output_item:
+                            for content in output_item['content']:
+                                if content.get('type') == 'output_text':
+                                    response_text = content.get('text', '')[:200]
+                                    print(f"  Response preview: {response_text}...")
+                                    break
+                        break
+    
+        return results
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Main Execution Functions
+
+# COMMAND ----------
+
+def run_synthetic_query_batch(num_queries: int = QUERIES_PER_BATCH) -> Dict[str, Any]:
+    """Run a full batch of synthetic queries."""
+    print(f"RUNNING SYNTHETIC QUERY BATCH ({num_queries} queries)")
+    print("=" * 60)
+    
+    batch_start_time = time.time()
+        
+    # create engine
+    engine = SyntheticQueryEngine(num_queries=num_queries)
+    
+    # generate queries
+    print("Generating query batch...")
+    queries = engine.generate_query_batch()
+    print(f"Generated {len(queries)} queries")
+    
+    # execute batch
+    print("Executing query batch...")
+    results = engine.execute_query_batch(queries)
+    
+    # calculate total time
+    batch_total_time = time.time() - batch_start_time
+    
+    # log batch summary
+    engine.log_batch_summary(results)
+    mlflow.log_metric("batch_total_time_seconds", batch_total_time)
+    
+    # create summary
+    summary = {
+        "total_queries": len(queries),
+        "successful_queries": sum(1 for r in results if r["success"]),
+        "failed_queries": sum(1 for r in results if not r["success"]),
+        "total_execution_time": batch_total_time,
+        "total_feedbacks": sum(len(r["feedbacks"]) for r in results if r["success"]),
+        "results": results
+    }
+    
+    print(f"✅ Batch execution completed in {batch_total_time:.2f}s")
+    return summary
+
+def run_continuous_simulation(batches: int = 3, delay_between_batches: int = 300):
+    """Run continuous simulation with multiple batches."""
+    print(f"STARTING CONTINUOUS SIMULATION ({batches} batches)")
+    print("=" * 60)
+    
+    simulation_start_time = time.time()
+    all_summaries = []
+    
+    for batch_num in range(1, batches + 1):
+        print(f"\n🚀 Starting batch {batch_num}/{batches}")
+        
+        try:
+            summary = run_synthetic_query_batch()
+            all_summaries.append(summary)
+            
+            print(f"✅ Batch {batch_num} completed successfully")
+            
+            # delay between batches (except for the last one)
+            if batch_num < batches:
+                print(f"⏳ Waiting {delay_between_batches}s before next batch...")
+                time.sleep(delay_between_batches)
+                
+        except Exception as e:
+            print(f"❌ Batch {batch_num} failed: {e}")
+            continue
+        
+        simulation_total_time = time.time() - simulation_start_time
+        
+        # log simulation summary
+        total_queries = sum(s["total_queries"] for s in all_summaries)
+        total_successful = sum(s["successful_queries"] for s in all_summaries)
+        total_feedbacks = sum(s["total_feedbacks"] for s in all_summaries)
+        
+        print(f"\n{'='*60}")
+        print(f"SIMULATION COMPLETED")
+        print(f"{'='*60}")
+        print(f"Total batches: {len(all_summaries)}")
+        print(f"Total queries: {total_queries}")
+        print(f"Total successful: {total_successful}")
+        print(f"Total feedbacks: {total_feedbacks}")
+        print(f"Total time: {simulation_total_time:.2f}s")
+        print(f"{'='*60}")
+        
+        return {
+            "batches_completed": len(all_summaries),
+            "total_simulation_time": simulation_total_time,
+            "batch_summaries": all_summaries
+        }
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Test Execution
+
+# COMMAND ----------
+
+# Generate sample queries for manual review
+print("Generating sample queries...")
+generate_sample_queries_for_testing()
+
+# Run single query test
+print("\nRunning single query test...")
+single_test_success = test_single_query()
+
+# Run small batch test if single test passes
+if single_test_success:
+    print("\nRunning small batch test...")
+    test_results = test_small_batch()
+else:
+    print("Skipping batch test due to single query test failure")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Production Execution
+# MAGIC
+# MAGIC Uncomment the cell below to run the full synthetic query batch.
+# MAGIC This can be scheduled as a Databricks job.
+
+# COMMAND ----------
+
+# # Run full synthetic query batch
+# if single_test_success:
+#     print("Running full synthetic query batch...")
+#     batch_summary = run_synthetic_query_batch(num_queries=QUERIES_PER_BATCH)
+#     print(f"Batch summary: {batch_summary}")
+# else:
+#     print("Skipping full batch due to test failures")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Continuous Simulation
+# MAGIC
+# MAGIC Uncomment to run continuous simulation (multiple batches with delays).
+# MAGIC Useful for long-running load testing.
+
+# COMMAND ----------
+
+# # Run continuous simulation
+# if single_test_success:
+#     print("Running continuous simulation...")
+#     simulation_summary = run_continuous_simulation(batches=3, delay_between_batches=300)
+#     print(f"Simulation summary: {simulation_summary}")
+# else:
+#     print("Skipping continuous simulation due to test failures")
