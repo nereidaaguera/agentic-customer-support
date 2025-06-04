@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=../bundle_config_schema.json
+resources:
+  jobs:
+    log_register_deploy_agent:
+      name: log_register_deploy_agent
+      tasks:
+        - task_key: log_register_agent
+          job_cluster_key: log_deploy_cluster
+          notebook_task:
+            notebook_path: ../notebooks/03_log_register/log_register_agent.py
+            base_parameters:
+              env: ${bundle.target}
+              git_commit: ${bundle.git.commit}
+              experiment_name: ${var.experiment_name}
+        - task_key: deploy_agent
+          job_cluster_key: log_deploy_cluster
+          depends_on:
+            - task_key: log_register_agent
+          notebook_task:
+            notebook_path: ../notebooks/04_deploy/deploy_agent.py
+            base_parameters:
+              env: ${bundle.target}
+      job_clusters:
+        - job_cluster_key: log_deploy_cluster
+          new_cluster:
+            spark_version: 16.3.x-cpu-ml-scala2.12
+            spark_conf:
+              spark.master: local[*, 4]
+              spark.databricks.cluster.profile: singleNode
+            node_type_id: i3.xlarge
+            custom_tags:
+              ResourceClass: SingleNode
+            data_security_mode: SINGLE_USER
+            runtime_engine: STANDARD
+            num_workers: 0
