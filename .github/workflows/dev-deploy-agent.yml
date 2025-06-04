@@ -4,14 +4,15 @@ on:
   push:
     branches:
       - manfred/adding_dabs
+env:
+  DATABRICKS_CLIENT_ID: ${{secrets.DEV_DATABRICKS_CLIENT_ID}}
+  DATABRICKS_CLIENT_SECRET: ${{secrets.DEV_DATABRICKS_CLIENT_SECRET}}
+  DATABRICKS_BUNDLE_TARGET: dev
+
 jobs:
   deploy:
-    name: Deploy infra
+    name: Deploy pipeline
     environment: dev
-    env:
-      DATABRICKS_CLIENT_ID: ${{secrets.DEV_DATABRICKS_CLIENT_ID}}
-      DATABRICKS_CLIENT_SECRET: ${{secrets.DEV_DATABRICKS_CLIENT_SECRET}}
-      DATABRICKS_BUNDLE_TARGET: dev
     runs-on:
       group: databricks-field-eng-protected-runner-group
       labels: linux-ubuntu-latest
@@ -22,7 +23,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Setup databricks CLI
         uses: databricks/setup-cli@main
-      - name: Validate Bundle for Dev
+      - name: Validate bundle for dev
         id: validate
         run: |
           databricks bundle validate
@@ -30,3 +31,20 @@ jobs:
         id: deploy
         run: |
           databricks bundle deploy
+  run_pipeline:
+    name: Run pipeline
+    environment: dev
+    runs-on:
+      group: databricks-field-eng-protected-runner-group
+      labels: linux-ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Setup databricks CLI
+        uses: databricks/setup-cli@main
+      - name: Run bundle for dev
+        id: run
+        run: |
+          databricks bundle run log_register_deploy_agent
