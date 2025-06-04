@@ -1,7 +1,7 @@
 # Databricks notebook source
 # MAGIC %md
 # MAGIC # Synthetic Query Generator
-# MAGIC 
+# MAGIC
 # MAGIC Notebook to generate synthetic queries to test telco support agent endpoint.
 # MAGIC Can be scheduled as a Databricks job to continuously simulate customer interactions.
 
@@ -335,7 +335,7 @@ class FeedbackGenerator:
     
     def __init__(self):
         self.agent_names = AGENT_NAMES.copy()
-        random.shuffle(self.agent_names)  # Randomize order
+        random.shuffle(self.agent_names)  # randomize order
         
     def get_random_agent(self) -> str:
         """Get a random agent name."""
@@ -435,8 +435,8 @@ class FeedbackGenerator:
     def _generate_completeness_feedback(self, query: str, response: Dict[str, Any], 
                                       metadata: Dict[str, Any], agent_name: str) -> Dict[str, Any]:
         """Generate completeness feedback."""
-        # 82% complete feedback
-        is_complete = random.random() < 0.82
+        # 80% complete feedback
+        is_complete = random.random() < 0.8
         
         return {
             "name": "completeness",
@@ -651,3 +651,169 @@ class SyntheticQueryEngine:
                     print(f"  - {result['query'][:80]}... | Error: {result['error']}")
         
         print(f"{'='*60}\n")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Test - Synthetic Queries
+
+# COMMAND ----------
+
+def generate_sample_queries_for_testing():
+    """Generate a few sample queries for manual testing."""
+    
+    engine = SyntheticQueryEngine(num_queries=5)
+    queries = engine.generate_query_batch()
+    
+    print("SAMPLE QUERIES FOR TESTING")
+    print("=" * 50)
+    
+    for i, (query, custom_inputs, metadata) in enumerate(queries):
+        print(f"{i+1}. Category: {metadata['category'].upper()}")
+        print(f"   Persona: {metadata['persona']}")
+        print(f"   Query: {query}")
+        if custom_inputs:
+            print(f"   Custom Inputs: {custom_inputs}")
+        print(f"   Request JSON:")
+        request = {"input": [{"role": "user", "content": query}]}
+        if custom_inputs:
+            request["custom_inputs"] = custom_inputs
+        print(f"   {json.dumps(request, indent=2)}")
+        print()
+
+# generate sample queries for manual testing
+generate_sample_queries_for_testing()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Test - Single Query
+
+# COMMAND ----------
+
+def test_single_query():
+    """Test a single query manually."""
+    print("MANUAL SINGLE QUERY TEST")
+    print("=" * 40)
+    
+    # create components
+    generator = QueryGenerator()
+    client = TelcoAgentClient()
+    feedback_gen = FeedbackGenerator()
+    
+    # generate a single query
+    test_query = "Customer wants to know what plan they're currently on and when their contract expires"
+    test_custom_inputs = {"customer": generator.generate_customer_id()}
+    
+    print(f"Test query: {test_query}")
+    print(f"Custom inputs: {test_custom_inputs}")
+    
+    try:
+        # execute query
+        print("\nExecuting query...")
+        start_time = time.time()
+        response = client.query_agent(test_query, test_custom_inputs)
+        execution_time = time.time() - start_time
+        
+        # get trace ID
+        trace_id = mlflow.get_last_active_trace_id()
+        print(f"Trace ID: {trace_id}")
+        print(f"Execution time: {execution_time:.2f}s")
+        
+        # generate feedback
+        print("\nGenerating feedback...")
+        metadata = {"category": "account", "persona": "test", "scenario": "test"}
+        feedbacks = feedback_gen.generate_feedback(test_query, response, metadata, trace_id)
+        
+        # log feedback
+        print("Logging feedback...")
+        for feedback in feedbacks:
+            try:
+                mlflow.log_feedback(
+                    trace_id=trace_id,
+                    name=feedback["name"],
+                    value=feedback["value"],
+                    source=feedback["source"],
+                    rationale=feedback["rationale"]
+                )
+                print(f"  ✅ Logged {feedback['name']}: {feedback['value']}")
+            except Exception as e:
+                print(f"  ❌ Failed to log {feedback['name']}: {e}")
+        
+        # show response
+        print(f"\nResponse structure: {list(response.keys())}")
+        if 'output' in response:
+            print(f"Output items: {len(response['output'])}")
+        if 'custom_outputs' in response:
+            print(f"Custom outputs: {list(response['custom_outputs'].keys())}")
+            
+        print("\n✅ Single query test completed successfully!")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Single query test failed: {e}")
+        return False
+
+# run single query test
+single_test_success = test_single_query()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Test - Small Query Batch
+
+# COMMAND ----------
+
+def test_small_batch():
+    """Test the system with a small batch of queries."""
+    print("TESTING WITH SMALL BATCH")
+    print("=" * 50)
+    
+    # create a small test engine
+    test_engine = SyntheticQueryEngine(num_queries=5)
+    
+    # generate small batch
+    print("Generating test queries...")
+    queries = test_engine.generate_query_batch()
+    
+    print(f"Generated {len(queries)} test queries:")
+    for i, (query, custom_inputs, metadata) in enumerate(queries):
+        print(f"\n{i+1}. [{metadata['category'].upper()}] {query}")
+        if custom_inputs:
+            print(f"    Custom inputs: {custom_inputs}")
+    
+    # execute the batch
+    print(f"\nExecuting test batch...")
+    results = test_engine.execute_query_batch(queries, max_workers=2)
+    
+    # show results
+    test_engine.log_batch_summary(results)
+    
+    # show detailed results for successful queries
+    successful_results = [r for r in results if r["success"]]
+    if successful_results:
+        print("\nDETAILED RESULTS:")
+        for i, result in enumerate(successful_results[:2]):  # show first 2
+            print(f"\nQuery {i+1}: {result['query']}")
+            print(f"Execution time: {result['execution_time']:.2f}s")
+            print(f"Trace ID: {result['trace_id']}")
+            print(f"Feedbacks generated: {len(result['feedbacks'])}")
+            for feedback in result['feedbacks']:
+                print(f"  - {feedback['name']}: {feedback['value']}")
+            
+            # show partial response
+            if result['response'] and 'output' in result['response']:
+                for output_item in result['response']['output']:
+                    if output_item.get('type') == 'message':
+                        if 'content' in output_item:
+                            for content in output_item['content']:
+                                if content.get('type') == 'output_text':
+                                    response_text = content.get('text', '')[:200]
+                                    print(f"  Response preview: {response_text}...")
+                                    break
+                        break
+    
+    return results
+
+# run test
+test_results = test_small_batch()
