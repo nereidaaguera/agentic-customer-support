@@ -71,7 +71,7 @@ This project is designed to run on [Databricks Runtime 16.3](https://docs.databr
 ### Environment Setup
 
 #### Prerequisites
-- Python 3.12.3 (matches Databricks Runtime 16.3)
+- Python 3.12+
 - Poetry (2.1.2 and above) for dependency management
 
 #### Local Development
@@ -101,6 +101,8 @@ poetry install
 We use a `requirements.txt` file to pip install dependencies in notebooks. To generate the `requirements.txt` from `pyproject.toml`:
 
 ```bash
+poetry install --without dev
+
 # generate requirements.txt from pyproject.toml
 poetry export -f requirements.txt --output requirements.txt --without-hashes
 ```
