@@ -25,6 +25,7 @@ cryptography==45.0.3
 cycler==0.12.1
 databricks-agents==1.0.0rc2
 databricks-ai-bridge==0.5.1
+databricks-connect==16.4.0
 databricks-openai==0.4.1
 databricks-sdk==0.52.0
 databricks-vectorsearch==0.56
@@ -92,7 +93,6 @@ pillow==11.2.1
 propcache==0.3.1
 proto-plus==1.26.1
 protobuf==5.29.5
-py4j==0.10.9.7
 py4j==0.10.9.9
 pyarrow==20.0.0
 pyasn1-modules==0.4.2
@@ -128,7 +128,6 @@ typing-extensions==4.14.0
 typing-inspect==0.9.0
 typing-inspection==0.4.1
 tzdata==2025.2
-unitycatalog-ai==0.3.0
 unitycatalog-ai==0.3.1
 unitycatalog-client==0.2.1
 unitycatalog-openai==0.2.0
