@@ -84,28 +84,63 @@ def make_mcp_exec_fn(
 
     return exec_fn
 
+import copy
+from typing import Any
+
+def _fix_float_to_number(schema: Any) -> Any:
+    """
+    Recursively traverse a JSON‐schema-like object (dicts/lists) and
+    replace any {"type": "float"} with {"type": "number"}.
+    """
+    if isinstance(schema, dict):
+        new_schema = {}
+        for key, val in schema.items():
+            # If we find a "type" key whose value is exactly "float", replace it.
+            if key == "type" and val == "float":
+                new_schema[key] = "number"
+            else:
+                # Otherwise, recurse into val
+                new_schema[key] = _fix_float_to_number(val)
+        return new_schema
+
+    elif isinstance(schema, list):
+        return [_fix_float_to_number(item) for item in schema]
+
+    else:
+        return schema
+
 
 def get_mcp_tool_infos(workspace_client: WorkspaceClient, server_urls: list[str]):
     tool_infos = []
     for mcp_server_url in server_urls:
         # 1. pull dynamic MCP tool specs
         mcp_tools = list_mcp_tools(mcp_server_url, workspace_client)
+
         # 2. convert each into a ToolInfo and append
         for t in mcp_tools.tools:
-            # build an OpenAI-style spec from the MCP schema
+            escaped_name = t.name.replace(".", "__")
+
+            # Deep‐copy t.inputSchema so we don't mutate the original MCP object
+            raw_schema = copy.deepcopy(t.inputSchema)
+
+            # Fix any occurrences of "type": "float"
+            fixed_schema = _fix_float_to_number(raw_schema)
+
             spec = {
                 "type": "function",
                 "function": {
-                    "name":        t.name,
+                    "name":        escaped_name,
                     "description": t.description,
-                    "parameters":  t.inputSchema
+                    "parameters":  fixed_schema
                 }
             }
+
             tool_infos.append(
                 ToolInfo(
-                    name=t.name,
+                    name=escaped_name,
                     spec=spec,
                     exec_fn=make_mcp_exec_fn(mcp_server_url, t.name, workspace_client),
                 )
             )
+
     return tool_infos

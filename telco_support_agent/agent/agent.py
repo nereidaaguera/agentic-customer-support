@@ -15,25 +15,11 @@ from mlflow.types.agent import (
 )
 
 from typing import Optional
-
-import logging
 from databricks.sdk.credentials_provider import ModelServingUserCredentials
 
 
 from databricks.sdk import WorkspaceClient
 from tools import get_mcp_tool_infos
-
-import logging
-import httpx
-#
-# logging.basicConfig(
-#     format="%(levelname)s [%(asctime)s] %(name)s - %(message)s",
-#     datefmt="%Y-%m-%d %H:%M:%S",
-#     level=logging.DEBUG
-# )
-
-
-# logger = logging.getLogger(__name__)
 
 ############################################
 # Define your LLM endpoint and system prompt
@@ -48,9 +34,9 @@ You are a helpful assistant.
 # Set up MCP tools
 ##################
 MCP_SERVER_URLS = [
-    "https://telco-outage-server-3888667486068890.aws.databricksapps.com/api/mcp/",
-    "https://db-ml-models-prod-us-west.cloud.databricks.com/api/2.0/mcp/functions/system/ai",
+    "https://db-ml-models-prod-us-west.cloud.databricks.com/api/2.0/mcp/functions/telco_customer_support_dev/agent",
     "https://db-ml-models-prod-us-west.cloud.databricks.com/api/2.0/mcp/vector-search/telco_customer_support_dev/agent",
+    "https://telco-outage-server-3888667486068890.aws.databricksapps.com/api/mcp/",
 ]
 
 class ToolCallingAgent(ChatAgent):
@@ -210,12 +196,8 @@ AGENT = ToolCallingAgent(llm_endpoint=LLM_ENDPOINT_NAME)
 mlflow.models.set_model(AGENT)
 
 if __name__ == "__main__":
-    print("---------Testing the Agent Predict Function---------")
-    user_query = "I'm experiencing an outage at Moscone Center, is this a known issue? Also, what's the 100th fibonacci number?"
-    response = AGENT.predict({"messages": [{"role": "user", "content": user_query}]})
-    for msg in response.messages:
-        print(msg.content)
+    user_query = "I'm experiencing an outage at Moscone Center, is this a known issue? Also, what's the bill for June 2025 for customer with ID CUS-10001? Finally, what can I do if I think my bill is too high?"
 
-    print("---------Testing the Agent Predict Stream Function---------")
+    print("---------Testing streaming agent output---------")
     for chunk in AGENT.predict_stream({"messages": [{"role": "user", "content": user_query}]}):
         print(chunk.delta.content, "-----------\n")
