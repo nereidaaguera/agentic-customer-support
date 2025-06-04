@@ -52,4 +52,4 @@ req_file.write_text('\n'.join(final_lines) + '\n')
 print(f"Cleaned and deduplicated to {len(final_lines)} unique packages")
 EOF
 
-echo "Generated clean requirements.txt"
+echo "Generated requirements.txt"
