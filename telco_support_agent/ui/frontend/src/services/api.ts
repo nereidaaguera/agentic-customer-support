@@ -31,6 +31,152 @@ export const agentResultsEmitter = {
   }
 };
 
+// =============================================================================
+// HUMANIZATION HELPER FUNCTIONS
+// =============================================================================
+
+/**
+ * Maps technical tool names to user-friendly names with icons
+ */
+const humanizeToolName = (technicalName: string): string => {
+  const toolNameMap: Record<string, string> = {
+    'knowledge_base_vector_search': '📚 Knowledge Base Search',
+    'support_tickets_vector_search': '🎫 Support History Search',
+    'get_customer_info': '👤 Customer Account Lookup',
+    'get_customer_subscriptions': '📋 Subscription Details',
+    'get_billing_info': '💳 Billing Information',
+    'get_usage_info': '📊 Usage Analytics',
+    'get_plans_info': '📝 Plan Information',
+    'get_devices_info': '📱 Device Information',
+    'get_promotions_info': '🎯 Promotions Lookup',
+    'get_customer_devices': '📲 Customer Devices'
+  };
+  
+  // If we have a mapping, use it
+  if (toolNameMap[technicalName]) {
+    return toolNameMap[technicalName];
+  }
+  
+  // Otherwise, create a fallback by cleaning up the technical name
+  const cleanName = technicalName.replace(/_/g, ' ');
+  const titleCase = cleanName.replace(/\b\w/g, letter => letter.toUpperCase());
+  return `🔧 ${titleCase}`;
+};
+
+/**
+ * Creates human-friendly descriptions based on tool name and context
+ */
+const createToolDescription = (toolName: string, toolArgs?: any): string => {
+  const descriptions: Record<string, string> = {
+    'knowledge_base_vector_search': 'Searching help articles and guides',
+    'support_tickets_vector_search': 'Looking through support ticket history',
+    'get_customer_info': 'Retrieving customer account details',
+    'get_customer_subscriptions': 'Checking active subscriptions',
+    'get_billing_info': 'Accessing billing records',
+    'get_usage_info': 'Analyzing usage patterns',
+    'get_plans_info': 'Comparing available plans',
+    'get_devices_info': 'Looking up device specifications',
+    'get_promotions_info': 'Finding current promotions',
+    'get_customer_devices': 'Checking registered devices'
+  };
+  
+  let baseDescription = descriptions[toolName];
+  if (!baseDescription) {
+    const cleanName = toolName.replace(/_/g, ' ');
+    baseDescription = `Processing ${cleanName}`;
+  }
+  
+  // Add context from arguments if available
+  if (toolArgs) {
+    if (toolArgs.query) {
+      baseDescription += ` for "${toolArgs.query}"`;
+    } else if (toolArgs.customer_id) {
+      baseDescription += ` for this customer`;
+    } else if (toolArgs.start_date && toolArgs.end_date) {
+      baseDescription += ` from ${toolArgs.start_date} to ${toolArgs.end_date}`;
+    }
+  }
+  
+  return baseDescription;
+};
+
+/**
+ * Creates natural, conversational reasoning text
+ */
+const createNaturalReasoning = (toolName: string, toolArgs?: any): string => {
+  const reasoningTemplates: Record<string, string> = {
+    'knowledge_base_vector_search': 'I need to search through our help documentation to find the most relevant guides and instructions',
+    'support_tickets_vector_search': 'Let me check our support history to see if similar issues have been resolved before',
+    'get_customer_info': 'I\'ll look up your account details to provide personalized assistance',
+    'get_customer_subscriptions': 'Checking your current subscriptions to understand your services',
+    'get_billing_info': 'Retrieving your billing information to answer your payment-related question',
+    'get_usage_info': 'Analyzing your usage data to provide accurate information about your consumption',
+    'get_plans_info': 'Looking up our current plan offerings to help you compare options',
+    'get_devices_info': 'Checking our device catalog to provide detailed specifications',
+    'get_promotions_info': 'Searching for current promotions and offers that might benefit you',
+    'get_customer_devices': 'Reviewing the devices registered to your account'
+  };
+  
+  let reasoning = reasoningTemplates[toolName];
+  if (!reasoning) {
+    const cleanName = toolName.replace(/_/g, ' ');
+    reasoning = `Processing your request using ${cleanName}`;
+  }
+  
+  // Add specific context for search queries
+  if (toolArgs?.query) {
+    reasoning += ` related to "${toolArgs.query}"`;
+  }
+  
+  return reasoning;
+};
+
+/**
+ * Summarizes tool results in a user-friendly way
+ */
+const summarizeToolResults = (toolName: string, result: any, toolArgs?: any): string[] => {
+  const summaries: string[] = [];
+  
+  // Add the humanized tool name as first item
+  summaries.push(humanizeToolName(toolName));
+  
+  if (typeof result === 'string') {
+    // For text results, try to extract meaningful info
+    if (result.includes('page_content')) {
+      const matches = result.match(/ID: ([\w-]+)/g);
+      const count = matches ? matches.length : 1;
+      summaries.push(`✅ Found ${count} relevant ${toolName.includes('knowledge') ? 'help article' + (count > 1 ? 's' : '') : 'support ticket' + (count > 1 ? 's' : '')}`);
+    } else if (result.length > 100) {
+      summaries.push(`✅ Retrieved detailed information (${Math.ceil(result.length / 100)} sections)`);
+    } else {
+      summaries.push(`✅ Information retrieved successfully`);
+    }
+  } else if (Array.isArray(result)) {
+    summaries.push(`✅ Found ${result.length} record${result.length !== 1 ? 's' : ''}`);
+  } else if (typeof result === 'object' && result !== null) {
+    const keys = Object.keys(result);
+    if (keys.length > 0) {
+      summaries.push(`✅ Retrieved ${keys.length} data field${keys.length !== 1 ? 's' : ''}`);
+    }
+  }
+  
+  // Add query context if available
+  if (toolArgs?.query) {
+    summaries.push(`🔍 Search term: "${toolArgs.query}"`);
+  }
+  
+  // Add expandable technical details for power users
+  if (typeof result === 'string' && result.length > 200) {
+    summaries.push(`🔧 Technical details available (click to expand)`);
+  }
+  
+  return summaries;
+};
+
+// =============================================================================
+// CORE API FUNCTIONS
+// =============================================================================
+
 /**
  * Get list of demo customers from the backend
  */
@@ -63,73 +209,141 @@ const convertToConversationHistory = (messages: ApiMessage[]) => {
   }));
 };
 
+// Define types for execution steps
+interface ExecutionStep {
+  step_type: string;
+  tool_name?: string;
+  description: string;
+  arguments?: any;
+  reasoning?: string;
+  call_id?: string;
+  result?: any;
+}
+
 /**
  * Convert backend response to frontend AgentResponse format
  */
-const convertBackendToAgentResponse = (backendResponse: any): AgentResponse => {
-  const tools: ToolCall[] = [];
-  
-  // Use execution_steps if available for more detailed information
-  const executionSteps = backendResponse.custom_outputs?.execution_steps || [];
-  
-  if (executionSteps.length > 0) {
-    executionSteps.forEach((step: any, index: number) => {
-      if (step.step_type === 'tool_call') {
-        tools.push({
-          tool_name: step.tool_name || `Tool ${index + 1}`,
-          description: step.description || `Called ${step.tool_name}`,
-          reasoning: step.reasoning || `Tool executed with arguments: ${JSON.stringify(step.arguments)}`,
+const convertBackendToAgentResponse = (databricksResponse: any): AgentResponse => {
+  try {
+    // Extract main response text
+    const response_text = databricksResponse.response || "";
+    const agent_type = databricksResponse.agent_type || null;
+    const tools: ToolCall[] = [];
+
+    // Get execution steps from the actual response structure
+    const execution_steps: ExecutionStep[] = databricksResponse.custom_outputs?.execution_steps || [];
+
+    // Process tools_used array if it exists
+    if (databricksResponse.tools_used && Array.isArray(databricksResponse.tools_used)) {
+      databricksResponse.tools_used.forEach((tool: any, index: number) => {
+        const tool_name = tool.name || "unknown_function";
+        const tool_args = tool.arguments || {};
+
+        // Create humanized tool call
+        const tool_call: ToolCall = {
+          tool_name: humanizeToolName(tool_name),
+          description: createToolDescription(tool_name, tool_args),
+          reasoning: createNaturalReasoning(tool_name, tool_args),
           type: 'EXTERNAL_API',
           informations: [
-            step.tool_name,
-            ...(step.arguments ? [JSON.stringify(step.arguments, null, 2)] : [])
+            humanizeToolName(tool_name),
+            createToolDescription(tool_name, tool_args)
           ]
-        });
-      } else if (step.step_type === 'tool_result') {
-        // Add result information to the last tool
-        if (tools.length > 0) {
-          const lastTool = tools[tools.length - 1];
-          lastTool.informations.push(
-            `Result: ${typeof step.result === 'string' ? step.result.substring(0, 200) + '...' : JSON.stringify(step.result).substring(0, 200) + '...'}`
+        };
+
+        // Look for corresponding result in execution_steps
+        const tool_result_step = execution_steps.find((step: any) => 
+          step.step_type === "tool_result" && step.call_id === tool.call_id
+        );
+
+        if (tool_result_step) {
+          // Update tool with humanized result summary
+          tool_call.informations = summarizeToolResults(
+            tool_name, 
+            tool_result_step.result, 
+            tool_args
           );
         }
-      }
-    });
-  } else if (backendResponse.tools_used) {
-    // Fallback to basic tools_used format
-    backendResponse.tools_used.forEach((tool: any, index: number) => {
-      tools.push({
-        tool_name: tool.name || `Tool ${index + 1}`,
-        description: `Called ${tool.name}`,
-        reasoning: `Tool executed with arguments: ${JSON.stringify(tool.arguments)}`,
-        type: 'EXTERNAL_API',
-        informations: [tool.name, JSON.stringify(tool.arguments, null, 2)]
+
+        tools.push(tool_call);
       });
+    }
+
+    // If no tools_used but we have execution_steps with tool_call, process those
+    if (tools.length === 0 && execution_steps.length > 0) {
+      const tool_call_steps = execution_steps.filter((step: any) => step.step_type === "tool_call");
+      
+      tool_call_steps.forEach((step: any, index: number) => {
+        const tool_name = step.tool_name || "unknown_function";
+        const tool_args = step.arguments || {};
+
+        // Create humanized tool call
+        const tool_call: ToolCall = {
+          tool_name: humanizeToolName(tool_name),
+          description: createToolDescription(tool_name, tool_args),
+          reasoning: createNaturalReasoning(tool_name, tool_args),
+          type: 'EXTERNAL_API',
+          informations: [
+            humanizeToolName(tool_name),
+            createToolDescription(tool_name, tool_args)
+          ]
+        };
+
+        // Look for corresponding result
+        const tool_result_step = execution_steps.find((resultStep: any) => 
+          resultStep.step_type === "tool_result" && resultStep.call_id === step.call_id
+        );
+
+        if (tool_result_step) {
+          // Update tool with humanized result summary
+          tool_call.informations = summarizeToolResults(
+            tool_name, 
+            tool_result_step.result, 
+            tool_args
+          );
+        }
+
+        tools.push(tool_call);
+      });
+    }
+
+    // Extract custom outputs for agent routing info
+    const custom_outputs = databricksResponse.custom_outputs || {};
+    const routing_info = custom_outputs.routing || {};
+
+    // Build final informations with more detail
+    const final_informations = [
+      agent_type ? `🤖 Handled by ${agent_type.replace('_', ' ')} specialist` : '🤖 Processed by AI assistant'
+    ];
+
+    if (tools.length > 0) {
+      final_informations.push(`🔧 Used ${tools.length} tool${tools.length !== 1 ? 's' : ''} to gather information`);
+    }
+
+    // Add routing information if available
+    const routing_steps = execution_steps.filter((step: any) => step.step_type === 'routing');
+    routing_steps.forEach((step: any) => {
+      final_informations.push(`📍 ${step.description}`);
     });
+
+    return {
+      question: '', // Will be set by caller
+      tools: tools,
+      final_answer: response_text || "I apologize, but I couldn't generate a proper response. Please try again.",
+      final_informations: final_informations,
+      non_intelligent_answer: response_text
+    };
+
+  } catch (error) {
+    console.error('Error parsing agent response:', error);
+    return {
+      question: '',
+      tools: [],
+      final_answer: "I encountered an error processing your request. Please try again.",
+      final_informations: ['❌ Error occurred during processing'],
+      non_intelligent_answer: "I encountered an error processing your request. Please try again."
+    };
   }
-
-  // Build final informations with more detail
-  const finalInformations = [
-    backendResponse.agent_type ? `Handled by ${backendResponse.agent_type} agent` : 'Processed by AI assistant'
-  ];
-
-  if (tools.length > 0) {
-    finalInformations.push(`Used ${tools.length} tool(s) to gather information`);
-  }
-
-  // Add routing information if available
-  const routingSteps = executionSteps.filter((step: any) => step.step_type === 'routing');
-  routingSteps.forEach((step: any) => {
-    finalInformations.push(step.description);
-  });
-
-  return {
-    question: '', // Will be set by caller
-    tools: tools,
-    final_answer: backendResponse.response,
-    final_informations: finalInformations,
-    non_intelligent_answer: backendResponse.response
-  };
 };
 
 /**
