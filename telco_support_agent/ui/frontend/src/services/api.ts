@@ -48,16 +48,16 @@ const humanizeToolName = (technicalName: string): string => {
   }
   
   const toolNameMap: Record<string, string> = {
-    'knowledge_base_vector_search': '📚 Knowledge Base Search',
-    'support_tickets_vector_search': '🎫 Support History Search',
-    'get_customer_info': '👤 Customer Account Lookup',
-    'get_customer_subscriptions': '📋 Subscription Details',
-    'get_billing_info': '💳 Billing Information',
-    'get_usage_info': '📊 Usage Analytics',
-    'get_plans_info': '📝 Plan Information',
-    'get_devices_info': '📱 Device Information',
-    'get_promotions_info': '🎯 Promotions Lookup',
-    'get_customer_devices': '📲 Customer Devices'
+    'knowledge_base_vector_search': '📚 Knowledge Base Vector Search',
+    'support_tickets_vector_search': '🎫 Support Tickets Vector Search',
+    'get_customer_info': '👤 Get Customer Info Tool',
+    'get_customer_subscriptions': '📋 Get Customer Subscriptions Tool',
+    'get_billing_info': '💳 Get Billing Info Tool',
+    'get_usage_info': '📊 Get Usage Info Tools',
+    'get_plans_info': '📝 Get Plans Info Tools',
+    'get_devices_info': '📱 Get Devices Info Tools',
+    'get_promotions_info': '🎯 Get Promotions Tool',
+    'get_customer_devices': '📲 Get Customer Devices Tool'
   };
   
   // If we have a mapping for the clean name, use it
@@ -356,20 +356,32 @@ const convertBackendToAgentResponse = (databricksResponse: any): AgentResponse =
     const custom_outputs = databricksResponse.custom_outputs || {};
     const routing_info = custom_outputs.routing || {};
 
-    // Build final informations with more detail
-    const final_informations = [
-      agent_type ? `🤖 Handled by ${agent_type.replace('_', ' ')} specialist` : '🤖 Processed by AI assistant'
-    ];
+    // Build final informations in chronological order
+    const final_informations: string[] = [];
 
-    if (tools.length > 0) {
-      final_informations.push(`🔧 Used ${tools.length} tool${tools.length !== 1 ? 's' : ''} to gather information`);
-    }
-
-    // Add routing information if available
+    // 1. First show routing information (what happened first)
     const routing_steps = execution_steps.filter((step: any) => step.step_type === 'routing');
     routing_steps.forEach((step: any) => {
-      final_informations.push(`📍 ${step.description}`);
+      final_informations.push(`📍 Query routed to ${agent_type?.replace('_', ' ') || 'agent'} agent`);
     });
+
+    // 2. Then show tools used (what happened next)
+    if (tools.length > 0) {
+      const toolNames = tools.map(tool => {
+        // Extract just the core name from humanized tool names (remove emoji and extra text)
+        const coreName = tool.tool_name
+          .replace(/^[^\w\s]+\s*/, '') // Remove emoji and leading non-word chars
+          .replace(/\s+(Search|Lookup|Details|Information|Analytics)$/, ''); // Simplify endings
+        return coreName;
+      });
+      
+      final_informations.push(`🔧 Used ${tools.length} tool${tools.length !== 1 ? 's' : ''} to gather information (${toolNames.join(', ')})`);
+    }
+
+    // 3. Finally show who handled it (summary)
+    final_informations.push(
+      agent_type ? `🤖 Response handled by ${agent_type.replace('_', ' ')} specialist` : '🤖 Response handled by AI assistant'
+    );
 
     return {
       question: '', // Will be set by caller
