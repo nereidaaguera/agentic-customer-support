@@ -7,7 +7,7 @@ resources:
         - task_key: log_register_agent
           job_cluster_key: log_deploy_cluster
           notebook_task:
-            notebook_path: ../notebooks/03_log_register/log_register_agent.py
+            notebook_path: ../notebooks/03_log_register_agent/log_register_agent.py
             base_parameters:
               env: ${bundle.target}
               git_commit: ${bundle.git.commit}
@@ -17,7 +17,7 @@ resources:
           depends_on:
             - task_key: log_register_agent
           notebook_task:
-            notebook_path: ../notebooks/04_deploy/deploy_agent.py
+            notebook_path: ../notebooks/04_deploy_agent/deploy_agent.py
             base_parameters:
               env: ${bundle.target}
       job_clusters:
