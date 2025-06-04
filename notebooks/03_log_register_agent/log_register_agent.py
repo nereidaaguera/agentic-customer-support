@@ -17,10 +17,22 @@ import os
 import sys
 import mlflow
 import yaml
+from mlflow.utils.databricks_utils import dbutils
 
 project_root = os.path.abspath(os.path.join(os.getcwd(), "../.."))
 sys.path.append(project_root)
 print(f"Added {project_root} to Python path")
+
+dbutils.widgets.text("env", "dev")
+dbutils.widgets.text("git_commit", "")
+dbutils.widgets.text("experiment_name", "/Workspace/telco_support_agent/dev/experiments")
+
+env = dbutils.widgets.get("env")
+git_commit = dbutils.widgets.get("git_commit")
+experiment_name = dbutils.widgets.get("experiment_name")
+
+# Setting env variable for telco support agent. In this way, the agent will deploy in the correct catalog and schema.
+os.environ['TELCO_SUPPORT_AGENT_ENV'] = env
 
 # COMMAND ----------
 
@@ -49,6 +61,9 @@ print(f"  Name: {config['name']}")
 print(f"  Description: {config['description']}")
 print(f"  UC Model: {uc_model_name}")
 print(f"  Input Example: {config['input_example']}")
+print(f"  Environment: {env}")
+print(f"  Git Commit: {git_commit}")
+print(f"  Experiment Name: {experiment_name}")
 
 # COMMAND ----------
 
