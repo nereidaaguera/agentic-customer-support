@@ -30,6 +30,6 @@ resources:
             node_type_id: i3.xlarge
             custom_tags:
               ResourceClass: SingleNode
-            data_security_mode: SINGLE_USER
+            data_security_mode: USER_ISOLATION
             runtime_engine: STANDARD
             num_workers: 0
