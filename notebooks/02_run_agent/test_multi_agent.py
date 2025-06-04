@@ -260,18 +260,6 @@ for query, description in account_quality_queries:
 
 # COMMAND ----------
 
-# billing_quality_queries = [
-#     ("What are the charges on my bill from 2025-04-01 to 2025-04-30?", "Date Range Billing"),
-#     ("When is my payment due?", "Payment Due Date"),
-#     ("I see an additional charge for $39 in my May bill that I don't recognize. show me my bill", "Unrecognized Charge"),## validated customer ID and additional charge
-#     ("Is there an unpaid amount for customer CUS-10001 from 2025-04-01 to 2025-04-30?", "Payment Status"),
-#     # ("Why is my bill higher this month?", "Bill Change Inquiry"), # remove why type of question
-#     ("Show me my billing details for March 2025", "Specific Month Billing"),
-#     ("How much data, voice minutes, and SMS did I use in the current billing cycle?", "Current Usage Query"),
-#     ("What's my usage breakdown for the past 3 months?", "Historical Usage Query"),
-#     ("How much is my total amount and how much is my base amount this month?", "Billing Breakdown Query"),
-# ]
-## use the same queries as in test_billing_agent.py
 billing_quality_queries = [
     ("What are the charges on my bill from 2025-04-01 to 2025-04-30?", "CUS-10001", "Date Range Billing"),
     ("When is my June payment due", "CUS-10001", "Payment Due Date"),
