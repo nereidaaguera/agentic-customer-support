@@ -20,7 +20,7 @@ targets:
     workspace:
       host: https://db-ml-models-prod-us-west.cloud.databricks.com
     run_as:
-      service_principal_name: telco-customer-support-sp-dev
+      service_principal_name: ${workspace.current_user.userName}
     variables:
       experiment_name: /Workspace/telco_support_agent/dev/experiments
   prod:
@@ -28,6 +28,6 @@ targets:
     workspace:
       host: https://db-ml-models-prod-us-west.cloud.databricks.com
     run_as:
-      service_principal_name: telco-customer-support-sp-prod
+      service_principal_name: ${workspace.current_user.userName}
     variables:
       experiment_name: /Workspace/telco_support_agent/prod/experiments
