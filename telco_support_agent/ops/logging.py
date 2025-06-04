@@ -173,8 +173,13 @@ def _get_supervisor_resources(environment: str) -> list[Resource]:
                     uc_functions.add(uc_func_name)
                     logger.info(f"Added UC function: {uc_func_name}")
 
-    # Vector Search indexes
+    # system functions used by agents
+    system_functions = ["system.ai.python_exec"]
+    for sys_func in system_functions:
+        resources.append(DatabricksFunction(function_name=sys_func))
+        logger.info(f"Added system function: {sys_func}")
 
+    # Vector Search indexes
     vector_indexes = [
         f"{agent_catalog}.{agent_schema}.knowledge_base_index",
         f"{agent_catalog}.{agent_schema}.support_tickets_index",
