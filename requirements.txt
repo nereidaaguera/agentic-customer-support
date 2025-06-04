@@ -19,7 +19,6 @@ cffi==1.17.1
 charset-normalizer==3.4.2
 click==8.2.1
 cloudpickle==3.1.1
-colorama==0.4.6
 contourpy==1.3.2
 cryptography==45.0.3
 cycler==0.12.1
@@ -103,7 +102,6 @@ pydantic==2.11.5
 pyparsing==3.2.3
 python-dateutil==2.9.0.post0
 pytz==2025.2
-pywin32==310
 pyyaml==6.0.2
 regex==2024.11.6
 requests-toolbelt==1.0.0
@@ -133,7 +131,6 @@ unitycatalog-client==0.2.1
 unitycatalog-openai==0.2.0
 urllib3==2.4.0
 uvicorn==0.34.3
-waitress==3.0.2
 werkzeug==3.1.3
 yarl==1.20.0
 zipp==3.22.0
