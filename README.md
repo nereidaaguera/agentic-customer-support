@@ -106,15 +106,6 @@ We use a `requirements.txt` file to pip install dependencies in notebooks. To ge
 ./scripts/generate-requirements.sh
 ```
 
-**Manual alternative:**
-```bash
-# Generate with Poetry
-poetry export --format=requirements.txt --output=requirements.txt --without-hashes --only main
-
-# keep package versions only
-sed -i '' 's/ ; .*//' requirements.txt
-```
-
 The generated `requirements.txt` contains only the main dependencies with clean `package==version` format.
 
 ### Databricks Development
