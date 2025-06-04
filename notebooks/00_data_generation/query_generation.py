@@ -796,12 +796,7 @@ def test_single_query():
         print("Logging feedback...")
         feedback_logger.log_feedback_for_query(feedbacks, trace_id)
         
-        # show response
-        print(f"\nResponse structure: {list(response.keys())}")
-        if 'output' in response:
-            print(f"Output items: {len(response['output'])}")
-        if 'custom_outputs' in response:
-            print(f"Custom outputs: {list(response['custom_outputs'].keys())}")
+        print(f"\nResponse: {response}")
             
         print("\n✅ Single query test completed successfully!")
         return True
@@ -892,7 +887,6 @@ def run_synthetic_query_batch(num_queries: int = QUERIES_PER_BATCH) -> Dict[str,
     
     # log batch summary
     engine.log_batch_summary(results)
-    mlflow.log_metric("batch_total_time_seconds", batch_total_time)
     
     # create summary
     summary = {
@@ -963,20 +957,18 @@ def run_continuous_simulation(batches: int = 3, delay_between_batches: int = 300
 
 # COMMAND ----------
 
-# Generate sample queries for manual review
 print("Generating sample queries...")
 generate_sample_queries_for_testing()
 
-# Run single query test
-print("\nRunning single query test...")
+# COMMAND ----------
+
+print("Running single query test...")
 single_test_success = test_single_query()
 
-# Run small batch test if single test passes
-if single_test_success:
-    print("\nRunning small batch test...")
-    test_results = test_small_batch()
-else:
-    print("Skipping batch test due to single query test failure")
+# COMMAND ----------
+
+print("Running small batch test...")
+test_results = test_small_batch()
 
 # COMMAND ----------
 
