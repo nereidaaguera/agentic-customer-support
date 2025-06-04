@@ -57,7 +57,8 @@ const humanizeToolName = (technicalName: string): string => {
     'get_plans_info': '📝 Get Plans Info Tools',
     'get_devices_info': '📱 Get Devices Info Tools',
     'get_promotions_info': '🎯 Get Promotions Tool',
-    'get_customer_devices': '📲 Get Customer Devices Tool'
+    'get_customer_devices': '📲 Get Customer Devices Tool',
+    'python_exec': '🐍 Python Executor Tool'
   };
   
   // If we have a mapping for the clean name, use it
@@ -92,7 +93,8 @@ const createToolDescription = (toolName: string, toolArgs?: any): string => {
     'get_plans_info': 'Comparing available plans',
     'get_devices_info': 'Looking up device specifications',
     'get_promotions_info': 'Finding current promotions',
-    'get_customer_devices': 'Checking registered devices'
+    'get_customer_devices': 'Checking registered devices',
+    'python_exec': 'Running python code'
   };
   
   let baseDescription = descriptions[cleanToolName];
@@ -101,8 +103,20 @@ const createToolDescription = (toolName: string, toolArgs?: any): string => {
     baseDescription = `Processing ${cleanName}`;
   }
   
-  // Add context from arguments if available
-  if (toolArgs) {
+  // Special handling for python_exec - try to infer what it's doing from the code
+  if (cleanToolName === 'python_exec' && toolArgs?.code) {
+    const code = toolArgs.code.toLowerCase();
+    if (code.includes('datetime')) {
+      baseDescription = 'Calculating date information';
+    } else if (code.includes('math') || code.includes('calculate')) {
+      baseDescription = 'Performing calculations';
+    } else {
+      baseDescription = 'Running python code';
+    }
+  }
+  
+  // Add context from arguments if available (for other tools)
+  if (toolArgs && cleanToolName !== 'python_exec') {
     if (toolArgs.query) {
       baseDescription += ` for "${toolArgs.query}"`;
     } else if (toolArgs.customer_id) {
@@ -136,7 +150,8 @@ const createNaturalReasoning = (toolName: string, toolArgs?: any): string => {
     'get_plans_info': 'I\'ll look up our current plan offerings to help you compare options',
     'get_devices_info': 'Let me check our device catalog to provide detailed specifications',
     'get_promotions_info': 'I\'ll search for current promotions and offers that might benefit you',
-    'get_customer_devices': 'Let me review the devices registered to your account'
+    'get_customer_devices': 'Let me review the devices registered to your account',
+    'python_exec': 'I need to perform some calculations to get the exact information you requested'
   };
   
   let reasoning = reasoningTemplates[cleanToolName];
@@ -145,8 +160,20 @@ const createNaturalReasoning = (toolName: string, toolArgs?: any): string => {
     reasoning = `Let me process your request using ${cleanName}`;
   }
   
-  // Add specific context for search queries
-  if (toolArgs?.query) {
+  // Special handling for python_exec - try to be more specific
+  if (cleanToolName === 'python_exec' && toolArgs?.code) {
+    const code = toolArgs.code.toLowerCase();
+    if (code.includes('datetime')) {
+      reasoning = 'I need to calculate date information to answer your question accurately';
+    } else if (code.includes('math') || code.includes('calculate')) {
+      reasoning = 'I need to perform some math calculations to answer your question accurately';
+    } else {
+      reasoning = 'I need to run some calculations to get the exact information you requested';
+    }
+  }
+  
+  // Add specific context for search queries (for other tools)
+  if (toolArgs?.query && cleanToolName !== 'python_exec') {
     reasoning += ` related to "${toolArgs.query}"`;
   }
   
@@ -170,8 +197,46 @@ const summarizeToolResults = (toolName: string, result: any, toolArgs?: any): st
   summaries.push(humanizeToolName(toolName));
   
   if (typeof result === 'string') {
-    // For text results, try to extract meaningful info
-    if (result.includes('page_content')) {
+    // Special handling for python_exec results
+    if (cleanToolName === 'python_exec') {
+      const output = result.trim();
+      
+      // Check for date range pattern (YYYY-MM-DD YYYY-MM-DD)
+      const dateRangeMatch = output.match(/(\d{4}-\d{2}-\d{2})\s+(\d{4}-\d{2}-\d{2})/);
+      if (dateRangeMatch) {
+        const [, startDate, endDate] = dateRangeMatch;
+        const startFormatted = new Date(startDate).toLocaleDateString('en-US', { 
+          month: 'long', 
+          day: 'numeric', 
+          year: 'numeric' 
+        });
+        const endFormatted = new Date(endDate).toLocaleDateString('en-US', { 
+          month: 'long', 
+          day: 'numeric', 
+          year: 'numeric' 
+        });
+        summaries.push(`✅ Calculated date range: ${startFormatted} - ${endFormatted}`);
+      } 
+      // Check for single date
+      else if (output.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        const formatted = new Date(output).toLocaleDateString('en-US', { 
+          month: 'long', 
+          day: 'numeric', 
+          year: 'numeric' 
+        });
+        summaries.push(`✅ Calculated date: ${formatted}`);
+      }
+      // Check for numeric results
+      else if (output.match(/^[\d.]+$/)) {
+        summaries.push(`✅ Calculated result: ${output}`);
+      }
+      // Generic calculation result
+      else {
+        summaries.push(`✅ Calculation completed successfully`);
+      }
+    }
+    // For text results from other tools
+    else if (result.includes('page_content')) {
       const matches = result.match(/ID: ([\w-]+)/g);
       const count = matches ? matches.length : 1;
       summaries.push(`✅ Found ${count} relevant ${cleanToolName.includes('knowledge') ? 'help article' + (count > 1 ? 's' : '') : 'support ticket' + (count > 1 ? 's' : '')}`);
@@ -210,8 +275,8 @@ const summarizeToolResults = (toolName: string, result: any, toolArgs?: any): st
     }
   }
   
-  // Add query context if available
-  if (toolArgs?.query) {
+  // Add query context if available (but not for python_exec)
+  if (toolArgs?.query && cleanToolName !== 'python_exec') {
     summaries.push(`🔍 Search term: "${toolArgs.query}"`);
   }
   
@@ -369,9 +434,16 @@ const convertBackendToAgentResponse = (databricksResponse: any): AgentResponse =
     if (tools.length > 0) {
       const toolNames = tools.map(tool => {
         // Extract just the core name from humanized tool names (remove emoji and extra text)
-        const coreName = tool.tool_name
+        let coreName = tool.tool_name
           .replace(/^[^\w\s]+\s*/, '') // Remove emoji and leading non-word chars
-          .replace(/\s+(Search|Lookup|Details|Information|Analytics)$/, ''); // Simplify endings
+          .replace(/\s+(Search|Lookup|Details|Information|Analytics|Calculator)$/, ''); // Simplify endings
+        
+        // Special cases for better readability
+        if (coreName === 'Python') coreName = 'Python Calculator';
+        if (coreName === 'Knowledge Base') coreName = 'Knowledge Base';
+        if (coreName === 'Support History') coreName = 'Support History';
+        if (coreName === 'Get Billing Info Tool') coreName = 'Billing Info';
+        
         return coreName;
       });
       
@@ -380,7 +452,7 @@ const convertBackendToAgentResponse = (databricksResponse: any): AgentResponse =
 
     // 3. Finally show who handled it (summary)
     final_informations.push(
-      agent_type ? `🤖 Response handled by ${agent_type.replace('_', ' ')} specialist` : '🤖 Response handled by AI assistant'
+      agent_type ? `🤖 Response handled by ${agent_type.replace('_', ' ')} agent` : '🤖 Response handled by AI assistant'
     );
 
     return {
