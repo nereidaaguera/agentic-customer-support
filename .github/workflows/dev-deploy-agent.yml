@@ -3,7 +3,7 @@ name: Dev Databricks Infra CI/CD
 on:
   push:
     branches:
-      - adding_dabs
+      - manfred/adding_dabs
   workflow_dispatch:
     inputs:
       skip_ci_evals:
