@@ -25,8 +25,6 @@ cryptography==45.0.3
 cycler==0.12.1
 databricks-agents==1.0.0rc2
 databricks-ai-bridge==0.5.1
-databricks-connect==16.1.5
-databricks-connect==16.4.0
 databricks-openai==0.4.1
 databricks-sdk==0.52.0
 databricks-vectorsearch==0.56
