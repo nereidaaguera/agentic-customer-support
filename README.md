@@ -57,7 +57,8 @@ telco_support_agent/
 ├── notebooks/               # Databricks notebooks
 │
 ├── scripts/                 # Utility scripts
-│   └── lint.sh              # Linting script
+│   ├── lint.sh              # Linting script
+│   └── generate-requirements.sh  # Generate requirements.txt
 │
 └── tests/                   # Unit / integration tests
     ├── __init__.py
@@ -71,7 +72,7 @@ This project is designed to run on [Databricks Runtime 16.3](https://docs.databr
 ### Environment Setup
 
 #### Prerequisites
-- Python 3.12.3 (matches Databricks Runtime 16.3)
+- Python 3.12+
 - Poetry (2.1.2 and above) for dependency management
 
 #### Local Development
@@ -98,14 +99,23 @@ poetry install
 
 ### Generating requirements.txt
 
-We use a `requirements.txt` file to pip install dependencies in notebooks. To generate the `requirements.txt` from `pyproject.toml`:
+We use a `requirements.txt` file to pip install dependencies in notebooks. To generate a clean `requirements.txt` from `pyproject.toml`:
 
 ```bash
-# generate requirements.txt from pyproject.toml
-poetry export -f requirements.txt --output requirements.txt --without-hashes
+# Generate requirements.txt (removes platform markers)
+./scripts/generate-requirements.sh
 ```
 
-The generated `requirements.txt` will include all dependencies specified in `pyproject.toml`. When running on Databricks Runtime 16.3, many of these dependencies are already pre-installed, but this approach ensures compatibility with both local development and Databricks environments.
+**Manual alternative:**
+```bash
+# Generate with Poetry
+poetry export --format=requirements.txt --output=requirements.txt --without-hashes --only main
+
+# keep package versions only
+sed -i '' 's/ ; .*//' requirements.txt
+```
+
+The generated `requirements.txt` contains only the main dependencies with clean `package==version` format.
 
 ### Databricks Development
 
