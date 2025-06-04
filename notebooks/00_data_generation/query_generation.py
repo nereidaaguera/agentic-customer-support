@@ -9,7 +9,7 @@
 
 # MAGIC %pip install -r ../../requirements.txt -q
 # MAGIC %pip install mlflow databricks-agents --upgrade --pre
-# MAGIC %pip install retry
+# MAGIC %pip install retry textstat
 # MAGIC dbutils.library.restartPython()
 
 # COMMAND ----------
@@ -27,6 +27,9 @@ from dataclasses import dataclass
 import mlflow
 from retry import retry
 from mlflow.deployments import get_deploy_client
+from databricks.agents.evals import judges
+from mlflow.entities.assessment import AssessmentSource, AssessmentSourceType
+import textstat
 
 root_path = os.path.abspath(os.path.join(os.getcwd(), "../.."))
 if root_path:
@@ -41,6 +44,7 @@ from telco_support_agent.data.config import CONFIG
 
 # COMMAND ----------
 
+# Config
 AGENT_ENDPOINT_NAME = "telco-customer-support-agent"
 LLM_ENDPOINT = "databricks-claude-3-7-sonnet"
 MAX_WORKERS = 5  # parallel query execution
@@ -56,7 +60,7 @@ AGENT_NAMES = [
     "Sarah Chen", "Michael Rodriguez", "Jessica Williams", "David Park",
     "Emily Johnson", "Robert Taylor", "Amanda Davis", "James Wilson",
     "Maria Garcia", "Christopher Lee", "Ashley Brown", "Daniel Kim",
-    "Lisa Anderson", "Kevin Martinez", "Rachel Thompson", "Brandon White",
+    "Lisa Anderson", "Kevin Martinez", "Rachel Thompson", "Brandon White"
 ]
 
 print(f"Customer ID range: CUS-{CUSTOMER_ID_START:05d} to CUS-{CUSTOMER_ID_END:05d}")
@@ -80,6 +84,7 @@ class QueryContext:
     persona_context: str
     business_scenario: str
 
+# Query generation templates organized by agent category
 QUERY_TEMPLATES = {
     "account": {
         "contexts": [
@@ -186,6 +191,7 @@ class QueryGenerator:
         
     @retry(tries=3, delay=2)
     def _call_llm(self, system_prompt: str, user_prompt: str) -> str:
+        """Call LLM with retry logic."""
         try:
             response = self.deploy_client.predict(
                 endpoint=self.llm_endpoint,
@@ -375,7 +381,10 @@ class FeedbackGenerator:
         return {
             "name": "helpfulness",
             "value": is_helpful,
-            "source": agent_name,
+            "source": AssessmentSource(
+                source_type=AssessmentSourceType.HUMAN,
+                source_id=agent_name
+            ),
             "rationale": random.choice([
                 "Response directly addressed the customer's question with actionable information",
                 "Customer seemed satisfied with the level of detail provided",
@@ -388,87 +397,154 @@ class FeedbackGenerator:
             ])
         }
     
-    def _generate_accuracy_feedback(self, query: str, response: Dict[str, Any], 
-                                  metadata: Dict[str, Any], agent_name: str) -> Dict[str, Any]:
-        """Generate accuracy feedback."""
-        # 90% accurate feedback
-        is_accurate = random.random() < 0.90
-        
-        return {
-            "name": "accuracy",
-            "value": is_accurate,
-            "source": agent_name,
-            "rationale": random.choice([
-                "Information provided was consistent with company policies",
-                "Data retrieved appeared correct based on customer account",
-                "Technical guidance was sound and appropriate",
-                "Billing information matched customer records"
-            ]) if is_accurate else random.choice([
-                "Minor discrepancy noted in billing calculation",
-                "One piece of information needed verification",
-                "Policy reference could be more current"
-            ])
-        }
-    
-    def _generate_clarity_feedback(self, query: str, response: Dict[str, Any], 
-                                 metadata: Dict[str, Any], agent_name: str) -> Dict[str, Any]:
-        """Generate clarity feedback."""
-        # 80% clear feedback
-        is_clear = random.random() < 0.80
-        
-        return {
-            "name": "clarity",
-            "value": is_clear,
-            "source": agent_name,
-            "rationale": random.choice([
-                "Response was easy to understand and well-structured",
-                "Technical terms were explained appropriately",
-                "Step-by-step instructions were clear and logical",
-                "Customer could easily follow the guidance provided"
-            ]) if is_clear else random.choice([
-                "Some technical language could be simplified",
-                "Response structure could be more organized",
-                "Customer asked for clarification on certain points"
-            ])
-        }
-    
-    def _generate_completeness_feedback(self, query: str, response: Dict[str, Any], 
-                                      metadata: Dict[str, Any], agent_name: str) -> Dict[str, Any]:
-        """Generate completeness feedback."""
-        # 82% complete feedback
-        is_complete = random.random() < 0.82
-        
-        return {
-            "name": "completeness",
-            "value": is_complete,
-            "source": agent_name,
-            "rationale": random.choice([
-                "All aspects of the customer's question were addressed",
-                "Response included relevant additional information",
-                "Follow-up options were clearly provided",
-                "No further questions were needed from the customer"
-            ]) if is_complete else random.choice([
-                "Customer had follow-up questions about specific details",
-                "One aspect of the inquiry could have been expanded",
-                "Additional context would have been helpful"
-            ])
-        }
-    
     def _generate_response_time_feedback(self, query: str, response: Dict[str, Any], 
                                        metadata: Dict[str, Any], agent_name: str) -> Dict[str, Any]:
         """Generate response time feedback."""
-        # Random response time between 1-10 seconds, mostly good
+        # random response time between 1-10 seconds, mostly good
         response_time = random.uniform(1.2, 8.5)
         is_fast_enough = response_time < 6.0
         
         return {
             "name": "response_time_seconds",
             "value": round(response_time, 1),
-            "source": agent_name,
+            "source": AssessmentSource(
+                source_type=AssessmentSourceType.HUMAN,
+                source_id=agent_name
+            ),
             "rationale": f"Response generated in {response_time:.1f} seconds" + (
                 " - within expected range" if is_fast_enough else " - slightly slower than optimal"
             )
         }
+    
+    def _generate_judge_feedback(self, query: str, response: Dict[str, Any], trace_id: str) -> List[Dict[str, Any]]:
+        """Generate judge-based feedback evaluations."""
+        feedbacks = []
+        
+        try:
+            # get trace for judge evaluation
+            trace = mlflow.get_trace(trace_id)
+            if not trace:
+                return feedbacks
+                
+            request = trace.data.spans[0].get_attribute('mlflow.spanInputs')
+            response_data = trace.data.spans[0].get_attribute('mlflow.spanOutputs')
+            
+            # professionalism evaluation
+            try:
+                professionalism = judges.guideline_adherence(
+                    request=request,
+                    response=response_data,
+                    guidelines=[
+                        "The response should be professional and respectful.",
+                        "The response should be appropriate for customer service."
+                    ],
+                    assessment_name="professionalism"
+                )
+                
+                feedbacks.append({
+                    "name": "professionalism",
+                    "value": professionalism.value == "yes",
+                    "source": professionalism.source,
+                    "rationale": professionalism.rationale,
+                    "trace_id": trace_id
+                })
+            except Exception as e:
+                print(f"Professionalism evaluation failed: {e}")
+            
+            # accuracy evaluation 
+            try:
+                accuracy = judges.guideline_adherence(
+                    request=request,
+                    response=response_data,
+                    guidelines=[
+                        "The response should provide accurate information based on the customer's query.",
+                        "The response should not contain factual errors."
+                    ],
+                    assessment_name="accuracy"
+                )
+                
+                feedbacks.append({
+                    "name": "accuracy", 
+                    "value": accuracy.value == "yes",
+                    "source": accuracy.source,
+                    "rationale": accuracy.rationale,
+                    "trace_id": trace_id
+                })
+            except Exception as e:
+                print(f"Accuracy evaluation failed: {e}")
+                
+        except Exception as e:
+            print(f"Judge feedback generation failed: {e}")
+            
+        return feedbacks
+    
+    def _generate_reading_ease_feedback(self, response: Dict[str, Any], agent_name: str) -> List[Dict[str, Any]]:
+        """Generate reading ease feedback using textstat."""
+        feedbacks = []
+        
+        try:
+            # extract response text
+            response_text = self._extract_response_text(response)
+            if not response_text:
+                return feedbacks
+                
+            # calculate reading ease
+            reading_ease = textstat.flesch_reading_ease(response_text)
+            
+            # categorize reading ease
+            if reading_ease >= 90:
+                reading_ease_bucket = "Very Easy"
+            elif reading_ease >= 80:
+                reading_ease_bucket = "Easy"
+            elif reading_ease >= 70:
+                reading_ease_bucket = "Fairly Easy"
+            elif reading_ease >= 60:
+                reading_ease_bucket = "Standard"
+            elif reading_ease >= 50:
+                reading_ease_bucket = "Fairly Difficult"
+            elif reading_ease >= 30:
+                reading_ease_bucket = "Difficult"
+            else:
+                reading_ease_bucket = "Very Confusing"
+            
+            feedbacks.extend([
+                {
+                    "name": "reading_ease_score",
+                    "value": reading_ease,
+                    "source": AssessmentSource(
+                        source_type=AssessmentSourceType.CODE,
+                        source_id="textstat.flesch_reading_ease"
+                    ),
+                    "rationale": f"Flesch reading ease score: {reading_ease:.1f}"
+                },
+                {
+                    "name": "reading_ease_category",
+                    "value": reading_ease_bucket,
+                    "source": AssessmentSource(
+                        source_type=AssessmentSourceType.CODE,
+                        source_id="textstat.flesch_reading_ease"
+                    ),
+                    "rationale": f"Reading difficulty level: {reading_ease_bucket}"
+                }
+            ])
+            
+        except Exception as e:
+            print(f"Reading ease calculation failed: {e}")
+            
+        return feedbacks
+    
+    def _extract_response_text(self, response: Dict[str, Any]) -> str:
+        """Extract main response text from agent response."""
+        try:
+            if "output" in response:
+                for item in response["output"]:
+                    if item.get("type") == "message" and "content" in item:
+                        for content in item["content"]:
+                            if content.get("type") == "output_text":
+                                return content.get("text", "")
+            return ""
+        except Exception:
+            return ""
 
 # COMMAND ----------
 
@@ -617,6 +693,7 @@ class SyntheticQueryEngine:
         else:
             avg_execution_time = 0
         
+        # category breakdown
         category_stats = {}
         for result in results:
             category = result["metadata"]["category"]
@@ -640,7 +717,6 @@ class SyntheticQueryEngine:
             success_rate = (stats["success"] / stats["total"]) * 100 if stats["total"] > 0 else 0
             print(f"  {category.title()}: {stats['success']}/{stats['total']} ({success_rate:.1f}%)")
         
-        # feedback summary
         total_feedbacks = sum(len(r["feedbacks"]) for r in results if r["success"])
         print(f"\nFeedback Generated: {total_feedbacks} items")
         
@@ -649,5 +725,3 @@ class SyntheticQueryEngine:
             for result in results:
                 if not result["success"]:
                     print(f"  - {result['query'][:80]}... | Error: {result['error']}")
-        
-        print(f"{'='*60}\n")
