@@ -243,36 +243,44 @@ export const getPredefinedQuestions = async () => {
   // Return telco-specific questions
   return [
     {
-      preview: "What plan am I on?",
-      text: "What plan am I currently on?"
+      preview: "Current plan",
+      text: "What plan is the customer currently on?"
     },
     {
-      preview: "Check my bill",
-      text: "Can you show me my billing details for this month?"
+      preview: "Active subscriptions",
+      text: "Show all active subscriptions and their status for the customer"
     },
     {
-      preview: "Data usage",
-      text: "How much data have I used this month?"
+      preview: "Customer segment",
+      text: "What is the customer's segment and loyalty tier?"
     },
     {
-      preview: "Account info",
-      text: "Can you show me my account information?"
+      preview: "April charges",
+      text: "What are the charges on the customer's from 2025-04-01 to 2025-04-30?"
     },
     {
-      preview: "Device info",
-      text: "What devices do I have on my account?"
+      preview: "Payment due date",
+      text: "When will the customer's current payment be due?"
     },
     {
-      preview: "Available plans",
-      text: "What plans are available and how do they compare?"
+      preview: "Bill breakdown",
+      text: "Break down the total amount of the customer's latest billing statement"
     },
     {
-      preview: "WiFi issues",
-      text: "My phone won't connect to WiFi, can you help?"
+      preview: "International roaming",
+      text: "How do I set up international roaming for my upcoming trip?"
     },
     {
-      preview: "Promotions",
-      text: "Are there any current promotions I can take advantage of?"
+      preview: "Dropped calls",
+      text: "My iPhone keeps dropping calls during conversations"
+    },
+    {
+      preview: "Plan comparison",
+      text: "What's the difference between the Standard and Premium plans?"
+    },
+    {
+      preview: "iPhone promotions",
+      text: "Are there any active promotions for iPhone upgrades?"
     }
   ];
 };
