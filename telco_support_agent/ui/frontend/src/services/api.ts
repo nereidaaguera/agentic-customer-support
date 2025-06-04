@@ -32,6 +32,28 @@ export const agentResultsEmitter = {
 };
 
 // =============================================================================
+// STREAMING EVENT INTERFACES
+// =============================================================================
+
+/**
+ * Enhanced streaming interface to handle different event types
+ */
+interface StreamingEvent {
+  type: 'routing' | 'tool_call' | 'tool_result' | 'response_text' | 'completion' | 'error';
+  agent_type?: string;
+  routing_decision?: string;
+  tool_name?: string;
+  call_id?: string;
+  arguments?: string;
+  output?: string;
+  text?: string;
+  tools_used?: any[];
+  final_response?: string;
+  error?: string;
+  done?: boolean;
+}
+
+// =============================================================================
 // HUMANIZATION HELPER FUNCTIONS
 // =============================================================================
 
@@ -319,19 +341,8 @@ const convertToConversationHistory = (messages: ApiMessage[]) => {
   }));
 };
 
-// Define types for execution steps
-interface ExecutionStep {
-  step_type: string;
-  tool_name?: string;
-  description: string;
-  arguments?: any;
-  reasoning?: string;
-  call_id?: string;
-  result?: any;
-}
-
 /**
- * Convert backend response to frontend AgentResponse format
+ * Convert backend response to frontend AgentResponse format (for non-streaming)
  */
 const convertBackendToAgentResponse = (databricksResponse: any): AgentResponse => {
   try {
@@ -341,7 +352,7 @@ const convertBackendToAgentResponse = (databricksResponse: any): AgentResponse =
     const tools: ToolCall[] = [];
 
     // Get execution steps from the actual response structure
-    const execution_steps: ExecutionStep[] = databricksResponse.custom_outputs?.execution_steps || [];
+    const execution_steps: any[] = databricksResponse.custom_outputs?.execution_steps || [];
 
     // Process tools_used array if it exists
     if (databricksResponse.tools_used && Array.isArray(databricksResponse.tools_used)) {
@@ -417,10 +428,6 @@ const convertBackendToAgentResponse = (databricksResponse: any): AgentResponse =
       });
     }
 
-    // Extract custom outputs for agent routing info
-    const custom_outputs = databricksResponse.custom_outputs || {};
-    const routing_info = custom_outputs.routing || {};
-
     // Build final informations in chronological order
     const final_informations: string[] = [];
 
@@ -476,7 +483,7 @@ const convertBackendToAgentResponse = (databricksResponse: any): AgentResponse =
 };
 
 /**
- * Send a message to the telco support agent backend
+ * Send a message to the telco support agent backend with streaming
  * @param messages The conversation history
  * @param messageId The ID of the message being responded to
  * @param intelligenceEnabled Whether to show the full intelligence process
@@ -503,7 +510,7 @@ export const sendMessageToAgent = async (
       messages.slice(0, -1) // Exclude the last message as it's the current one
     );
 
-    // Build request payload for your backend
+    // Build request payload for backend
     const requestPayload = {
       message: lastUserMessage.content,
       customer_id: customerID,
@@ -515,7 +522,265 @@ export const sendMessageToAgent = async (
       type: 'thinking-start'
     });
 
-    // Make request to your backend
+    // Make streaming request to backend
+    const response = await fetch('/api/chat/stream', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+      },
+      body: JSON.stringify(requestPayload)
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    // Handle streaming response
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error('No response body reader available');
+    }
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let agentType: string | null = null;
+    let toolsUsed: ToolCall[] = [];
+    let currentToolCalls = new Map<string, any>();
+    let finalResponse = '';
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) {
+          break;
+        }
+
+        // Decode chunk and add to buffer
+        buffer += decoder.decode(value, { stream: true });
+        
+        // Process complete lines
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // Keep incomplete line in buffer
+        
+        for (const line of lines) {
+          if (line.trim() === '') continue;
+          
+          // Parse Server-Sent Event
+          if (line.startsWith('data: ')) {
+            const eventData = line.slice(6); // Remove 'data: ' prefix
+            
+            if (eventData === '[DONE]') {
+              break;
+            }
+            
+            try {
+              const event: StreamingEvent = JSON.parse(eventData);
+              
+              // Handle different event types
+              switch (event.type) {
+                case 'routing':
+                  agentType = event.agent_type || null;
+                  
+                  if (intelligenceEnabled) {
+                    agentResultsEmitter.emit(messageId, {
+                      type: 'routing',
+                      data: {
+                        agent_type: agentType,
+                        routing_decision: event.routing_decision
+                      }
+                    });
+                  }
+                  break;
+                  
+                case 'tool_call':
+                  if (intelligenceEnabled && event.tool_name && event.call_id) {
+                    // Store tool call info for when we get the result
+                    currentToolCalls.set(event.call_id, {
+                      tool_name: event.tool_name,
+                      arguments: event.arguments,
+                      call_id: event.call_id
+                    });
+                    
+                    // Create tool call for frontend display
+                    const toolCall: ToolCall = {
+                      tool_name: humanizeToolName(event.tool_name),
+                      description: createToolDescription(event.tool_name, 
+                        event.arguments ? JSON.parse(event.arguments) : {}),
+                      reasoning: createNaturalReasoning(event.tool_name, 
+                        event.arguments ? JSON.parse(event.arguments) : {}),
+                      type: 'EXTERNAL_API',
+                      informations: [
+                        humanizeToolName(event.tool_name),
+                        createToolDescription(event.tool_name, 
+                          event.arguments ? JSON.parse(event.arguments) : {})
+                      ]
+                    };
+                    
+                    toolsUsed.push(toolCall);
+                    
+                    // Emit tool call started
+                    agentResultsEmitter.emit(messageId, {
+                      type: 'tool',
+                      data: toolCall
+                    });
+                  }
+                  break;
+                  
+                case 'tool_result':
+                  if (intelligenceEnabled && event.call_id) {
+                    // Get the corresponding tool call
+                    const toolCall = currentToolCalls.get(event.call_id);
+                    if (toolCall) {
+                      // Update tool with result information
+                      const updatedInformations = summarizeToolResults(
+                        toolCall.tool_name, 
+                        event.output, 
+                        toolCall.arguments ? JSON.parse(toolCall.arguments) : {}
+                      );
+                      
+                      // Find and update the tool in toolsUsed array
+                      const toolIndex = toolsUsed.findIndex(tool => 
+                        currentToolCalls.get(event.call_id!)?.tool_name === toolCall.tool_name
+                      );
+                      
+                      if (toolIndex !== -1) {
+                        toolsUsed[toolIndex].informations = updatedInformations;
+                      }
+                      
+                      // Emit tool completion with results
+                      agentResultsEmitter.emit(messageId, {
+                        type: 'tool_result',
+                        data: {
+                          call_id: event.call_id,
+                          informations: updatedInformations
+                        }
+                      });
+                    }
+                  }
+                  break;
+                  
+                case 'response_text':
+                  // Accumulate response text
+                  if (event.text) {
+                    finalResponse = event.text;
+                  }
+                  break;
+                  
+                case 'completion':
+                  // Final completion event
+                  agentType = event.agent_type || agentType;
+                  finalResponse = event.final_response || finalResponse;
+                  
+                  // Build final informations
+                  const finalInformations: string[] = [];
+                  
+                  if (agentType) {
+                    finalInformations.push(`📍 Query routed to ${agentType.replace('_', ' ')} agent`);
+                  }
+                  
+                  if (toolsUsed.length > 0) {
+                    const toolNames = toolsUsed.map(tool => {
+                      let coreName = tool.tool_name
+                        .replace(/^[^\w\s]+\s*/, '') // Remove emoji and leading non-word chars
+                        .replace(/\s+(Search|Lookup|Details|Information|Analytics|Calculator)$/, '');
+                      return coreName;
+                    });
+                    
+                    finalInformations.push(`🔧 Used ${toolsUsed.length} tool${toolsUsed.length !== 1 ? 's' : ''} to gather information (${toolNames.join(', ')})`);
+                  }
+                  
+                  finalInformations.push(
+                    agentType ? `🤖 Response handled by ${agentType.replace('_', ' ')} agent` : '🤖 Response handled by AI assistant'
+                  );
+                  
+                  // Emit final answer
+                  agentResultsEmitter.emit(messageId, {
+                    type: 'final-answer',
+                    data: {
+                      final_answer: finalResponse || "I apologize, but I couldn't generate a proper response. Please try again.",
+                      final_informations: finalInformations
+                    }
+                  });
+                  return; // Exit the function
+                  
+                case 'error':
+                  throw new Error(event.error || 'Unknown streaming error');
+                  
+                default:
+                  console.log('Unknown event type:', event.type, event);
+              }
+              
+            } catch (parseError) {
+              console.error('Error parsing streaming event:', parseError, 'Raw data:', eventData);
+            }
+          }
+        }
+      }
+      
+    } finally {
+      reader.releaseLock();
+    }
+
+  } catch (error) {
+    console.error('Error in sendMessageToAgent:', error);
+    
+    // Emit error response
+    agentResultsEmitter.emit(messageId, {
+      type: 'final-answer',
+      data: {
+        final_answer: 'I apologize, but I encountered an error processing your request. Please try again.',
+        final_informations: ['❌ Error occurred during processing']
+      }
+    });
+    
+    throw error;
+  }
+};
+
+/**
+ * Send a message to the telco support agent backend (non-streaming fallback)
+ * @param messages The conversation history
+ * @param messageId The ID of the message being responded to
+ * @param intelligenceEnabled Whether to show the full intelligence process
+ * @param customerID The customer ID for the request
+ * @returns A promise that resolves when the agent response is emitted
+ */
+export const sendMessageToAgentNonStreaming = async (
+  messages: ApiMessage[], 
+  messageId: string, 
+  intelligenceEnabled: boolean = true,
+  customerID: string = 'CUS-10001'
+): Promise<void> => {
+  try {
+    // Get the last user message
+    const userMessages = messages.filter(msg => msg.role === 'user');
+    const lastUserMessage = userMessages[userMessages.length - 1];
+    
+    if (!lastUserMessage) {
+      throw new Error('No user message found');
+    }
+
+    // Convert conversation history (exclude the current message)
+    const conversationHistory = convertToConversationHistory(
+      messages.slice(0, -1) // Exclude the last message as it's the current one
+    );
+
+    // Build request payload for backend
+    const requestPayload = {
+      message: lastUserMessage.content,
+      customer_id: customerID,
+      conversation_history: conversationHistory
+    };
+
+    // Emit thinking start event
+    agentResultsEmitter.emit(messageId, {
+      type: 'thinking-start'
+    });
+
+    // Make request to backend
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: {
@@ -563,14 +828,14 @@ export const sendMessageToAgent = async (
     });
 
   } catch (error) {
-    console.error('Error in sendMessageToAgent:', error);
+    console.error('Error in sendMessageToAgentNonStreaming:', error);
     
     // Emit error response
     agentResultsEmitter.emit(messageId, {
       type: 'final-answer',
       data: {
         final_answer: 'I apologize, but I encountered an error processing your request. Please try again.',
-        final_informations: ['Error occurred during processing']
+        final_informations: ['❌ Error occurred during processing']
       }
     });
     

@@ -1,6 +1,5 @@
 """Service for interacting with the Databricks Telco Support Agent."""
 
-import asyncio
 import json
 import logging
 from collections.abc import AsyncGenerator
@@ -129,7 +128,11 @@ class TelcoAgentService:
             await self.client.aclose()
 
     def _build_databricks_payload(
-        self, message: str, customer_id: str, conversation_history: list[ChatMessage]
+        self,
+        message: str,
+        customer_id: str,
+        conversation_history: list[ChatMessage],
+        stream: bool = False,
     ) -> dict[str, Any]:
         """Build the payload for Databricks API."""
         input_messages = []
@@ -139,7 +142,12 @@ class TelcoAgentService:
         # Add current user message
         input_messages.append({"role": "user", "content": message})
 
-        return {"input": input_messages, "custom_inputs": {"customer": customer_id}}
+        payload = {"input": input_messages, "custom_inputs": {"customer": customer_id}}
+
+        if stream:
+            payload["stream"] = True
+
+        return payload
 
     def _parse_agent_response(
         self, databricks_response: dict[str, Any]
@@ -255,6 +263,29 @@ class TelcoAgentService:
                 tools_used=None,
             )
 
+    def _parse_sse_line(self, line: str) -> Optional[dict]:
+        """Parse a single Server-Sent Event line."""
+        line = line.strip()
+
+        # skip empty lines and comments
+        if not line or line.startswith(":"):
+            return None
+
+        # handle data lines
+        if line.startswith("data: "):
+            data_content = line[6:]  # Remove 'data: ' prefix
+
+            if data_content == "[DONE]":
+                return {"type": "done"}
+
+            try:
+                return json.loads(data_content)
+            except json.JSONDecodeError as e:
+                logger.warning(f"Failed to parse SSE data: {data_content}, error: {e}")
+                return None
+
+        return None
+
     async def send_message(
         self,
         message: str,
@@ -279,7 +310,7 @@ class TelcoAgentService:
 
         try:
             payload = self._build_databricks_payload(
-                message, customer_id, conversation_history
+                message, customer_id, conversation_history, stream=False
             )
 
             logger.info(f"Sending request to Databricks for customer {customer_id}")
@@ -353,27 +384,197 @@ class TelcoAgentService:
         customer_id: str,
         conversation_history: list[ChatMessage] = None,
     ) -> AsyncGenerator[str, None]:
-        """Send a message with streaming response."""
+        """Send a message with real streaming response."""
         if conversation_history is None:
             conversation_history = []
 
+        if not self.client:
+            error_response = {
+                "type": "error",
+                "error": "Chat functionality is currently unavailable. Please configure Databricks authentication.",
+                "done": True,
+            }
+            yield f"data: {json.dumps(error_response)}\n\n"
+            return
+
         try:
-            agent_response = await self.send_message(
-                message, customer_id, conversation_history
+            payload = self._build_databricks_payload(
+                message, customer_id, conversation_history, stream=True
             )
 
-            response_text = agent_response.response
-            chunk_size = 10  # characters per chunk
+            logger.info(f"Starting streaming request for customer {customer_id}")
+            headers = await self._get_headers()
 
-            for i in range(0, len(response_text), chunk_size):
-                chunk = response_text[i : i + chunk_size]
-                yield f"data: {json.dumps({'text': chunk, 'done': False})}\n\n"
-                await asyncio.sleep(0.1)
+            # make streaming request
+            async with self.client.stream(
+                "POST", self.settings.databricks_endpoint, json=payload, headers=headers
+            ) as response:
+                if response.status_code != 200:
+                    error_msg = f"HTTP {response.status_code}: {response.reason_phrase}"
+                    logger.error(f"Streaming request failed: {error_msg}")
 
-            yield f"data: {json.dumps({'done': True, 'agent_type': agent_response.agent_type, 'tools_used': agent_response.tools_used})}\n\n"
+                    error_response = {
+                        "type": "error",
+                        "error": f"Service temporarily unavailable ({error_msg})",
+                        "done": True,
+                    }
+                    yield f"data: {json.dumps(error_response)}\n\n"
+                    return
+
+                collected_tools = []
+                current_response_text = ""
+                agent_type = None
+                routing_info = None
+
+                async for chunk in response.aiter_text():
+                    lines = chunk.split("\n")
+
+                    for line in lines:
+                        event_data = self._parse_sse_line(line)
+
+                        if not event_data:
+                            continue
+
+                        event_type = event_data.get("type")
+
+                        if event_type == "response.debug":
+                            # Routing decision
+                            item = event_data.get("item", {})
+                            routing_decision = item.get("routing_decision", "")
+
+                            if "routed to" in routing_decision.lower():
+                                # Extract agent type from routing decision
+                                if "account agent" in routing_decision.lower():
+                                    agent_type = "account"
+                                elif "billing agent" in routing_decision.lower():
+                                    agent_type = "billing"
+                                elif "tech support agent" in routing_decision.lower():
+                                    agent_type = "tech_support"
+                                elif "product agent" in routing_decision.lower():
+                                    agent_type = "product"
+
+                                routing_info = routing_decision
+
+                                # Send routing event to frontend
+                                routing_event = {
+                                    "type": "routing",
+                                    "agent_type": agent_type,
+                                    "routing_decision": routing_decision,
+                                }
+                                yield f"data: {json.dumps(routing_event)}\n\n"
+
+                        elif event_type == "response.output_item.done":
+                            item = event_data.get("item", {})
+                            item_type = item.get("type")
+
+                            if item_type == "function_call":
+                                # Tool call started
+                                tool_info = {
+                                    "type": "tool_call",
+                                    "tool_name": item.get("name", "unknown"),
+                                    "call_id": item.get("call_id"),
+                                    "arguments": item.get("arguments", "{}"),
+                                }
+
+                                # add to collected tools
+                                collected_tools.append(tool_info)
+
+                                # send tool call event
+                                yield f"data: {json.dumps(tool_info)}\n\n"
+
+                            elif item_type == "function_call_output":
+                                # tool execution result
+                                call_id = item.get("call_id")
+                                output = item.get("output", "")
+
+                                for tool in collected_tools:
+                                    if tool.get("call_id") == call_id:
+                                        tool["output"] = output
+                                        break
+
+                                tool_result = {
+                                    "type": "tool_result",
+                                    "call_id": call_id,
+                                    "output": output,
+                                }
+                                yield f"data: {json.dumps(tool_result)}\n\n"
+
+                            elif (
+                                item_type == "message"
+                                and item.get("role") == "assistant"
+                            ):
+                                content = item.get("content", [])
+                                for content_item in content:
+                                    if content_item.get("type") == "output_text":
+                                        current_response_text += content_item.get(
+                                            "text", ""
+                                        )
+
+                                response_event = {
+                                    "type": "response_text",
+                                    "text": current_response_text,
+                                }
+                                yield f"data: {json.dumps(response_event)}\n\n"
+
+                        elif event_type == "done":
+                            # stream completed
+                            break
+
+                completion_event = {
+                    "type": "completion",
+                    "agent_type": agent_type,
+                    "routing_decision": routing_info,
+                    "tools_used": collected_tools,
+                    "final_response": current_response_text,
+                    "done": True,
+                }
+                yield f"data: {json.dumps(completion_event)}\n\n"
+
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                f"HTTP error from Databricks: {e.response.status_code} - {e.response.text}"
+            )
+
+            # try to refresh token if 403 and using OAuth
+            if e.response.status_code == 403 and self.settings.auth_method == "oauth":
+                logger.info("Got 403, attempting to refresh OAuth token and retry...")
+                try:
+                    self.access_token = await self._get_oauth_token()
+                    # retry the streaming request
+                    async for event in self.send_message_stream(
+                        message, customer_id, conversation_history
+                    ):
+                        yield event
+                    return
+                except Exception as retry_error:
+                    logger.error(f"Retry after token refresh failed: {retry_error}")
+
+            error_response = {
+                "type": "error",
+                "error": f"Service temporarily unavailable (HTTP {e.response.status_code})",
+                "done": True,
+            }
+            yield f"data: {json.dumps(error_response)}\n\n"
+
+        except httpx.RequestError as e:
+            logger.error(f"Request error to Databricks: {e}")
+
+            error_response = {
+                "type": "error",
+                "error": "Unable to connect to agent service. Please check your connection and try again.",
+                "done": True,
+            }
+            yield f"data: {json.dumps(error_response)}\n\n"
 
         except Exception as e:
-            yield f"data: {json.dumps({'error': str(e), 'done': True})}\n\n"
+            logger.error(f"Unexpected error in streaming: {e}")
+
+            error_response = {
+                "type": "error",
+                "error": f"An unexpected error occurred: {str(e)}",
+                "done": True,
+            }
+            yield f"data: {json.dumps(error_response)}\n\n"
 
     async def health_check(self) -> bool:
         """Check if the Databricks endpoint is healthy."""

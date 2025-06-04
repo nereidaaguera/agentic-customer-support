@@ -1,5 +1,6 @@
 """API routes for telco support agent."""
 
+import json
 import logging
 import traceback
 from typing import Optional
@@ -86,7 +87,7 @@ async def get_demo_customers(settings: Settings = Depends(get_settings)):
 async def chat(
     request: ChatRequest, agent_service: TelcoAgentService = Depends(get_agent_service)
 ):
-    """Send message to telco support agent."""
+    """Send message to telco support agent (non-streaming)."""
     try:
         logger.info(
             f"Received chat request for customer {request.customer_id}: {request.message}"
@@ -123,23 +124,47 @@ async def chat_stream(
     """Send message to telco support agent with streaming response."""
     try:
         logger.info(
-            f"Received streaming chat request for customer {request.customer_id}"
+            f"Received streaming chat request for customer {request.customer_id}: {request.message}"
         )
 
+        async def event_generator():
+            """Generator that yields Server-Sent Events."""
+            try:
+                async for event_data in agent_service.send_message_stream(
+                    message=request.message,
+                    customer_id=request.customer_id,
+                    conversation_history=request.conversation_history,
+                ):
+                    yield event_data
+
+            except Exception as e:
+                logger.error(f"Error in streaming generator: {str(e)}")
+                logger.error(traceback.format_exc())
+
+                # Send error event
+                error_event = {
+                    "type": "error",
+                    "error": f"Streaming error: {str(e)}",
+                    "done": True,
+                }
+                yield f"data: {json.dumps(error_event)}\n\n"
+
         return StreamingResponse(
-            agent_service.send_message_stream(
-                message=request.message,
-                customer_id=request.customer_id,
-                conversation_history=request.conversation_history,
-            ),
-            media_type="text/plain",
+            event_generator(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "Cache-Control",
+            },
         )
 
     except Exception as e:
-        logger.error(f"Error processing streaming chat request: {str(e)}")
+        logger.error(f"Error setting up streaming chat request: {str(e)}")
         logger.error(traceback.format_exc())
         raise HTTPException(
-            status_code=500, detail=f"Error processing streaming request: {str(e)}"
+            status_code=500, detail=f"Error setting up streaming request: {str(e)}"
         ) from e
 
 
