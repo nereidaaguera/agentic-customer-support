@@ -1,9 +1,9 @@
-name: Dev Databricks Infra CI/CD
+name: Prod Databricks Infra CI/CD
 
 on:
   push:
     branches:
-      - manfred/adding_dabs
+      - release
 env:
   DATABRICKS_CLIENT_ID: ${{secrets.PROD_DATABRICKS_CLIENT_ID}}
   DATABRICKS_CLIENT_SECRET: ${{secrets.PROD_DATABRICKS_CLIENT_SECRET}}
