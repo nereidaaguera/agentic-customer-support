@@ -13,13 +13,26 @@
 
 # COMMAND ----------
 
+dbutils.widgets.text("env", "dev")
+dbutils.widgets.text("git_commit", "")
+dbutils.widgets.text("experiment_name", "/telco_support_agent/dev/experiments/dev_telco_support_agent")
+
+# COMMAND ----------
+
 import os
 import sys
 import mlflow
 import yaml
+from mlflow.utils.databricks_utils import dbutils
 
 project_root = os.path.abspath(os.path.join(os.getcwd(), "../.."))
 sys.path.append(project_root)
+
+env = dbutils.widgets.get("env")
+git_commit = dbutils.widgets.get("git_commit")
+experiment_name = dbutils.widgets.get("experiment_name")
+
+os.environ['TELCO_SUPPORT_AGENT_ENV'] = env
 
 # COMMAND ----------
 
@@ -30,6 +43,9 @@ from telco_support_agent.ops.registry import register_agent_to_uc
 
 # COMMAND ----------
 
+mlflow.set_experiment(experiment_name)
+
+# COMMAND ----------
 # MAGIC %md
 # MAGIC ## Load log_register_agent config
 
@@ -48,6 +64,9 @@ print(f"  Name: {config['name']}")
 print(f"  Description: {config['description']}")
 print(f"  UC Model: {uc_model_name}")
 print(f"  Input Example: {config['input_example']}")
+print(f"  Environment: {env}")
+print(f"  Git Commit: {git_commit}")
+print(f"  Experiment Name: {experiment_name}")
 
 # COMMAND ----------
 
@@ -109,7 +128,7 @@ logged_model_info = log_agent(
     agent_class=SupervisorAgent,
     name=config["name"],
     input_example=config["input_example"],
-    environment="prod",
+    environment=env,
 )
 
 print(f"Logged agent: {logged_model_info.model_uri}")
@@ -145,5 +164,16 @@ model_version = register_agent_to_uc(
     model_uri=logged_model_info.model_uri,
     uc_model_name=uc_model_name,
 )
+
+# tag model with the commit hash
+if git_commit:
+    print(f"Tagging model with git_commit: {git_commit}")
+    client = mlflow.MlflowClient()
+    client.set_model_version_tag(
+        name=model_version.name,
+        version=model_version.version,
+        key="git_commit",
+        value=git_commit
+    )
 
 print(f"✅ Registered: {uc_model_name} version {model_version.version}")

@@ -42,7 +42,7 @@ from telco_support_agent.data.config import CONFIG
 
 # COMMAND ----------
 
-AGENT_ENDPOINT_NAME = "telco-customer-support-agent"
+AGENT_ENDPOINT_NAME = "prod-telco-customer-support-agent"
 LLM_ENDPOINT = "databricks-claude-3-7-sonnet"
 MAX_WORKERS = 5  # parallel query execution
 QUERIES_PER_BATCH = 50  # number of queries to generate per execution
@@ -1114,18 +1114,18 @@ def run_continuous_simulation(batches: int = 3, delay_between_batches: int = 300
 
 # COMMAND ----------
 
-# print("Generating sample queries...")
-# generate_sample_queries_for_testing()
+print("Generating sample queries...")
+generate_sample_queries_for_testing()
 
 # COMMAND ----------
 
-# print("Running single query test...")
-# single_test_success = test_single_query()
+print("Running single query test...")
+single_test_success = test_single_query()
 
 # COMMAND ----------
 
-# print("Running small batch test...")
-# test_results = test_small_batch()
+print("Running small batch test...")
+test_results = test_small_batch()
 
 # COMMAND ----------
 
@@ -1136,11 +1136,8 @@ def run_continuous_simulation(batches: int = 3, delay_between_batches: int = 300
 
 # COMMAND ----------
 
-# if single_test_success:
-#     print("Running full synthetic query batch...")
-#     batch_summary = run_synthetic_query_batch(num_queries=QUERIES_PER_BATCH)
-# else:
-#     print("❌ Skipping full batch due to test failures")
+print("Running batch execution...")
+batch_summary = run_synthetic_query_batch(num_queries=QUERIES_PER_BATCH)
 
 # COMMAND ----------
 

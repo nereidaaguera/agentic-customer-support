@@ -124,7 +124,9 @@ def register_customer_subscriptions(uc_config: UCConfig):
         print(f"Error registering get_customer_subscriptions: {str(e)}")
 
 
+logger.info("Register account UC function")
 # call registration functions
 uc_config = config_manager.get_uc_config()
 register_customer_info(uc_config)
 register_customer_subscriptions(uc_config)
+logger.info("End account UC function")
