@@ -3,7 +3,7 @@
 # Deployment parameters
 deployment:
   endpoint_name: telco-customer-support-agent
-  scale_to_zero_enabled: true
+  scale_to_zero_enabled: false
   workload_size: Small  # Small, Medium, Large
   wait_for_ready: true
 
@@ -16,12 +16,10 @@ deployment:
     team: databricks-agents
     environment: dev
 
-# Environment variables for the deployed agent
-environment_vars:
-  # any environment variables the agent might need
-  # Example:
-  # API_KEY: {{secrets/telco-support/api-key}}
-  # DEBUG_MODE: false
+# Cleanup old deployment versions
+cleanup_old_versions: true
+cleanup:
+  keep_previous_count: 1  # Number of previous versions to keep (in addition to current)
 
 # Agent Instructions - will be visible in the Review App
 instructions: |

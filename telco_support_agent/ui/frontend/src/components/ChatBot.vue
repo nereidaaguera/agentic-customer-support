@@ -9,7 +9,8 @@
         <div class="message-content">
           <div class="message-avatar">
             <v-avatar size="32" :color="message.sender === 'user' ? 'primary' : 'secondary'">
-              <span class="text-white">{{ message.sender === 'user' ? 'U' : 'B' }}</span>
+              <v-icon v-if="message.sender === 'user'" color="white" size="small">mdi-account</v-icon>
+              <span v-else class="text-white">AI</span>
             </v-avatar>
           </div>
           <div class="message-bubble">
@@ -81,7 +82,7 @@
         <div class="message-content">
           <div class="message-avatar">
             <v-avatar size="32" color="secondary">
-              <span class="text-white">B</span>
+              <span class="text-white">AI</span>
             </v-avatar>
           </div>
           <div class="message-bubble">
@@ -97,7 +98,7 @@
         <div class="message-content">
           <div class="message-avatar">
             <v-avatar size="32" color="secondary">
-              <span class="text-white">B</span>
+              <span class="text-white">AI</span>
             </v-avatar>
           </div>
           <div class="message-bubble">

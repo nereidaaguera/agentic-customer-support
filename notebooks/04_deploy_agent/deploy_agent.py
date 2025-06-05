@@ -26,7 +26,6 @@ import mlflow
 
 project_root = os.path.abspath(os.path.join(os.getcwd(), "../.."))
 sys.path.append(project_root)
-print(f"Added {project_root} to Python path")
 
 
 env = dbutils.widgets.get("env")
@@ -39,7 +38,7 @@ mlflow.set_experiment(experiment_name)
 
 # COMMAND ----------
 
-from telco_support_agent.ops.deployment import deploy_agent, AgentDeploymentError
+from telco_support_agent.ops.deployment import deploy_agent, cleanup_old_deployments, AgentDeploymentError
 from telco_support_agent.utils.config import config_manager
 from telco_support_agent.ops.registry import get_latest_model_version
 
@@ -176,6 +175,68 @@ if hasattr(deployment_result, 'review_app_url'):
     print(f"Review App: {deployment_result.review_app_url}")
 
 print("="*50)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Clean up old model serving endpoints
+# MAGIC
+# COMMAND ----------
+
+cleanup_enabled = deploy_agent_config.get("cleanup_old_versions", False)
+
+if cleanup_enabled:
+    cleanup_config = deploy_agent_config.get("cleanup", {})
+
+    print("="*50)
+    print("CLEANING UP OLD DEPLOYMENT VERSIONS")
+    print("="*50)
+    print(f"Model: {uc_model_name}")
+    print(f"Current version: {model_version}")
+    print(f"Endpoint: {deployment_result.endpoint_name}")
+    print(f"Keep previous versions: {cleanup_config.get('keep_previous_count', 1)}")
+    print()
+
+    try:
+        cleanup_result = cleanup_old_deployments(
+            model_name=uc_model_name,
+            current_version=str(model_version),
+            endpoint_name=deployment_result.endpoint_name,
+            keep_previous_count=cleanup_config.get("keep_previous_count", 1),
+            max_deletion_attempts=cleanup_config.get("max_deletion_attempts", 3),
+            wait_between_attempts=cleanup_config.get("wait_between_attempts", 60),
+            wait_after_deletion=cleanup_config.get("wait_after_deletion", 180),
+            raise_on_error=cleanup_config.get("raise_on_error", False),
+        )
+
+        print("✅ Cleanup completed!")
+        print(f"Versions kept: {cleanup_result['versions_kept']}")
+        print(f"Versions deleted: {cleanup_result['versions_deleted']}")
+
+        if cleanup_result['versions_failed']:
+            print(f"⚠️ Versions that failed to delete: {cleanup_result['versions_failed']}")
+            print("These may need manual cleanup or will be retried in future deployments.")
+
+        if not cleanup_result['versions_deleted'] and not cleanup_result['versions_failed']:
+            print("No old versions found to clean up.")
+
+    except AgentDeploymentError as e:
+        print(f"❌ Cleanup failed with error: {str(e)}")
+        if cleanup_config.get("raise_on_error", False):
+            raise
+        else:
+            print("Continuing despite cleanup failure (raise_on_error=false)")
+    except Exception as e:
+        print(f"❌ Unexpected cleanup error: {str(e)}")
+        if cleanup_config.get("raise_on_error", False):
+            raise
+        else:
+            print("Continuing despite cleanup failure (raise_on_error=false)")
+
+    print("="*50)
+else:
+    print("Cleanup of old versions is disabled in configuration")
+    print("To enable, set 'cleanup_old_versions: true' in deploy_agent.yaml")
 
 # COMMAND ----------
 

@@ -27,7 +27,6 @@ from mlflow.utils.databricks_utils import dbutils
 
 project_root = os.path.abspath(os.path.join(os.getcwd(), "../.."))
 sys.path.append(project_root)
-print(f"Added {project_root} to Python path")
 
 env = dbutils.widgets.get("env")
 git_commit = dbutils.widgets.get("git_commit")

@@ -1,24 +1,27 @@
 """UC functions for account-related operations."""
 
+from databricks.sdk import WorkspaceClient
 from unitycatalog.ai.core.databricks import DatabricksFunctionClient
 
 from telco_support_agent.utils.config import UCConfig, config_manager
 from telco_support_agent.utils.logging_utils import get_logger
+from telco_support_agent.utils.uc_permissions import grant_function_permissions
 
 logger = get_logger(__name__)
 
-logger.info("Starting DatabricksFunctionClient")
-
 client = DatabricksFunctionClient()
-
-logger.info("Ending DatabricksFunctionClient")
+workspace_client = WorkspaceClient()
 
 
 def register_customer_info(uc_config: UCConfig):
     """Register the get_customer_info UC function."""
+    function_name = (
+        f"{uc_config.agent['catalog']}.{uc_config.agent['schema']}.get_customer_info"
+    )
+
     try:
         sql = f"""
-        CREATE OR REPLACE FUNCTION {uc_config.agent["catalog"]}.{uc_config.agent["schema"]}.get_customer_info(
+        CREATE OR REPLACE FUNCTION {function_name}(
           customer STRING COMMENT 'The customer ID in the format CUS-XXXXX'
         )
         RETURNS STRING
@@ -44,19 +47,31 @@ def register_customer_info(uc_config: UCConfig):
         WHERE customer_id = customer
         LIMIT 1
         """
+
         client.create_function(sql_function_body=sql)
-        print("Registered get_customer_info UC function")
+        print(f"Registered {function_name} UC function")
+
+        # grant permissions
+        if grant_function_permissions(function_name, uc_config, workspace_client):
+            print(f"Granted permissions on {function_name}")
+        else:
+            print(
+                f"Warning: Some permissions may not have been granted on {function_name}"
+            )
+
     except Exception as e:
         print(f"Error registering get_customer_info: {str(e)}")
 
 
 def register_customer_subscriptions(uc_config: UCConfig):
     """Register the get_customer_subscriptions UC function."""
+    function_name = f"{uc_config.agent['catalog']}.{uc_config.agent['schema']}.get_customer_subscriptions"
+
     try:
         data_catalog = uc_config.data["catalog"]
         data_schema = uc_config.data["schema"]
         sql = f"""
-        CREATE OR REPLACE FUNCTION {uc_config.agent["catalog"]}.{uc_config.agent["schema"]}.get_customer_subscriptions(
+        CREATE OR REPLACE FUNCTION {function_name}(
           customer STRING COMMENT 'The customer ID in the format CUS-XXXXX'
         )
         RETURNS STRING
@@ -93,8 +108,18 @@ def register_customer_subscriptions(uc_config: UCConfig):
           LIMIT 1
         )
         """
+
         client.create_function(sql_function_body=sql)
-        print("Registered get_customer_subscriptions UC function")
+        print(f"Registered {function_name} UC function")
+
+        # grant permissions
+        if grant_function_permissions(function_name, uc_config, workspace_client):
+            print(f"Granted permissions on {function_name}")
+        else:
+            print(
+                f"Warning: Some permissions may not have been granted on {function_name}"
+            )
+
     except Exception as e:
         print(f"Error registering get_customer_subscriptions: {str(e)}")
 
