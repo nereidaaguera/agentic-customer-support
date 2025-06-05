@@ -67,6 +67,12 @@ deploy_client = get_deploy_client("databricks")
 
 # COMMAND ----------
 
+MLFLOW_EXPERIMENT_ID = "c6d626ab8d2c4780ab723ab3ee43f052"
+
+mlflow.set_experiment(experiment_id=MLFLOW_EXPERIMENT_ID)
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## Response Formatting Utilities
 
@@ -408,19 +414,22 @@ class TelcoAgentClient:
                 inputs=payload
             )
             
-            # Extract trace ID from response
             trace_id = None
             if isinstance(response, dict):
                 databricks_output = response.get('databricks_output', {})
-                if 'trace' in databricks_output:
-                    trace_info = databricks_output['trace']
+                if isinstance(databricks_output, dict):
+                    trace_info = databricks_output.get('trace', {})
                     if isinstance(trace_info, dict):
-                        trace_id = trace_info.get('request_id')
+                        info = trace_info.get('info', {})
+                        if isinstance(info, dict):
+                            trace_id = info.get('trace_id')
+                
+                if not trace_id and isinstance(databricks_output, dict):
+                    trace_id = (databricks_output.get('trace_id') or
+                              databricks_output.get('request_id'))
                 
                 if not trace_id:
-                    trace_id = response.get('id') or response.get('databricks_request_id')
-                    if isinstance(databricks_output, dict):
-                        trace_id = trace_id or databricks_output.get('databricks_request_id')
+                    trace_id = response.get('trace_id')
             
             return response, trace_id
             
@@ -632,13 +641,13 @@ class FeedbackLogger:
         
         print(f"Logging {total_count} feedback items to trace {trace_id}")
         
+        time.sleep(2)
         for feedback in feedbacks:
             try:
                 feedback_name = feedback["name"]
                 feedback_value = feedback["value"]
                 feedback_source = feedback["source"]
                 feedback_rationale = feedback["rationale"]
-                
                 source = AssessmentSource(
                     source_type=AssessmentSourceType.HUMAN,
                     source_id=feedback_source,
@@ -657,6 +666,25 @@ class FeedbackLogger:
                     
             except Exception as e:
                 print(f"  ❌ Failed to log {feedback.get('name', 'unknown')}: {e}")
+                
+                if "Invalid request id" in str(e) or "Request id must map to a trace" in str(e):
+                    try:
+                        print(f"    Retrying feedback logging after longer delay...")
+                        time.sleep(3)
+                        
+                        mlflow.log_feedback(
+                            trace_id=trace_id,
+                            name=feedback_name,
+                            source=source,
+                            value=feedback_value,
+                            rationale=feedback_rationale,
+                        )
+                        
+                        success_count += 1
+                        print(f"  ✅ {feedback_name}: {feedback_value} (by {feedback_source}) [retry successful]")
+                        
+                    except Exception as retry_e:
+                        print(f"    ❌ Retry also failed: {retry_e}")
         
         print(f"Feedback logging complete: {success_count}/{total_count} successful")
         return success_count == total_count
