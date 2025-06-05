@@ -14,11 +14,17 @@ from mlflow.types.agent import (
 
 from databricks.sdk import WorkspaceClient
 from tools import get_mcp_tool_infos
+import logging
+
+logging.basicConfig(level=logging.WARNING)
+mlflow_logger = logging.getLogger("mlflow")
+mlflow_logger.setLevel(logging.WARNING)
 
 LLM_ENDPOINT_NAME = "databricks-claude-3-7-sonnet"
 SYSTEM_PROMPT = "You are a helpful assistant."
 MCP_SERVER_URLS = [
-    "https://telco-outage-server-dev-3888667486068890.aws.databricksapps.com/mcp/",
+    # "https://telco-outage-server-dev-3888667486068890.aws.databricksapps.com/mcp/",
+    "https://dbc-d3f42956-2c15.cloud.databricks.com/api/2.0/mcp/functions/system/ai",
 ]
 
 class ToolCallingAgent(ChatAgent):
@@ -77,6 +83,7 @@ class ToolCallingAgent(ChatAgent):
             model=self.llm_endpoint,
             messages=self.prepare_messages_for_llm(messages),
             tools=self.get_tool_specs(workspace_client),
+            max_tokens=400,
         )
 
     @mlflow.trace(span_type=SpanType.AGENT)

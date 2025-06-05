@@ -52,7 +52,6 @@ async def mcp_session(server_url: str, workspace_client: WorkspaceClient):
             auth=workspace_client.mcp.get_oauth_provider()
     ) as (read_stream, write_stream, _):
         async with ClientSession(read_stream, write_stream) as session:
-            # TODO(smurching) always initialize?
             await session.initialize()
             yield session
 
