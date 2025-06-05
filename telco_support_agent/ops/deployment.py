@@ -174,7 +174,11 @@ def cleanup_old_deployments(
         )
 
         current_version_int = int(current_version)
-        deployed_versions = [int(dep.model_version) for dep in all_deployments]
+        deployed_versions = [
+            int(dep.model_version)
+            for dep in all_deployments
+            if dep.endpoint_name == endpoint_name
+        ]
         deployed_versions.sort(reverse=True)
 
         previous_versions = [v for v in deployed_versions if v < current_version_int]

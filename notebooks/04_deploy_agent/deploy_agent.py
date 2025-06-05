@@ -34,7 +34,7 @@ experiment_name = dbutils.widgets.get("experiment_name")
 
 # Setting env variable for telco support agent. In this way, the agent will deploy in the correct catalog and schema.
 os.environ['TELCO_SUPPORT_AGENT_ENV'] = env
-mlflow.set_experiment(experiment_name)
+os.environ['MLFLOW_EXPERIMENT_ID'] = experiment_name
 
 # COMMAND ----------
 
@@ -117,9 +117,11 @@ except Exception as e:
 
 # COMMAND ----------
 
+endpoint_name = f"{env}-{deployment_config.get('endpoint_name')}"
+
 print("Deploying agent..")
 print(f"Model: {uc_model_name} version {model_version}")
-print(f"Endpoint: {deployment_config.get('endpoint_name')}")
+print(f"Endpoint: {endpoint_name}")
 print(f"Workload Size: {deployment_config.get('workload_size', 'Small')}")
 print(f"Scale-to-zero: {deployment_config.get('scale_to_zero_enabled', False)}")
 print(f"Wait for endpoint to be ready: {deployment_config.get('wait_for_ready', True)}")
@@ -140,7 +142,7 @@ try:
     deployment_result = deploy_agent(
         uc_model_name=uc_model_name,
         model_version=model_version,
-        deployment_name=f"{env}-{deployment_config.get('endpoint_name')}",
+        deployment_name=endpoint_name,
         tags=deployment_config.get("tags"),
         scale_to_zero_enabled=deployment_config.get("scale_to_zero_enabled", False),
         environment_vars=environment_vars if environment_vars else None,
