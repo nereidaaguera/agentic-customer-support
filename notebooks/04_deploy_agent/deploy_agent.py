@@ -61,7 +61,7 @@ print(yaml.dump(deploy_agent_config, sort_keys=False, default_flow_style=False))
 
 uc_config = config_manager.get_uc_config()
 deployment_config = deploy_agent_config.get("deployment", {})
-environment_vars = deploy_agent_config.get("environment_vars", {})
+environment_vars = deploy_agent_config.get("environment_vars", {}) | {"TELCO_SUPPORT_AGENT_ENV": env}
 permissions = deploy_agent_config.get("permissions")
 instructions = deploy_agent_config.get("instructions")
 
