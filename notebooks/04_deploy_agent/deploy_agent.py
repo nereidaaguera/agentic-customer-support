@@ -5,6 +5,12 @@
 
 # COMMAND ----------
 
+dbutils.widgets.text("env", "dev")
+dbutils.widgets.text("git_commit", "")
+dbutils.widgets.text("experiment_name", "/Workspace/telco_support_agent/dev/experiments")
+
+# COMMAND ----------
+
 # MAGIC %pip install -r ../../requirements.txt -q
 
 # COMMAND ----------
@@ -22,9 +28,6 @@ project_root = os.path.abspath(os.path.join(os.getcwd(), "../.."))
 sys.path.append(project_root)
 print(f"Added {project_root} to Python path")
 
-dbutils.widgets.text("env", "dev")
-dbutils.widgets.text("git_commit", "")
-dbutils.widgets.text("experiment_name", "/Workspace/telco_support_agent/dev/experiments")
 
 env = dbutils.widgets.get("env")
 git_commit = dbutils.widgets.get("git_commit")

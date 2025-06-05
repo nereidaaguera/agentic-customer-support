@@ -114,6 +114,7 @@ def _register_domain_functions(domain: str) -> dict[str, bool]:
 
     # import module to trigger registration
     try:
+        logger.info(f"Importing functions for domain: {domain}")
         importlib.import_module(domain_modules[domain])
 
         for func_name in get_functions_for_domain(domain):
