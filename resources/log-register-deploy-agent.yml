@@ -20,16 +20,3 @@ resources:
               env: ${bundle.target}
               git_commit: ${bundle.git.commit}
               experiment_name: ${var.experiment_name}
-      job_clusters:
-        - job_cluster_key: log_deploy_cluster
-          new_cluster:
-            spark_version: 16.3.x-cpu-ml-scala2.12
-            spark_conf:
-              spark.master: local[*, 4]
-              spark.databricks.cluster.profile: singleNode
-            node_type_id: i3.xlarge
-            custom_tags:
-              ResourceClass: SingleNode
-            data_security_mode: SINGLE_USER
-            runtime_engine: STANDARD
-            num_workers: 1
