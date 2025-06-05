@@ -1075,7 +1075,7 @@ def run_continuous_simulation(batches: int = 3, delay_between_batches: int = 300
             
             # delay between batches (except for the last one)
             if batch_num < batches:
-                print(f"⏳ Waiting {delay_between_batches}s before next batch...")
+                print(f"Waiting {delay_between_batches}s before next batch...")
                 time.sleep(delay_between_batches)
                 
         except Exception as e:
@@ -1130,19 +1130,21 @@ test_results = test_small_batch()
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Production Execution
+# MAGIC ## Batch Execution
 # MAGIC
 # MAGIC Uncomment cell to run full synthetic query batch.
 
 # COMMAND ----------
 
-# # Run full synthetic query batch
-# if single_test_success:
-#     print("Running full synthetic query batch...")
-#     batch_summary = run_synthetic_query_batch(num_queries=QUERIES_PER_BATCH)
-#     print(f"Batch summary: {batch_summary}")
-# else:
-#     print("❌ Skipping full batch due to test failures")
+QUERIES_PER_BATCH = 3
+
+# COMMAND ----------
+
+if single_test_success:
+    print("Running full synthetic query batch...")
+    batch_summary = run_synthetic_query_batch(num_queries=QUERIES_PER_BATCH)
+else:
+    print("❌ Skipping full batch due to test failures")
 
 # COMMAND ----------
 
@@ -1160,3 +1162,12 @@ test_results = test_small_batch()
 #     print(f"Simulation summary: {simulation_summary}")
 # else:
 #     print("❌ Skipping continuous simulation due to test failures")
+
+# COMMAND ----------
+
+import pyspark.sql.functions as F
+spark.table("telco_customer_support_dev.agent.telco_customer_support_agent_1_payload").orderBy(F.col("request_time").desc()).display()
+
+# COMMAND ----------
+
+
