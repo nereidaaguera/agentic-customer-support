@@ -195,9 +195,3 @@ mlflow.openai.autolog()
 AGENT = ToolCallingAgent(llm_endpoint=LLM_ENDPOINT_NAME)
 mlflow.models.set_model(AGENT)
 
-if __name__ == "__main__":
-    user_query = ("What was my bill for the last few months (my customer ID is CUS-10001)?")
-
-    print("---------Testing streaming agent output---------")
-    for chunk in AGENT.predict_stream({"messages": [{"role": "user", "content": user_query}]}):
-        print(chunk.delta.content, "-----------\n")

@@ -60,7 +60,7 @@ async def simulate_telco_api_call(endpoint: str, delay_ms: int = None):
     return True
 
 # --- FastMCP setup ---
-mcp_app = FastMCP(name="telco-mcp-server")
+mcp_app = FastMCP(name="telco-mcp-server", stateless_http=True)
 
 
 @mcp_app.tool()
@@ -127,14 +127,17 @@ async def report_network_issue_tool(issue_type: str, region: str, description: s
 
     return json.dumps(response, indent=2)
 
-# --- Mounting FastMCP under /api/mcp ---
+# --- Mounting FastMCP under /mcp ---
 
+import pdb
+# pdb.set_trace()
 starlette_app = Starlette(
-    debug=False,
+    debug=True,
     routes=[
         Route("/", demo_homepage),
-        Mount("/api/mcp", app=mcp_app.streamable_http_app()),
+        Mount("/", app=mcp_app.streamable_http_app()),
     ],
+    lifespan=lambda app: mcp_app.session_manager.run(),
 )
 
 
