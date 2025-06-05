@@ -169,16 +169,16 @@ def cleanup_old_deployments(
             logger.info("No existing deployments found to clean up")
             return result
 
+        endpoint_deployments = [
+            dep for dep in all_deployments if dep.endpoint_name == endpoint_name
+        ]
+
         logger.info(
-            f"Found {len(all_deployments)} existing deployments for {model_name}"
+            f"Found {len(endpoint_deployments)} existing deployments for {model_name} in endpoint {endpoint_name}"
         )
 
         current_version_int = int(current_version)
-        deployed_versions = [
-            int(dep.model_version)
-            for dep in all_deployments
-            if dep.endpoint_name == endpoint_name
-        ]
+        deployed_versions = [int(dep.model_version) for dep in endpoint_deployments]
         deployed_versions.sort(reverse=True)
 
         previous_versions = [v for v in deployed_versions if v < current_version_int]

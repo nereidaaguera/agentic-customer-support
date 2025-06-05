@@ -3,26 +3,50 @@ name: Dev Databricks Infra CI/CD
 on:
   push:
     branches:
-      - main
+      - release
+env:
+  DATABRICKS_CLIENT_ID: ${{secrets.PROD_DATABRICKS_CLIENT_ID}}
+  DATABRICKS_CLIENT_SECRET: ${{secrets.PROD_DATABRICKS_CLIENT_SECRET}}
+  DATABRICKS_BUNDLE_TARGET: prod
+
 jobs:
   deploy:
-    name: Deploy infra
+    name: Deploy pipeline
     environment: prod
-    env:
-      DATABRICKS_CLIENT_ID: ${{secrets.PROD_DATABRICKS_CLIENT_ID}}
-      DATABRICKS_CLIENT_SECRET: ${{secrets.PROD_DATABRICKS_CLIENT_SECRET}}
-      DATABRICKS_BUNDLE_TARGET: prod
-    runs-on: ubuntu-latest
+    runs-on:
+      group: databricks-field-eng-protected-runner-group
+      labels: linux-ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - uses: databricks/setup-cli@main
-      - name: Validate Bundle for Dev
+      - name: Setup databricks CLI
+        uses: databricks/setup-cli@main
+      - name: Validate bundle for prod
         id: validate
         run: |
           databricks bundle validate
-      - name: Deploy Bundle to Dev
+      - name: Deploy Bundle to prod
         id: deploy
         run: |
-          databricks bundle deploy --var=skip_ci_evals=${{ github.event.inputs.skip_ci_evals || 'false' }}
+          databricks bundle deploy
+  run_pipeline:
+    name: Run pipeline
+    environment: prod
+    runs-on:
+      group: databricks-field-eng-protected-runner-group
+      labels: linux-ubuntu-latest
+    needs:
+      - deploy
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Setup databricks CLI
+        uses: databricks/setup-cli@main
+      - name: Run bundle for prod
+        id: run
+        run: |
+          databricks bundle run log_register_deploy_agent

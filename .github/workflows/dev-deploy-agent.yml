@@ -27,7 +27,7 @@ jobs:
         id: validate
         run: |
           databricks bundle validate
-      - name: Deploy Bundle to Dev
+      - name: Deploy bundle to dev
         id: deploy
         run: |
           databricks bundle deploy
