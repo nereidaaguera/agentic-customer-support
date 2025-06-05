@@ -34,7 +34,7 @@ experiment_name = dbutils.widgets.get("experiment_name")
 
 # Setting env variable for telco support agent. In this way, the agent will deploy in the correct catalog and schema.
 os.environ['TELCO_SUPPORT_AGENT_ENV'] = env
-os.environ['MLFLOW_EXPERIMENT_ID'] = experiment_name
+os.environ['MLFLOW_EXPERIMENT_NAME'] = experiment_name
 
 # COMMAND ----------
 
@@ -127,7 +127,7 @@ logged_model_info = log_agent(
     agent_class=SupervisorAgent,
     name=config["name"],
     input_example=config["input_example"],
-    environment="prod",
+    environment=env,
 )
 
 print(f"Logged agent: {logged_model_info.model_uri}")
