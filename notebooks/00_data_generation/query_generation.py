@@ -214,11 +214,11 @@ QUERY_TEMPLATES = {
     
     "tech_support": {
         "contexts": [
-            QueryContext("tech_support", False, False, "frustrated customer", "service disruption"),
-            QueryContext("tech_support", False, False, "tech-savvy customer", "configuration issue"),
-            QueryContext("tech_support", False, False, "elderly customer", "device setup help"),
-            QueryContext("tech_support", False, False, "business customer", "connectivity problem"),
-            QueryContext("tech_support", False, False, "traveling customer", "roaming setup"),
+            QueryContext("tech_support", True, False, "frustrated customer", "service disruption"),
+            QueryContext("tech_support", True, False, "tech-savvy customer", "configuration issue"),
+            QueryContext("tech_support", True, False, "elderly customer", "device setup help"),
+            QueryContext("tech_support", True, False, "business customer", "connectivity problem"),
+            QueryContext("tech_support", True, False, "traveling customer", "roaming setup"),
         ],
         "base_scenarios": [
             "customer's phone won't connect to network",
