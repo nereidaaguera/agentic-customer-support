@@ -79,7 +79,8 @@ def make_mcp_exec_fn(
     def exec_fn(**kwargs):
         async def _call():
             async with mcp_session(mcp_server_url, workspace_client) as session:
-                return await session.call_tool(name=tool_name, arguments=kwargs)
+                tool_call_res = await session.call_tool(name=tool_name, arguments=kwargs)
+                return "".join([content_obj.text for content_obj in tool_call_res.content])
 
         return asyncio.run(_call())
 
