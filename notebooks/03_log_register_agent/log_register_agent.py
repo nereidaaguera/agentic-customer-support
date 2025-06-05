@@ -35,6 +35,7 @@ experiment_name = dbutils.widgets.get("experiment_name")
 
 # Setting env variable for telco support agent. In this way, the agent will deploy in the correct catalog and schema.
 os.environ['TELCO_SUPPORT_AGENT_ENV'] = env
+mlflow.set_experiment(experiment_name)
 
 # COMMAND ----------
 
