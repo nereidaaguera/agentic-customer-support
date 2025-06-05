@@ -124,24 +124,24 @@ class ResponseFormatter:
         custom_outputs = ResponseFormatter.extract_custom_outputs(response)
         
         summary_lines = []
-        summary_lines.append(f"⏱️  Execution Time: {execution_time:.2f}s")
+        summary_lines.append(f"Execution Time: {execution_time:.2f}s")
         
         routing_info = custom_outputs.get('routing', {})
         if routing_info:
             agent_type = routing_info.get('agent_type', 'unknown')
-            summary_lines.append(f"🤖 Routed to: {agent_type.upper()} agent")
+            summary_lines.append(f"Routed to: {agent_type.upper()} agent")
         
         customer_id = custom_outputs.get('customer')
         if customer_id:
-            summary_lines.append(f"👤 Customer: {customer_id}")
+            summary_lines.append(f"Customer: {customer_id}")
         
         if function_calls:
-            summary_lines.append(f"🔧 Function Calls: {len(function_calls)}")
+            summary_lines.append(f"Function Calls: {len(function_calls)}")
             for fc in function_calls:
                 summary_lines.append(f"   • {fc['name']}")
         
         if assistant_message:
-            summary_lines.append(f"💬 Response: {assistant_message}")
+            summary_lines.append(f"Response: {assistant_message}")
         
         return "\n".join(summary_lines)
 
@@ -630,7 +630,7 @@ class FeedbackLogger:
         success_count = 0
         total_count = len(feedbacks)
         
-        print(f"📝 Logging {total_count} feedback items to trace {trace_id}")
+        print(f"Logging {total_count} feedback items to trace {trace_id}")
         
         for feedback in feedbacks:
             try:
@@ -658,7 +658,7 @@ class FeedbackLogger:
             except Exception as e:
                 print(f"  ❌ Failed to log {feedback.get('name', 'unknown')}: {e}")
         
-        print(f"📊 Feedback logging complete: {success_count}/{total_count} successful")
+        print(f"Feedback logging complete: {success_count}/{total_count} successful")
         return success_count == total_count
 
 # COMMAND ----------
@@ -896,8 +896,8 @@ def test_single_query():
     test_query = "Customer wants to know what plan they're currently on and when their contract expires"
     test_custom_inputs = {"customer": generator.generate_customer_id()}
     
-    print(f"📋 Test query: {test_query}")
-    print(f"👤 Custom inputs: {test_custom_inputs}")
+    print(f"Test query: {test_query}")
+    print(f"Custom inputs: {test_custom_inputs}")
     
     try:
         # execute query
@@ -910,12 +910,12 @@ def test_single_query():
         print(f"Trace ID: {trace_id}")
         
         # Format and display response summary
-        print(f"\n📊 RESPONSE SUMMARY:")
+        print(f"\nRESPONSE SUMMARY:")
         print(f"{formatter.format_response_summary(response, execution_time)}")
         
         # Generate and log feedback
         if trace_id:
-            print(f"\n📝 Generating and logging feedback...")
+            print(f"\nGenerating and logging feedback...")
             metadata = {"category": "account", "persona": "test", "scenario": "test"}
             feedbacks = feedback_gen.generate_feedback(test_query, response, metadata)
             feedback_success = feedback_logger.log_feedback_for_query(feedbacks, trace_id)
@@ -947,14 +947,14 @@ def test_small_batch():
     print("🔧 Generating test queries...")
     queries = test_engine.generate_query_batch()
     
-    print(f"📝 Generated {len(queries)} test queries:")
+    print(f"Generated {len(queries)} test queries:")
     for i, (query, custom_inputs, metadata) in enumerate(queries):
         print(f"\n{i+1}. [{metadata['category'].upper()}] {query}")
         if custom_inputs:
-            print(f"    🔑 Custom inputs: {custom_inputs}")
+            print(f"    Custom inputs: {custom_inputs}")
     
     # execute the batch
-    print(f"\n🚀 Executing test batch...")
+    print(f"\nExecuting test batch...")
     results = test_engine.execute_query_batch(queries, max_workers=2)
     
     # show results
@@ -967,18 +967,18 @@ def test_small_batch():
         for i, result in enumerate(successful_results[:2]):  # show first 2
             print(f"\n{'='*50}")
             print(f"Query {i+1}: {result['query']}")
-            print(f"🆔 Trace ID: {result.get('trace_id', 'N/A')}")
-            print(f"📊 Feedbacks: {len(result['feedbacks'])} generated, logged: {result.get('feedback_logged', False)}")
+            print(f"Trace ID: {result.get('trace_id', 'N/A')}")
+            print(f"Feedbacks: {len(result['feedbacks'])} generated, logged: {result.get('feedback_logged', False)}")
             
             if result['response']:
                 print(f"\n{formatter.format_response_summary(result['response'], result['execution_time'])}")
             
             if result['feedbacks']:
-                print(f"\n📝 Feedback Details:")
+                print(f"\nFeedback Details:")
                 for feedback in result['feedbacks']:
                     status = "✅" if feedback['value'] else "❌"
                     print(f"  {status} {feedback['name']}: {feedback['value']} (by {feedback['source']})")
-                    print(f"    💭 {feedback['rationale']}")
+                    print(f"    {feedback['rationale']}")
     
     return results
 
