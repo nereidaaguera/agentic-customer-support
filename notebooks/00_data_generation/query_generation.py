@@ -1033,7 +1033,7 @@ def run_synthetic_query_batch(num_queries: int = QUERIES_PER_BATCH) -> Dict[str,
     print(f"Generated {len(queries)} queries")
     
     # execute batch
-    print("🚀 Executing query batch...")
+    print("Executing query batch...")
     results = engine.execute_query_batch(queries)
     
     # calculate total time
@@ -1065,7 +1065,7 @@ def run_continuous_simulation(batches: int = 3, delay_between_batches: int = 300
     all_summaries = []
     
     for batch_num in range(1, batches + 1):
-        print(f"\n🚀 Starting batch {batch_num}/{batches}")
+        print(f"\nStarting batch {batch_num}/{batches}")
         
         try:
             summary = run_synthetic_query_batch()
@@ -1132,8 +1132,7 @@ test_results = test_small_batch()
 # MAGIC %md
 # MAGIC ## Production Execution
 # MAGIC
-# MAGIC Uncomment the cell below to run the full synthetic query batch.
-# MAGIC This can be scheduled as a Databricks job.
+# MAGIC Uncomment cell to run full synthetic query batch.
 
 # COMMAND ----------
 
@@ -1150,8 +1149,7 @@ test_results = test_small_batch()
 # MAGIC %md
 # MAGIC ## Continuous Simulation
 # MAGIC
-# MAGIC Uncomment to run continuous simulation (multiple batches with delays).
-# MAGIC Useful for long-running load testing.
+# MAGIC Uncomment to run continuous simulation (multiple batches with delays)
 
 # COMMAND ----------
 
