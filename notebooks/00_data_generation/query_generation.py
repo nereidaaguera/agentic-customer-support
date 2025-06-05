@@ -45,7 +45,7 @@ from telco_support_agent.data.config import CONFIG
 AGENT_ENDPOINT_NAME = "telco-customer-support-agent"
 LLM_ENDPOINT = "databricks-claude-3-7-sonnet"
 MAX_WORKERS = 5  # parallel query execution
-QUERIES_PER_BATCH = 3  # number of queries to generate per execution
+QUERIES_PER_BATCH = 50  # number of queries to generate per execution
 
 # Customer ID generation based on data generation config
 CUSTOMER_ID_START = 10001
@@ -1152,7 +1152,7 @@ def run_continuous_simulation(batches: int = 3, delay_between_batches: int = 300
 # COMMAND ----------
 
 print("Running continuous simulation...")
-simulation_summary = run_continuous_simulation(batches=3, delay_between_batches=180)
+simulation_summary = run_continuous_simulation(batches=3, delay_between_batches=120)
 print(f"Simulation summary: {simulation_summary}")
 
 # COMMAND ----------
