@@ -2,9 +2,7 @@ import json
 from typing import Any, Callable, Generator, List, Optional
 from uuid import uuid4
 
-import backoff
 import mlflow
-import openai
 from mlflow.entities import SpanType
 from mlflow.pyfunc import ChatAgent
 from mlflow.types.agent import (
@@ -36,7 +34,7 @@ You are a helpful assistant.
 MCP_SERVER_URLS = [
     # "https://db-ml-models-prod-us-west.cloud.databricks.com/api/2.0/mcp/functions/telco_customer_support_dev/agent",
     # "https://db-ml-models-prod-us-west.cloud.databricks.com/api/2.0/mcp/vector-search/telco_customer_support_dev/agent",
-    "https://telco-outage-server-dev-3888667486068890.aws.databricksapps.com/api/mcp/",
+    "https://telco-outage-server-dev-3888667486068890.aws.databricksapps.com/mcp/",
 ]
 
 class ToolCallingAgent(ChatAgent):
@@ -140,7 +138,6 @@ class ToolCallingAgent(ChatAgent):
         for message in self.call_and_run_tools(messages=all_messages):
             yield ChatAgentChunk(delta=message)
 
-    @backoff.on_exception(backoff.expo, openai.RateLimitError)
     def chat_completion(self, messages: List[ChatAgentMessage]):
         return self.model_serving_client.chat.completions.create(
             model=self.llm_endpoint,
@@ -194,4 +191,3 @@ class ToolCallingAgent(ChatAgent):
 mlflow.openai.autolog()
 AGENT = ToolCallingAgent(llm_endpoint=LLM_ENDPOINT_NAME)
 mlflow.models.set_model(AGENT)
-

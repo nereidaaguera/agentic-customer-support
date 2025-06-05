@@ -135,8 +135,6 @@ def get_mcp_tool_infos(workspace_client: WorkspaceClient, server_urls: list[str]
                     "parameters":  fixed_schema
                 }
             }
-            print(f"@SID tool spec {spec}")
-
             tool_infos.append(
                 ToolInfo(
                     name=escaped_name,

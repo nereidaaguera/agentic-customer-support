@@ -6,7 +6,7 @@ async def demo_homepage(request):
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Telco Operations MCP Server Updated</title>
+        <title>Telco Operations MCP Server</title>
         <style>
             body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
             .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
@@ -24,7 +24,7 @@ async def demo_homepage(request):
     <body>
         <div class="container">
             <div class="header">
-                <h1>🏢 Telco Operations MCP Server</h1>
+                <h1>🏢 Telco Operations MCP Server Updated</h1>
                 <p>Network Operations Team's Established Tools</p>
                 <div class="status running">✅ Server Status: RUNNING</div>
             </div>

@@ -21,7 +21,7 @@ pip install -r telco_support_agent/mcp_servers/outage_info_server/requirements.t
 ## Test the agent
 
 ```bash
-python telco_support_agent/agent/agent.py
+python telco_support_agent/agent/run_agent.py
 ```
 
 ## Log and deploy the agent
