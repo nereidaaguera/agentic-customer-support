@@ -2,5 +2,6 @@
 databricks sync . /Workspace/telco_outages_mcp_server
 
 ## Redeploy the app from the latest source code
-databricks apps deploy telco-outage-server  
+databricks apps deploy telco-outage-server-dev
+
 

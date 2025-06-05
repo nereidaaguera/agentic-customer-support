@@ -34,9 +34,9 @@ You are a helpful assistant.
 # Set up MCP tools
 ##################
 MCP_SERVER_URLS = [
-    "https://db-ml-models-prod-us-west.cloud.databricks.com/api/2.0/mcp/functions/telco_customer_support_dev/agent",
-    "https://db-ml-models-prod-us-west.cloud.databricks.com/api/2.0/mcp/vector-search/telco_customer_support_dev/agent",
-    "https://telco-outage-server-3888667486068890.aws.databricksapps.com/api/mcp/",
+    # "https://db-ml-models-prod-us-west.cloud.databricks.com/api/2.0/mcp/functions/telco_customer_support_dev/agent",
+    # "https://db-ml-models-prod-us-west.cloud.databricks.com/api/2.0/mcp/vector-search/telco_customer_support_dev/agent",
+    "https://telco-outage-server-dev-3888667486068890.aws.databricksapps.com/api/mcp/",
 ]
 
 class ToolCallingAgent(ChatAgent):
@@ -196,7 +196,7 @@ AGENT = ToolCallingAgent(llm_endpoint=LLM_ENDPOINT_NAME)
 mlflow.models.set_model(AGENT)
 
 if __name__ == "__main__":
-    user_query = "I'm experiencing an outage at Moscone Center, is this a known issue? Also, what's the bill for June 2025 for customer with ID CUS-10001? Finally, what can I do if I think my bill is too high?"
+    user_query = ("What was my bill for the last few months (my customer ID is CUS-10001)?")
 
     print("---------Testing streaming agent output---------")
     for chunk in AGENT.predict_stream({"messages": [{"role": "user", "content": user_query}]}):

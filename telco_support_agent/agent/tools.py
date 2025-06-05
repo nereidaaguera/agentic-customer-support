@@ -52,7 +52,8 @@ async def mcp_session(server_url: str, workspace_client: WorkspaceClient):
             auth=workspace_client.mcp.get_oauth_provider()
     ) as (read_stream, write_stream, _):
         async with ClientSession(read_stream, write_stream) as session:
-            # await session.initialize()
+            # TODO(smurching) always initialize?
+            await session.initialize()
             yield session
 
 
@@ -121,10 +122,10 @@ def get_mcp_tool_infos(workspace_client: WorkspaceClient, server_urls: list[str]
             escaped_name = t.name.replace(".", "__")
 
             # Deep‐copy t.inputSchema so we don't mutate the original MCP object
-            raw_schema = copy.deepcopy(t.inputSchema)
+            fixed_schema = copy.deepcopy(t.inputSchema)
 
             # Fix any occurrences of "type": "float"
-            fixed_schema = _fix_float_to_number(raw_schema)
+            # fixed_schema = _fix_float_to_number(raw_schema)
 
             spec = {
                 "type": "function",
@@ -134,6 +135,7 @@ def get_mcp_tool_infos(workspace_client: WorkspaceClient, server_urls: list[str]
                     "parameters":  fixed_schema
                 }
             }
+            print(f"@SID tool spec {spec}")
 
             tool_infos.append(
                 ToolInfo(
