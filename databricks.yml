@@ -3,7 +3,7 @@ bundle:
 
 variables:
   experiment_name:
-    default: /Workspace/telco_support_agent/dev/experiments/dev_telco_support_agent
+    default: /telco_support_agent/dev/experiments/dev_telco_support_agent
 
 permissions:
   - level: CAN_MANAGE
@@ -22,7 +22,7 @@ targets:
     run_as:
       service_principal_name: ${workspace.current_user.userName}
     variables:
-      experiment_name: /Workspace/telco_support_agent/prod/experiments/prod_telco_support_agent
+      experiment_name: /telco_support_agent/dev/experiments/dev_telco_support_agent
   prod:
     default: false
     workspace:
@@ -30,4 +30,4 @@ targets:
     run_as:
       service_principal_name: ${workspace.current_user.userName}
     variables:
-      experiment_name: /Workspace/telco_support_agent/prod/experiments
+      experiment_name: /telco_support_agent/prod/experiments/prod_telco_support_agent

@@ -7,7 +7,7 @@
 
 dbutils.widgets.text("env", "dev")
 dbutils.widgets.text("git_commit", "")
-dbutils.widgets.text("experiment_name", "/Workspace/telco_support_agent/dev/experiments/dev_telco_support_agent")
+dbutils.widgets.text("experiment_name", "/telco_support_agent/dev/experiments/dev_telco_support_agent")
 
 # COMMAND ----------
 
