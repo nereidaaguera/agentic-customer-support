@@ -34,4 +34,4 @@ resources:
               ResourceClass: SingleNode
             data_security_mode: SINGLE_USER
             runtime_engine: STANDARD
-            num_workers: 0
+            num_workers: 1
