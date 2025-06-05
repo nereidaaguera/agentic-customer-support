@@ -165,4 +165,15 @@ model_version = register_agent_to_uc(
     uc_model_name=uc_model_name,
 )
 
+# tag model with the commit hash
+if git_commit:
+    print(f"Tagging model with git_commit: {git_commit}")
+    client = mlflow.MlflowClient()
+    client.set_model_version_tag(
+        name=model_version.name,
+        version=model_version.version,
+        key="git_commit",
+        value=git_commit
+    )
+
 print(f"✅ Registered: {uc_model_name} version {model_version.version}")
