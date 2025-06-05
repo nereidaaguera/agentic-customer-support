@@ -3,7 +3,7 @@ name: Dev Databricks Infra CI/CD
 on:
   push:
     branches:
-      - main
+      - manfred/adding_dabs
 env:
   DATABRICKS_CLIENT_ID: ${{secrets.DEV_DATABRICKS_CLIENT_ID}}
   DATABRICKS_CLIENT_SECRET: ${{secrets.DEV_DATABRICKS_CLIENT_SECRET}}

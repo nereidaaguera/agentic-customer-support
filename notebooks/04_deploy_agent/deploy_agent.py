@@ -7,7 +7,7 @@
 
 dbutils.widgets.text("env", "dev")
 dbutils.widgets.text("git_commit", "")
-dbutils.widgets.text("experiment_name", "/Workspace/telco_support_agent/dev/experiments")
+dbutils.widgets.text("experiment_name", "/Workspace/telco_support_agent/dev/experiments/dev_telco_support_agent")
 
 # COMMAND ----------
 
@@ -34,13 +34,16 @@ experiment_name = dbutils.widgets.get("experiment_name")
 
 # Setting env variable for telco support agent. In this way, the agent will deploy in the correct catalog and schema.
 os.environ['TELCO_SUPPORT_AGENT_ENV'] = env
-#os.environ['MLFLOW_EXPERIMENT_NAME'] = experiment_name
 
 # COMMAND ----------
 
 from telco_support_agent.ops.deployment import deploy_agent, cleanup_old_deployments, AgentDeploymentError
 from telco_support_agent.utils.config import config_manager
 from telco_support_agent.ops.registry import get_latest_model_version
+
+# COMMAND ----------
+
+mlflow.set_experiment(experiment_name)
 
 # COMMAND ----------
 

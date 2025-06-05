@@ -6,10 +6,6 @@ on:
   pull_request:
     branches: [ main ]
 
-env:
-  DATABRICKS_CLIENT_ID: ${{secrets.DEV_DATABRICKS_CLIENT_ID}}
-  DATABRICKS_CLIENT_SECRET: ${{secrets.DEV_DATABRICKS_CLIENT_SECRET}}
-
 jobs:
   lint:
     runs-on:
