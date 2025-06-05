@@ -5,17 +5,17 @@
 
 # COMMAND ----------
 
-dbutils.widgets.text("env", "dev")
-dbutils.widgets.text("git_commit", "")
-dbutils.widgets.text("experiment_name", "/telco_support_agent/dev/experiments/dev_telco_support_agent")
-
-# COMMAND ----------
-
 # MAGIC %pip install -r ../../requirements.txt -q
 
 # COMMAND ----------
 
 # MAGIC %restart_python
+
+# COMMAND ----------
+
+dbutils.widgets.text("env", "dev")
+dbutils.widgets.text("git_commit", "")
+dbutils.widgets.text("experiment_name", "/telco_support_agent/dev/experiments/dev_telco_support_agent")
 
 # COMMAND ----------
 
@@ -27,12 +27,10 @@ import mlflow
 project_root = os.path.abspath(os.path.join(os.getcwd(), "../.."))
 sys.path.append(project_root)
 
-
 env = dbutils.widgets.get("env")
 git_commit = dbutils.widgets.get("git_commit")
 experiment_name = dbutils.widgets.get("experiment_name")
 
-# Setting env variable for telco support agent. In this way, the agent will deploy in the correct catalog and schema.
 os.environ['TELCO_SUPPORT_AGENT_ENV'] = env
 
 # COMMAND ----------
