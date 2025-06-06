@@ -1,3 +1,5 @@
+"""Topic classification utilities for the telco support agent."""
+
 import json
 import logging
 from dataclasses import dataclass
@@ -19,9 +21,18 @@ def run_llm(
     message: str,
     system_prompt: Optional[str] = None,
     model: str = "gpt-4o",
-):
-    messages = [{"role": "user", "content": message}]
+) -> str:
+    """Run LLM query using Databricks deployment client.
 
+    Args:
+        message: The user message to send to the LLM
+        system_prompt: Optional system prompt to include
+        model: The model endpoint to use (default: gpt-4o)
+
+    Returns:
+        The LLM response content
+    """
+    messages = [{"role": "user", "content": message}]
     if system_prompt is not None:
         messages = [{"role": "system", "content": system_prompt}] + messages
 
@@ -33,14 +44,29 @@ def run_llm(
 
 @dataclass(frozen=True, eq=True)
 class TopicCategory:
+    """Represents a topic category for classification.
+
+    Args:
+        name: The name of the topic category
+        description: Optional description of the topic category
+    """
     name: str
     description: Optional[str] = None
 
-    def __hash__(self):
+    def __hash__(self) -> int:
+        """Generate hash for the topic category."""
         return hash((self.name, self.description or ""))
 
     @classmethod
     def from_dict(cls, topic_dict: dict[str, Any]) -> "TopicCategory":
+        """Create a TopicCategory from a dictionary.
+
+        Args:
+            topic_dict: Dictionary containing topic information
+
+        Returns:
+            TopicCategory instance
+        """
         return cls(
             name=topic_dict.get("name") or topic_dict.get("topic"),
             description=topic_dict.get("description"),
@@ -49,12 +75,13 @@ class TopicCategory:
 
 def _create_topic_classification_prompt(
     message: str, topic_categories: list[TopicCategory]
-):
+) -> str:
+    """Create a prompt for topic classification."""
     formatted_topic_categories = "\n".join(
         [
             f"""    <topic>
             <name>{topic_category.name}</name>
-            <description>{topic_category.description}</description>
+            <description>{topic_category.description or 'No description'}</description>
             </topic>"""
             for topic_category in topic_categories
         ]
@@ -69,32 +96,49 @@ def _create_topic_classification_prompt(
 
     Please return the result using the following JSON format. Do not use any newlines or additional spaces:
     {{
-        "rationale": Reason for the categorization.,
-        "topic": The chosen topic. If none of the topics are applicable, return 'other',
+        "rationale": "Reason for the categorization.",
+        "topic": "The chosen topic. If none of the topics are applicable, return 'other'"
     }}
     """
 
 
-def topic_classification(content: str, topic_categories: list[TopicCategory]):
+def topic_classification(
+    content: str,
+    topic_categories: list[TopicCategory],
+    model: str = "gpt-4o"
+) -> dict[str, str]:
     """Classify content into topics using an LLM.
 
     Args:
         content: The text content to classify
         topic_categories: List of topic categories
+        model: The LLM model to use for classification
 
     Returns:
-        Classification result from the model
+        Dictionary with 'topic' and 'rationale' keys
     """
+    if not content.strip() or not topic_categories:
+        return {"topic": "other", "rationale": "Empty content or no categories"}
+
     try:
-        result = run_llm(_create_topic_classification_prompt(content, topic_categories))
+        prompt = _create_topic_classification_prompt(content, topic_categories)
+        result = run_llm(prompt, model=model)
+
         deserialized_result = json.loads(result)
-        topic = deserialized_result["topic"]
-        rationale = deserialized_result["rationale"]
+        topic = deserialized_result.get("topic", "other")
+        rationale = deserialized_result.get("rationale", "No rationale provided")
+
+        # Validate topic is one of the available categories or 'other'
+        valid_topics = {cat.name for cat in topic_categories} | {"other"}
+        if topic not in valid_topics:
+            topic = "other"
+            rationale = "Invalid topic returned, defaulting to other"
+
         return {"topic": topic, "rationale": rationale}
+
     except Exception as e:
-        _logger.error(f"Failed to classify {content}: {str(e)}")
-        _logger.error(f"Classification response: {result}")
-        return {}
+        _logger.error(f"Failed to classify content: {str(e)}")
+        return {"topic": "other", "rationale": f"Classification error: {str(e)}"}
 
 
 def load_topics_from_yaml(
@@ -123,14 +167,10 @@ def load_topics_from_yaml(
             Path("/model/artifacts") / "topics.yaml",
         ]
 
+        yaml_path = None
         for path in search_paths:
-            if isinstance(path, Path) and path.exists():
+            if path.exists():
                 yaml_path = path
-                _logger.info(f"Found topics file at {path}")
-                break
-            elif isinstance(path, str) and Path(path).exists():
-                yaml_path = Path(path)
-                _logger.info(f"Found topics file at {path}")
                 break
 
         if yaml_path is None:
@@ -138,25 +178,25 @@ def load_topics_from_yaml(
                 "Could not find topics.yaml in any of the expected locations"
             )
 
-    try:
-        with open(yaml_path) as f:
-            data = yaml.safe_load(f)
+    with open(yaml_path) as f:
+        data = yaml.safe_load(f)
 
-        if not isinstance(data, dict) or "topics" not in data:
-            raise ValueError(
-                "YAML file must contain a 'topics' key with a list of topic definitions"
-            )
+    if not isinstance(data, dict) or "topics" not in data:
+        raise ValueError(
+            "YAML file must contain a 'topics' key with a list of topic definitions"
+        )
 
-        if not isinstance(data["topics"], list):
-            raise ValueError("'topics' must be a list of topic definitions")
+    if not isinstance(data["topics"], list):
+        raise ValueError("'topics' must be a list of topic definitions")
 
-        return [TopicCategory.from_dict(topic) for topic in data["topics"]]
-    except FileNotFoundError:
-        _logger.error(f"Topics YAML file not found at {yaml_path}")
-        raise
-    except yaml.YAMLError as e:
-        _logger.error(f"Error parsing topics YAML file: {e}")
-        raise
-    except Exception as e:
-        _logger.error(f"Error loading topics: {e}")
-        raise
+    topics = []
+    for topic_data in data["topics"]:
+        try:
+            topic = TopicCategory.from_dict(topic_data)
+            if topic.name:
+                topics.append(topic)
+        except Exception as e:
+            _logger.warning(f"Skipping invalid topic: {e}")
+            continue
+
+    return topics
