@@ -1,28 +1,28 @@
-name: Prod UI Deploy
+name: Staging UI Deploy
 
 on:
   push:
-    branches: [ release ]
+    branches: [ main ]
     paths: [ 'ui/**' ]
   workflow_run:
-    workflows: ["Prod Databricks Infra CI/CD"]
+    workflows: ["Staging Databricks Infra CI/CD"]
     types: [completed]
-    branches: [ release ]
+    branches: [ main ]
   workflow_dispatch:
     inputs:
       reason:
         description: 'Reason for manual deployment'
-        required: true
-        default: 'Manual production deployment'
+        required: false
+        default: 'Manual staging deployment'
 
 env:
-  DATABRICKS_CLIENT_ID: ${{secrets.PROD_DATABRICKS_CLIENT_ID}}
-  DATABRICKS_CLIENT_SECRET: ${{secrets.PROD_DATABRICKS_CLIENT_SECRET}}
+  DATABRICKS_CLIENT_ID: ${{secrets.STAGING_DATABRICKS_CLIENT_ID}}
+  DATABRICKS_CLIENT_SECRET: ${{secrets.STAGING_DATABRICKS_CLIENT_SECRET}}
 
 jobs:
   deploy-ui:
-    name: Deploy UI to Production
-    environment: prod
+    name: Deploy UI to Staging
+    environment: staging
     runs-on:
       group: databricks-field-eng-protected-runner-group
       labels: linux-ubuntu-latest
@@ -30,7 +30,7 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -55,12 +55,11 @@ jobs:
         working-directory: ui
         run: |
           chmod +x deploy.sh
-          ./deploy.sh prod prod
+          ./deploy.sh staging staging
           
-      - name: Post-deployment Verification
+      - name: Verify Deployment
         run: |
           # Wait for deployment to register
           sleep 60
           # Check if app is running
-          databricks apps get telco-support-agent-prod --profile prod
-          echo "✅ Production deployment completed successfully"
+          databricks apps get telco-support-agent-staging --profile staging

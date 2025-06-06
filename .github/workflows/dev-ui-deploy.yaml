@@ -1,50 +1,66 @@
-# name: Dev UI Deploy
+name: Dev UI Deploy
 
-# on:
-#   push:
-#     branches: [ main ]
-#     paths: [ 'ui/**' ]
-#   workflow_run:
-#     workflows: ["Dev Databricks Infra CI/CD"]
-#     types: [completed]
-#     branches: [ main ]
+on:
+  push:
+    branches: [ main ]
+    paths: [ 'ui/**' ]
+  workflow_run:
+    workflows: ["Dev Databricks Infra CI/CD"]
+    types: [completed]
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for manual deployment'
+        required: false
+        default: 'Manual dev deployment'
 
-# env:
-#   DATABRICKS_CLIENT_ID: ${{secrets.DEV_DATABRICKS_CLIENT_ID}}
-#   DATABRICKS_CLIENT_SECRET: ${{secrets.DEV_DATABRICKS_CLIENT_SECRET}}
+env:
+  DATABRICKS_CLIENT_ID: ${{secrets.DEV_DATABRICKS_CLIENT_ID}}
+  DATABRICKS_CLIENT_SECRET: ${{secrets.DEV_DATABRICKS_CLIENT_SECRET}}
 
-# jobs:
-#   deploy-ui:
-#     name: Deploy UI to Dev
-#     environment: dev
-#     runs-on:
-#       group: databricks-field-eng-protected-runner-group
-#       labels: linux-ubuntu-latest
-#     # run if agent deployment succeeded or if UI changes were made
-#     if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'push' }}
-#     steps:
-#       - name: Checkout repository
-#         uses: actions/checkout@v4
+jobs:
+  deploy-ui:
+    name: Deploy UI to Dev
+    environment: dev
+    runs-on:
+      group: databricks-field-eng-protected-runner-group
+      labels: linux-ubuntu-latest
+    # run if agent deployment succeeded, UI changes were made, or manually triggered
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
         
-#       - name: Setup Node.js
-#         uses: actions/setup-node@v4
-#         with:
-#           node-version: '18'
-#           cache: 'npm'
-#           cache-dependency-path: ui/frontend/package-lock.json
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'ui/frontend/package-lock.json'
           
-#       - name: Setup Databricks CLI
-#         uses: databricks/setup-cli@main
+      - name: Install frontend dependencies
+        working-directory: ui/frontend
+        run: |
+          npm ci --prefer-offline --no-audit
+          
+      - name: Build frontend
+        working-directory: ui/frontend
+        run: |
+          npm run build
+          
+      - name: Setup Databricks CLI
+        uses: databricks/setup-cli@main
         
-#       - name: Deploy UI App
-#         working-directory: ui
-#         run: |
-#           chmod +x deploy.sh
-#           ./deploy.sh dev dev
+      - name: Deploy UI App
+        working-directory: ui
+        run: |
+          chmod +x deploy.sh
+          ./deploy.sh dev dev
           
-#       - name: Verify Deployment
-#         run: |
-#           # Wait for deployment to register
-#           sleep 60
-#           # Check if app is running
-#           databricks apps get telco-support-agent-dev --profile dev
+      - name: Verify Deployment
+        run: |
+          # Wait for deployment to register
+          sleep 60
+          # Check if app is running
+          databricks apps get telco-support-agent-dev --profile dev
