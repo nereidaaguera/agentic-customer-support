@@ -21,8 +21,9 @@ LLM_ENDPOINT_NAME = "databricks-claude-3-7-sonnet"
 SYSTEM_PROMPT = "You are a helpful assistant."
 MCP_SERVER_URLS = [
     "https://db-ml-models-prod-us-west.cloud.databricks.com/api/2.0/mcp/functions/telco_customer_support_dev/agent",
-    "https://db-ml-models-prod-us-west.cloud.databricks.com/api/2.0/mcp/vector-search/telco_customer_support_dev/agent",
-    "https://mcp-telco-outage-server-3888667486068890.aws.databricksapps.com/mcp/",
+    "https://db-ml-models-prod-us-west.cloud.databricks.com/api/2.0/mcp/functions/system/ai",
+    # "https://db-ml-models-prod-us-west.cloud.databricks.com/api/2.0/mcp/vector-search/telco_customer_support_dev/agent",
+    # "https://mcp-telco-outage-server-3888667486068890.aws.databricksapps.com/mcp/",
 ]
 
 
@@ -61,13 +62,49 @@ class ToolCallingAgent(ResponsesAgent):
         tools_dict = {t.name: t for t in tool_infos}
         return tools_dict[tool_name].exec_fn(**args)
 
-    def prepare_messages_for_llm(self, messages: List[dict]) -> List[dict]:
-        """
-        Given a sequence of “message dicts,” drop any keys the LLM doesn’t support.
-        We only allow the fields: role, content, name, tool_calls, tool_call_id.
-        """
-        allowed = {"role", "content", "name", "tool_calls", "tool_call_id"}
-        return [{k: v for k, v in msg.items() if k in allowed} for msg in messages]
+    def convert_to_chat_completion_format(self, message: dict[str, Any]) -> dict[str, Any]:
+        """Convert from Responses API to ChatCompletion compatible"""
+        msg_type = message.get("type", None)
+        if msg_type == "function_call":
+            return [
+                {
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": [
+                        {
+                            "id": message["call_id"],
+                            "type": "function",
+                            "function": {
+                                "arguments": message["arguments"],
+                                "name": message["name"]
+                            }
+
+                        }
+                    ],
+                }
+            ]
+        elif msg_type == "message" and isinstance(message["content"], list):
+            return [
+                {"role": message["role"], "content": content["text"]}
+                for content in message["content"]
+            ]
+        elif msg_type == "function_call_output":
+            return [
+                {
+                    "role": "tool",
+                    "content": message["output"],
+                    "tool_call_id": message["call_id"],
+                }
+            ]
+        compatible_keys = ["role", "content", "name", "tool_calls", "tool_call_id"]
+        return [{k: v for k, v in message.items() if k in compatible_keys}]
+
+    def prepare_messages_for_llm(self, messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Filter out message fields that are not compatible with LLM message formats and convert from Responses API to ChatCompletion compatible"""
+        chat_msgs = []
+        for msg in messages:
+            chat_msgs.extend(self.convert_to_chat_completion_format(msg))
+        return chat_msgs
 
     def chat_completion(
             self, messages: List[dict], workspace_client: WorkspaceClient
@@ -136,7 +173,6 @@ class ToolCallingAgent(ResponsesAgent):
                     for fc in tool_calls:
                         fname = fc["function"]["name"]
                         fargs = json.loads(fc["function"]["arguments"])
-                        result = None
                         try:
                             result = self.execute_tool(
                                 tool_name=fname, args=fargs, workspace_client=workspace_client

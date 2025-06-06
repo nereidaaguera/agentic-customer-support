@@ -5,7 +5,7 @@ from pkg_resources import get_distribution
 import mlflow
 from mlflow.models.auth_policy import SystemAuthPolicy, UserAuthPolicy, AuthPolicy
 from databricks import agents
-
+from databricks.sdk import WorkspaceClient
 
 mlflow.set_registry_uri("databricks-uc")
 
@@ -15,11 +15,20 @@ print("---------Logging the Model to MLflow---------")
 here = os.path.dirname(os.path.abspath(__file__))
 agent_script = os.path.join(here, "agent.py")
 
-resources = [DatabricksServingEndpoint(endpoint_name=LLM_ENDPOINT_NAME)]
+resources = [
+    DatabricksServingEndpoint(endpoint_name=LLM_ENDPOINT_NAME),
+    # TODO: We expect SSP auth to the MCP server to fail (current approach)
+    # if we comment out these functions. We could try OBO instead
+    # but there is no scope yet for first-party MCP with OBO
+    DatabricksFunction("telco_customer_support_dev.agent.get_average_monthly_bill"),
+    DatabricksFunction("telco_customer_support_dev.agent.get_billing_info"),
+    DatabricksFunction("system.ai.python_exec"),
+]
+
 system_auth_policy = SystemAuthPolicy(resources=resources)
 user_auth_policy = UserAuthPolicy(
     api_scopes=[
-        "serving.serving-endpoints"
+        "serving.serving-endpoints",
     ]
 )
 
@@ -27,11 +36,7 @@ with mlflow.start_run():
     logged_agent_info = mlflow.pyfunc.log_model(
         artifact_path="agent",
         python_model=agent_script,
-        pip_requirements=[
-            "mlflow",
-            "backoff",
-            "databricks-openai",
-            "databricks-mcp",
+        extra_pip_requirements=[
             f"databricks-connect=={get_distribution('databricks-connect').version}"
         ],
         auth_policy=AuthPolicy(
@@ -47,7 +52,13 @@ print()
 print("---------Testing the Logged Model---------")
 print(mlflow.models.predict(
     model_uri=f"runs:/{logged_agent_info.run_id}/agent",
-    input_data={"messages": [{"role": "user", "content": "Please call the start-notification-stream tool with two notifications and a 1s interval"}]},
+    input_data={"input": [{"role": "user", "content": "What was customer CUS-10001's average total bill per month over the last year?"}]},
+    env_manager="uv",
+))
+
+print(mlflow.models.predict(
+    model_uri=f"runs:/{logged_agent_info.run_id}/agent",
+    input_data={"input": [{"role": "user", "content": "What is the 200th fibonacci #?"}]},
     env_manager="uv",
 ))
 

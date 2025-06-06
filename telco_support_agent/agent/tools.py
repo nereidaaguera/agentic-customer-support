@@ -1,28 +1,7 @@
-import json
 from typing import Any, Callable, Generator, List, Optional
-from uuid import uuid4
-
-import backoff
-import mlflow
-import openai
-from databricks_openai import VectorSearchRetrieverTool, UCFunctionToolkit
-from unitycatalog.ai.core.base import get_uc_function_client
-from mlflow.entities import SpanType
-from mlflow.pyfunc import ChatAgent
-from mlflow.types.agent import (
-    ChatAgentChunk,
-    ChatAgentMessage,
-    ChatAgentResponse,
-    ChatContext,
-)
 from pydantic import BaseModel
 
-from typing import Optional
-
-import logging
-from databricks.sdk.credentials_provider import ModelServingUserCredentials
-from unitycatalog.ai.core.databricks import DatabricksFunctionClient
-
+from databricks_mcp import DatabricksOAuthClientProvider
 
 import asyncio
 from contextlib import asynccontextmanager
@@ -46,10 +25,9 @@ async def mcp_session(server_url: str, workspace_client: WorkspaceClient):
     """
     Async context manager that yields an initialized MCP ClientSession
     """
-    # Open bidirectional stream
     async with streamablehttp_client(
             url=server_url,
-            auth=workspace_client.mcp.get_oauth_provider()
+            auth=DatabricksOAuthClientProvider(workspace_client)
     ) as (read_stream, write_stream, _):
         async with ClientSession(read_stream, write_stream) as session:
             try:
@@ -89,30 +67,6 @@ def make_mcp_exec_fn(
     return exec_fn
 
 import copy
-from typing import Any
-
-def _fix_float_to_number(schema: Any) -> Any:
-    """
-    Recursively traverse a JSON‐schema-like object (dicts/lists) and
-    replace any {"type": "float"} with {"type": "number"}.
-    """
-    if isinstance(schema, dict):
-        new_schema = {}
-        for key, val in schema.items():
-            # If we find a "type" key whose value is exactly "float", replace it.
-            if key == "type" and val == "float":
-                new_schema[key] = "number"
-            else:
-                # Otherwise, recurse into val
-                new_schema[key] = _fix_float_to_number(val)
-        return new_schema
-
-    elif isinstance(schema, list):
-        return [_fix_float_to_number(item) for item in schema]
-
-    else:
-        return schema
-
 
 def get_mcp_tool_infos(workspace_client: WorkspaceClient, server_urls: list[str]):
     tool_infos = []
@@ -122,7 +76,6 @@ def get_mcp_tool_infos(workspace_client: WorkspaceClient, server_urls: list[str]
 
         # 2. convert each into a ToolInfo and append
         for t in mcp_tools.tools:
-            escaped_name = t.name.replace(".", "__")
 
             # Deep‐copy t.inputSchema so we don't mutate the original MCP object
             final_schema = copy.deepcopy(t.inputSchema)
@@ -133,14 +86,14 @@ def get_mcp_tool_infos(workspace_client: WorkspaceClient, server_urls: list[str]
             spec = {
                 "type": "function",
                 "function": {
-                    "name":        escaped_name,
+                    "name":        t.name,
                     "description": t.description,
                     "parameters":  final_schema
                 }
             }
             tool_infos.append(
                 ToolInfo(
-                    name=escaped_name,
+                    name=t.name,
                     spec=spec,
                     exec_fn=make_mcp_exec_fn(mcp_server_url, t.name, workspace_client),
                 )

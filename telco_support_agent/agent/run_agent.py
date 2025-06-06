@@ -2,7 +2,18 @@ import logging
 from agent import AGENT
 
 def query_agent(query):
-    for event in AGENT.predict_stream({"input": [{"role": "user", "content": query}]}):
+    assistant_response = {
+        "type": "message",
+        "id": "0bd86922-aa94-4857-817f-4b1bcf653643",
+        "content": [
+            {
+                "type": "output_text",
+                "text": "Hello! I'm here to help you with any questions you might have about telecommunications services, billing information, subscription plans, devices, or technical support. How can I assist you today?"
+            }
+        ],
+        "role": "assistant"
+    }
+    for event in AGENT.predict_stream({"input": [{"role": "user", "content": "hi"}, assistant_response, {"role": "user", "content": query}]}):
         if item:= getattr(event, "item", None):
             item_type = item.get("type")
 
