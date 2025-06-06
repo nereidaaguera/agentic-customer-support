@@ -1,0 +1,57 @@
+name: Prod UI Deploy
+
+on:
+  push:
+    branches: [ release ]
+    paths: [ 'ui/**' ]
+  workflow_run:
+    workflows: ["Prod Databricks Infra CI/CD"]
+    types: [completed]
+    branches: [ release ]
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for manual deployment'
+        required: true
+        default: 'Manual production deployment'
+
+env:
+  DATABRICKS_CLIENT_ID: ${{secrets.PROD_DATABRICKS_CLIENT_ID}}
+  DATABRICKS_CLIENT_SECRET: ${{secrets.PROD_DATABRICKS_CLIENT_SECRET}}
+
+jobs:
+  deploy-ui:
+    name: Deploy UI to Production
+    environment: prod
+    runs-on:
+      group: databricks-field-eng-protected-runner-group
+      labels: linux-ubuntu-latest
+    # run if agent deployment succeeded or if manually triggered
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: ui/frontend/package-lock.json
+          
+      - name: Setup Databricks CLI
+        uses: databricks/setup-cli@main
+          
+      - name: Deploy UI App
+        working-directory: ui
+        run: |
+          chmod +x deploy.sh
+          ./deploy.sh prod prod
+          
+      - name: Post-deployment Verification
+        run: |
+          # Wait for deployment to register
+          sleep 60
+          # Check if app is running
+          databricks apps get telco-support-agent-prod --profile prod
+          echo "✅ Production deployment completed successfully"

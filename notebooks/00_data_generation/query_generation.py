@@ -20,7 +20,7 @@ import json
 import time
 import random
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Any, Tuple
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 
@@ -67,19 +67,13 @@ deploy_client = get_deploy_client("databricks")
 
 # COMMAND ----------
 
-MLFLOW_EXPERIMENT_ID = "c6d626ab8d2c4780ab723ab3ee43f052"
-
-mlflow.set_experiment(experiment_id=MLFLOW_EXPERIMENT_ID)
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC ## Response Formatting Utilities
 
 # COMMAND ----------
 
 class ResponseFormatter:
-    """Utility class for formatting agent responses for better readability."""
+    """Utility class for formatting agent responses."""
     
     @staticmethod
     def extract_assistant_message(response: Dict[str, Any]) -> str:
@@ -239,7 +233,7 @@ QUERY_TEMPLATES = {
             QueryContext("product", True, False, "price-conscious customer", "plan comparison"),
             QueryContext("product", True, False, "tech enthusiast", "device upgrade"),
             QueryContext("product", True, False, "family customer", "multi-line planning"),
-            QueryContext("product", False, False, "potential customer", "service exploration"),
+            QueryContext("product", True, False, "potential customer", "service exploration"), 
             QueryContext("product", True, False, "existing customer", "optimization"),
         ],
         "base_scenarios": [
@@ -362,9 +356,8 @@ Generate ONE realistic question following this pattern. Don't include any preamb
         """Enhance query with appropriate context (customer ID, dates, etc.)."""
         custom_inputs = {}
         
-        # add customer ID if required
-        if context.requires_customer_id:
-            custom_inputs["customer"] = self.generate_customer_id()
+        # always add customer ID
+        custom_inputs["customer"] = self.generate_customer_id()
         
         # add temporal context for billing queries
         if context.requires_dates and "billing" in context.category:
@@ -623,7 +616,7 @@ class FeedbackGenerator:
 # COMMAND ----------
 
 class FeedbackLogger:
-    """Handle feedback logging with proper trace management."""
+    """Handle feedback logging."""
     
     @staticmethod
     def log_feedback_for_query(feedbacks: List[Dict[str, Any]], trace_id: str) -> bool:
@@ -697,7 +690,7 @@ class FeedbackLogger:
 # COMMAND ----------
 
 class SyntheticQueryEngine:
-    """Engine for generating and executing synthetic queries."""
+    """Generate and execute synthetic queries."""
     
     def __init__(self, num_queries: int = QUERIES_PER_BATCH):
         self.num_queries = num_queries
@@ -883,9 +876,7 @@ class SyntheticQueryEngine:
 
 # COMMAND ----------
 
-def generate_sample_queries_for_testing():
-    """Generate a few sample queries for manual testing."""
-    
+def generate_sample_queries_for_testing():    
     engine = SyntheticQueryEngine(num_queries=5)
     queries = engine.generate_query_batch()
     
@@ -909,7 +900,6 @@ def generate_sample_queries_for_testing():
         print()
 
 def test_single_query():
-    """Test a single query manually."""
     print("MANUAL SINGLE QUERY TEST")
     print("=" * 40)
     
@@ -963,7 +953,6 @@ def test_single_query():
         return False
 
 def test_small_batch():
-    """Test the system with a small batch of queries."""
     print("TESTING WITH SMALL BATCH")
     print("=" * 50)
     
@@ -1114,18 +1103,18 @@ def run_continuous_simulation(batches: int = 3, delay_between_batches: int = 300
 
 # COMMAND ----------
 
-print("Generating sample queries...")
-generate_sample_queries_for_testing()
+# print("Generating sample queries...")
+# generate_sample_queries_for_testing()
 
 # COMMAND ----------
 
-print("Running single query test...")
-single_test_success = test_single_query()
+# print("Running single query test...")
+# single_test_success = test_single_query()
 
 # COMMAND ----------
 
-print("Running small batch test...")
-test_results = test_small_batch()
+# print("Running small batch test...")
+# test_results = test_small_batch()
 
 # COMMAND ----------
 
@@ -1136,8 +1125,8 @@ test_results = test_small_batch()
 
 # COMMAND ----------
 
-print("Running batch execution...")
-batch_summary = run_synthetic_query_batch(num_queries=QUERIES_PER_BATCH)
+# print("Running batch execution...")
+# batch_summary = run_synthetic_query_batch(num_queries=QUERIES_PER_BATCH)
 
 # COMMAND ----------
 
@@ -1149,7 +1138,7 @@ batch_summary = run_synthetic_query_batch(num_queries=QUERIES_PER_BATCH)
 # COMMAND ----------
 
 print("Running continuous simulation...")
-simulation_summary = run_continuous_simulation(batches=3, delay_between_batches=120)
+simulation_summary = run_continuous_simulation(batches=8, delay_between_batches=60)
 print(f"Simulation summary: {simulation_summary}")
 
 # COMMAND ----------
