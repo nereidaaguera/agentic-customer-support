@@ -1,7 +1,8 @@
 dev:
   data:
-    catalog: telco_customer_support_dev
+    catalog: telco_customer_support_prod
     schema: bronze
+    indexes_schema: gold
   agent:
     catalog: telco_customer_support_dev
     schema: agent
@@ -14,8 +15,9 @@ dev:
         - EXECUTE
 staging:
   data:
-    catalog: telco_customer_support_dev
+    catalog: telco_customer_support_prod
     schema: bronze
+    indexes_schema: gold
   agent:
     catalog: telco_customer_support_staging
     schema: agent
@@ -30,6 +32,7 @@ prod:
   data:
     catalog: telco_customer_support_prod
     schema: bronze
+    indexes_schema: gold
   agent:
     catalog: telco_customer_support_prod
     schema: agent

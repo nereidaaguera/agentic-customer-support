@@ -18,15 +18,24 @@
 
 # COMMAND ----------
 
+dbutils.widgets.text("env", "dev")
+
+# COMMAND ----------
+
 import os
 import sys
 from pathlib import Path
+from mlflow.utils.databricks_utils import dbutils
 
 root_path = os.path.abspath(os.path.join(os.getcwd(), "../.."))
 print(f"Root path: {root_path}")
 
 if root_path:
     sys.path.append(root_path)
+
+env = dbutils.widgets.get("env")
+
+os.environ['TELCO_SUPPORT_AGENT_ENV'] = env
 
 # COMMAND ----------
 
@@ -51,7 +60,7 @@ print("✅ Vector Search Manager initialized successfully")
 print(f"   Endpoint: {vs_manager.endpoint_name}")
 print(f"   Knowledge Base: {vs_manager.kb_table} -> {vs_manager.kb_index_name}")
 print(f"   Support Tickets: {vs_manager.tickets_table} -> {vs_manager.tickets_index_name}")
-    
+
 # COMMAND ----------
 
 # MAGIC %md
@@ -60,7 +69,7 @@ print(f"   Support Tickets: {vs_manager.tickets_table} -> {vs_manager.tickets_in
 # MAGIC This will:
 # MAGIC 1. Create vector search endpoint (if needed)
 # MAGIC 2. Verify source tables with `formatted_content` columns exist
-# MAGIC 3. Create both vector search indexes 
+# MAGIC 3. Create both vector search indexes
 # MAGIC 4. Sync indexes with source data
 # MAGIC 5. Test indexes with sample queries
 
@@ -88,7 +97,7 @@ print("=== Vector Search Index Status ===\n")
 
 for index_type, status in status_summary.items():
     print(f"{index_type.replace('_', ' ').title()} Index:")
-    
+
     if status.get('exists', False):
         print(f"  ✅ Name: {status['name']}")
         print(f"     State: {status['state']}")
@@ -98,7 +107,7 @@ for index_type, status in status_summary.items():
         print(f"  ❌ Index does not exist: {status['name']}")
         if 'error' in status:
             print(f"     Error: {status['error']}")
-    
+
     print()
 
 
