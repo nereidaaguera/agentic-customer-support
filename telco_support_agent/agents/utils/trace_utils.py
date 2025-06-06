@@ -56,10 +56,16 @@ def compute_request_preview(request: Any) -> str:
     return preview[:TRACE_REQUEST_RESPONSE_PREVIEW_MAX_LENGTH]
 
 
+"""
+Ultra-simple fix for compute_response_preview in trace_utils.py
+Replace the existing function with this minimal version
+"""
+
+
 def compute_response_preview(response: Any) -> str:
     """Compute preview of response for tracing.
 
-    Extracts assistant response for display in trace previews.
+    Extracts assistant response text for display in trace previews.
 
     Args:
         response: The raw response string or dict to process
@@ -73,33 +79,34 @@ def compute_response_preview(response: Any) -> str:
         try:
             data = json.loads(response)
         except (json.JSONDecodeError, TypeError):
-            preview = response
-            return preview[:TRACE_REQUEST_RESPONSE_PREVIEW_MAX_LENGTH]
+            return response[:TRACE_REQUEST_RESPONSE_PREVIEW_MAX_LENGTH]
     else:
         data = response
 
-    if isinstance(data, dict):
-        try:
-            output = data.get("output")
-            if isinstance(output, list):
-                for item in reversed(output):
-                    if (
-                        isinstance(item, dict)
-                        and item.get("role") == "assistant"
-                        and isinstance(item.get("content"), list)
-                    ):
-                        for part in reversed(item["content"]):
+    if isinstance(data, dict) and "output" in data:
+        output = data["output"]
+        if isinstance(output, list):
+            for item in reversed(output):
+                if (
+                    hasattr(item, "type")
+                    and item.type == "message"
+                    and hasattr(item, "role")
+                    and item.role == "assistant"
+                    and hasattr(item, "content")
+                ):
+                    content = item.content
+                    if isinstance(content, list):
+                        for content_item in content:
                             if (
-                                isinstance(part, dict)
-                                and part.get("type") == "output_text"
-                                and isinstance(part.get("text"), str)
+                                isinstance(content_item, dict)
+                                and content_item.get("type") == "output_text"
+                                and "text" in content_item
                             ):
-                                preview = part["text"]
+                                preview = content_item["text"]
                                 break
-                        if preview:
-                            break
-        except (KeyError, TypeError, AttributeError) as e:
-            logger.debug(f"Error extracting assistant content from response: {e}")
+
+                    if preview:
+                        break
 
     if not preview:
         preview = str(response)
