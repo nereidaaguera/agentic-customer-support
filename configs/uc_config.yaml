@@ -14,7 +14,7 @@ dev:
         - EXECUTE
 staging:
   data:
-    catalog: telco_customer_support_staging
+    catalog: telco_customer_support_dev
     schema: bronze
   agent:
     catalog: telco_customer_support_staging
@@ -23,7 +23,7 @@ staging:
     # permissions for UC functions
     permissions:
       groups:
-        - telco-customer-support-staging
+        - telco-customer-support-dev
       privileges:
         - EXECUTE
 prod:
