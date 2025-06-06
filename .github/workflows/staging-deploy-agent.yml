@@ -3,7 +3,7 @@ name: Staging Databricks Infra CI/CD
 on:
   push:
     branches:
-      - manfred/adding_stage_workflow
+      - main
 env:
   DATABRICKS_CLIENT_ID: ${{secrets.STAGING_DATABRICKS_CLIENT_ID}}
   DATABRICKS_CLIENT_SECRET: ${{secrets.STAGING_DATABRICKS_CLIENT_SECRET}}
