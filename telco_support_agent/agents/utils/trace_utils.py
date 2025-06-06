@@ -109,7 +109,7 @@ def compute_response_preview(response: Any) -> str:
 
 def patch_trace_info() -> None:
     """Apply monkey patch to TraceInfo for better trace previews."""
-    # Check if already patched to avoid double-patching
+    # check if already patched to avoid double-patching
     if hasattr(TraceInfo, "_is_patched"):
         return
 
@@ -152,25 +152,22 @@ def update_trace_preview(
     request_preview = None
     response_preview = None
 
-    # Handle request preview
+    # handle request preview
     if request_data:
         request_preview = compute_request_preview(request_data)
     elif user_query:
-        # Construct minimal request structure
         request_structure = create_request_structure(
             user_query, {"customer": customer_id} if customer_id else None
         )
         request_preview = compute_request_preview(request_structure)
 
-    # Handle response preview
+    # handle response preview
     if response_data:
         response_preview = compute_response_preview(response_data)
     elif assistant_response:
-        # Construct minimal response structure
         response_structure = create_response_structure(assistant_response)
         response_preview = compute_response_preview(response_structure)
 
-    # Update trace if we have any previews
     if request_preview is not None or response_preview is not None:
         mlflow.update_current_trace(
             request_preview=request_preview,
