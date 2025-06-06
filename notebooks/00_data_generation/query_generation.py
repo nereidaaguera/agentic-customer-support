@@ -1138,7 +1138,7 @@ def run_continuous_simulation(batches: int = 3, delay_between_batches: int = 300
 # COMMAND ----------
 
 print("Running continuous simulation...")
-simulation_summary = run_continuous_simulation(batches=8, delay_between_batches=60)
+simulation_summary = run_continuous_simulation(batches=6, delay_between_batches=120)
 print(f"Simulation summary: {simulation_summary}")
 
 # COMMAND ----------
