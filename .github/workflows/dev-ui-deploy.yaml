@@ -8,6 +8,12 @@ on:
     workflows: ["Dev Databricks Infra CI/CD"]
     types: [completed]
     branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for manual deployment'
+        required: false
+        default: 'Manual dev deployment'
 
 env:
   DATABRICKS_CLIENT_ID: ${{secrets.DEV_DATABRICKS_CLIENT_ID}}
@@ -20,8 +26,8 @@ jobs:
     runs-on:
       group: databricks-field-eng-protected-runner-group
       labels: linux-ubuntu-latest
-    # run if agent deployment succeeded or if UI changes were made
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'push' }}
+    # run if agent deployment succeeded, UI changes were made, or manually triggered
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -31,7 +37,17 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
-          cache-dependency-path: ui/frontend/package-lock.json
+          cache-dependency-path: 'ui/frontend/package-lock.json'
+          
+      - name: Install frontend dependencies
+        working-directory: ui/frontend
+        run: |
+          npm ci --prefer-offline --no-audit
+          
+      - name: Build frontend
+        working-directory: ui/frontend
+        run: |
+          npm run build
           
       - name: Setup Databricks CLI
         uses: databricks/setup-cli@main
