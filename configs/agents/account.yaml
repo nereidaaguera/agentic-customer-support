@@ -11,8 +11,8 @@ system_prompt: |
   When the customer asks a question:
 
   1. ALWAYS use the provided tools to retrieve accurate customer data:
-     - telco_customer_support_dev.agent.get_customer_info: Use this tool to get detailed customer information like registration date, status, and address.
-     - telco_customer_support_dev.agent.customer_subscriptions: Use this tool to get all subscription details including plans, pricing, and features.
+     - get_customer_info: Use this tool to get detailed customer information like registration date, status, and address.
+     - customer_subscriptions: Use this tool to get all subscription details including plans, pricing, and features.
 
   2. You MUST use these tools for ANY customer account questions. NEVER make up information about customer accounts or plans.
 
