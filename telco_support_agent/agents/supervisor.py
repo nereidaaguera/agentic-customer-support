@@ -22,6 +22,10 @@ from telco_support_agent.agents.types import AgentType
 from telco_support_agent.agents.utils.message_formatting import (
     extract_user_query,
 )
+from telco_support_agent.agents.utils.topic_utils import (
+    load_topics_from_yaml,
+    topic_classification,
+)
 from telco_support_agent.utils.logging_utils import get_logger, setup_logging
 
 setup_logging()
@@ -71,7 +75,7 @@ class SupervisorAgent(BaseAgent):
 
         self._sub_agents = {}
         self.disable_tools = disable_tools or []
-
+        self._topic_categories = load_topics_from_yaml()
         if self.disable_tools:
             logger.info(
                 f"Supervisor configured with disabled tools: {self.disable_tools}"
@@ -160,6 +164,14 @@ class SupervisorAgent(BaseAgent):
             )
             return AgentType.ACCOUNT
 
+    @mlflow.trace(span_type=SpanType.LLM)
+    def _classify_query(self, query: str) -> dict[str, str]:
+        classification_result = topic_classification(query, self._topic_categories)
+        detected_topic = classification_result.get("topic")
+        if detected_topic is not None:
+            mlflow.update_current_trace(tags={"topic": detected_topic})
+        return classification_result
+
     def _prepare_agent_execution(
         self, request: ResponsesAgentRequest
     ) -> AgentExecutionResult:
@@ -211,6 +223,10 @@ class SupervisorAgent(BaseAgent):
 
         # get sub-agent
         sub_agent = self._get_sub_agent(agent_type)
+
+        # classify query based on topic categories
+        classification_result = self._classify_query(user_query)
+        custom_outputs["topic"] = classification_result.get("topic")
 
         # if sub-agent not implemented, prepare non-response
         if sub_agent is None:
