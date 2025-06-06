@@ -239,7 +239,7 @@ QUERY_TEMPLATES = {
             QueryContext("product", True, False, "price-conscious customer", "plan comparison"),
             QueryContext("product", True, False, "tech enthusiast", "device upgrade"),
             QueryContext("product", True, False, "family customer", "multi-line planning"),
-            QueryContext("product", False, False, "potential customer", "service exploration"),
+            QueryContext("product", True, False, "potential customer", "service exploration"), 
             QueryContext("product", True, False, "existing customer", "optimization"),
         ],
         "base_scenarios": [
@@ -362,9 +362,8 @@ Generate ONE realistic question following this pattern. Don't include any preamb
         """Enhance query with appropriate context (customer ID, dates, etc.)."""
         custom_inputs = {}
         
-        # add customer ID if required
-        if context.requires_customer_id:
-            custom_inputs["customer"] = self.generate_customer_id()
+        # always add customer ID
+        custom_inputs["customer"] = self.generate_customer_id()
         
         # add temporal context for billing queries
         if context.requires_dates and "billing" in context.category:
