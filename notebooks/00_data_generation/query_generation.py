@@ -1113,18 +1113,18 @@ def run_continuous_simulation(batches: int = 3, delay_between_batches: int = 300
 
 # COMMAND ----------
 
-print("Generating sample queries...")
-generate_sample_queries_for_testing()
+# print("Generating sample queries...")
+# generate_sample_queries_for_testing()
 
 # COMMAND ----------
 
-print("Running single query test...")
-single_test_success = test_single_query()
+# print("Running single query test...")
+# single_test_success = test_single_query()
 
 # COMMAND ----------
 
-print("Running small batch test...")
-test_results = test_small_batch()
+# print("Running small batch test...")
+# test_results = test_small_batch()
 
 # COMMAND ----------
 
@@ -1135,8 +1135,8 @@ test_results = test_small_batch()
 
 # COMMAND ----------
 
-print("Running batch execution...")
-batch_summary = run_synthetic_query_batch(num_queries=QUERIES_PER_BATCH)
+# print("Running batch execution...")
+# batch_summary = run_synthetic_query_batch(num_queries=QUERIES_PER_BATCH)
 
 # COMMAND ----------
 
