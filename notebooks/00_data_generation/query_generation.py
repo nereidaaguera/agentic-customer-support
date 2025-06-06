@@ -20,7 +20,7 @@ import json
 import time
 import random
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Any, Tuple
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 
@@ -73,7 +73,7 @@ deploy_client = get_deploy_client("databricks")
 # COMMAND ----------
 
 class ResponseFormatter:
-    """Utility class for formatting agent responses for better readability."""
+    """Utility class for formatting agent responses."""
     
     @staticmethod
     def extract_assistant_message(response: Dict[str, Any]) -> str:
@@ -616,7 +616,7 @@ class FeedbackGenerator:
 # COMMAND ----------
 
 class FeedbackLogger:
-    """Handle feedback logging with proper trace management."""
+    """Handle feedback logging."""
     
     @staticmethod
     def log_feedback_for_query(feedbacks: List[Dict[str, Any]], trace_id: str) -> bool:
@@ -690,7 +690,7 @@ class FeedbackLogger:
 # COMMAND ----------
 
 class SyntheticQueryEngine:
-    """Engine for generating and executing synthetic queries."""
+    """Generate and execute synthetic queries."""
     
     def __init__(self, num_queries: int = QUERIES_PER_BATCH):
         self.num_queries = num_queries
@@ -876,9 +876,7 @@ class SyntheticQueryEngine:
 
 # COMMAND ----------
 
-def generate_sample_queries_for_testing():
-    """Generate a few sample queries for manual testing."""
-    
+def generate_sample_queries_for_testing():    
     engine = SyntheticQueryEngine(num_queries=5)
     queries = engine.generate_query_batch()
     
@@ -902,7 +900,6 @@ def generate_sample_queries_for_testing():
         print()
 
 def test_single_query():
-    """Test a single query manually."""
     print("MANUAL SINGLE QUERY TEST")
     print("=" * 40)
     
@@ -956,7 +953,6 @@ def test_single_query():
         return False
 
 def test_small_batch():
-    """Test the system with a small batch of queries."""
     print("TESTING WITH SMALL BATCH")
     print("=" * 50)
     
