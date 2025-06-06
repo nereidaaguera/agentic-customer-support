@@ -50,6 +50,7 @@ class TopicCategory:
         name: The name of the topic category
         description: Optional description of the topic category
     """
+
     name: str
     description: Optional[str] = None
 
@@ -81,7 +82,7 @@ def _create_topic_classification_prompt(
         [
             f"""    <topic>
             <name>{topic_category.name}</name>
-            <description>{topic_category.description or 'No description'}</description>
+            <description>{topic_category.description or "No description"}</description>
             </topic>"""
             for topic_category in topic_categories
         ]
@@ -105,9 +106,7 @@ Consider the following customer message and topic categories. Categorize the mes
 
 
 def topic_classification(
-    content: str,
-    topic_categories: list[TopicCategory],
-    model: str = "gpt-4o"
+    content: str, topic_categories: list[TopicCategory], model: str = "gpt-4o"
 ) -> dict[str, str]:
     """Classify content into topics using an LLM.
 
