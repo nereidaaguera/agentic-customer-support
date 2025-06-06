@@ -1,0 +1,33 @@
+name: Staging Databricks Infra CI/CD
+
+on:
+  push:
+    branches:
+      - manfred/adding_stage_workflow
+env:
+  DATABRICKS_CLIENT_ID: ${{secrets.STAGING_DATABRICKS_CLIENT_ID}}
+  DATABRICKS_CLIENT_SECRET: ${{secrets.STAGING_DATABRICKS_CLIENT_SECRET}}
+  DATABRICKS_BUNDLE_TARGET: staging
+
+jobs:
+  deploy:
+    name: Deploy pipeline
+    environment: staging
+    runs-on:
+      group: databricks-field-eng-protected-runner-group
+      labels: linux-ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Setup databricks CLI
+        uses: databricks/setup-cli@main
+      - name: Validate bundle for staging
+        id: validate
+        run: |
+          databricks bundle validate
+      - name: Deploy bundle to staging
+        id: deploy
+        run: |
+          databricks bundle deploy

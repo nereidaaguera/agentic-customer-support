@@ -16,6 +16,7 @@
 dbutils.widgets.text("env", "dev")
 dbutils.widgets.text("git_commit", "")
 dbutils.widgets.text("experiment_name", "/telco_support_agent/dev/experiments/dev_telco_support_agent")
+dbutils.widgets.text("disable_tools", "")
 
 # COMMAND ----------
 
@@ -31,6 +32,7 @@ sys.path.append(project_root)
 env = dbutils.widgets.get("env")
 git_commit = dbutils.widgets.get("git_commit")
 experiment_name = dbutils.widgets.get("experiment_name")
+disable_tools = dbutils.widgets.get("disable_tools").split(",")
 
 os.environ['TELCO_SUPPORT_AGENT_ENV'] = env
 
@@ -102,7 +104,7 @@ print(f"\nInitialized {success_count}/{total_count} UC functions")
 
 print("Testing supervisor agent...")
 
-supervisor = SupervisorAgent()
+supervisor = SupervisorAgent(disable_tools=disable_tools)
 print(f"Created supervisor agent (LLM: {supervisor.llm_endpoint})")
 
 from mlflow.types.responses import ResponsesAgentRequest

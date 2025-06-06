@@ -12,7 +12,20 @@ dev:
         - telco-customer-support-dev
       privileges:
         - EXECUTE
-
+staging:
+  data:
+    catalog: telco_customer_support_staging
+    schema: bronze
+  agent:
+    catalog: telco_customer_support_staging
+    schema: agent
+    model_name: telco_customer_support_agent
+    # permissions for UC functions
+    permissions:
+      groups:
+        - telco-customer-support-staging
+      privileges:
+        - EXECUTE
 prod:
   data:
     catalog: telco_customer_support_prod
