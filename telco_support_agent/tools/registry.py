@@ -12,7 +12,7 @@ logger = get_logger(__name__)
 DOMAIN_FUNCTION_MAP = {
     AgentType.ACCOUNT.value: [
         "get_customer_info",
-        "get_customer_subscriptions",
+        "customer_subscriptions",
     ],
     AgentType.BILLING.value: [
         "get_billing_info",
@@ -57,7 +57,7 @@ def get_functions_for_domain(domain: str) -> list[str]:
     """
     uc_config = config_manager.get_uc_config()
     function_names = [
-        f"{uc_config.agent['catalog']}.{uc_config.agent['schema']}.{function_name}"
+        uc_config.get_uc_function_name(function_name)
         for function_name in DOMAIN_FUNCTION_MAP.get(domain, [])
     ]
     return function_names

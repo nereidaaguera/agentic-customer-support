@@ -61,18 +61,21 @@ class VectorSearchManager:
         """Setup full table and index names from config."""
         uc_config = config_manager.get_uc_config()
 
-        data_catalog = uc_config.data["catalog"]
-        data_schema = uc_config.data["schema"]
-        agent_catalog = uc_config.agent["catalog"]
-        agent_schema = uc_config.agent["schema"]
-
         # source tables
-        self.kb_table = f"{data_catalog}.{data_schema}.{self.config['indexes']['knowledge_base']['source_table']}"
-        self.tickets_table = f"{data_catalog}.{data_schema}.{self.config['indexes']['support_tickets']['source_table']}"
+        self.kb_table = uc_config.get_uc_table_name(
+            self.config["indexes"]["knowledge_base"]["source_table"]
+        )
+        self.tickets_table = uc_config.get_uc_table_name(
+            self.config["indexes"]["support_tickets"]["source_table"]
+        )
 
         # index names
-        self.kb_index_name = f"{agent_catalog}.{agent_schema}.{self.config['indexes']['knowledge_base']['name']}"
-        self.tickets_index_name = f"{agent_catalog}.{agent_schema}.{self.config['indexes']['support_tickets']['name']}"
+        self.kb_index_name = uc_config.get_uc_index_name(
+            self.config["indexes"]["knowledge_base"]["name"]
+        )
+        self.tickets_index_name = uc_config.get_uc_index_name(
+            self.config["indexes"]["support_tickets"]["name"]
+        )
 
         # vector search endpoint
         self.endpoint_name = self.config["endpoint"]["name"]
