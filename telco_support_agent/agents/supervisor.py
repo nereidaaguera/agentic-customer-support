@@ -1,7 +1,7 @@
 """Supervisor agent to orchestrate specialized sub-agents."""
 
 from collections.abc import Generator
-from typing import NamedTuple, Optional, Union
+from typing import Dict, NamedTuple, Optional, Union
 from uuid import uuid4
 
 import mlflow
@@ -20,6 +20,7 @@ from telco_support_agent.agents.product import ProductAgent
 from telco_support_agent.agents.tech_support import TechSupportAgent
 from telco_support_agent.agents.types import AgentType
 from telco_support_agent.utils.logging_utils import get_logger, setup_logging
+from telco_support_agent.utils.topic_utils import load_topics_from_yaml, topic_classification
 
 setup_logging()
 logger = get_logger(__name__)
@@ -68,7 +69,7 @@ class SupervisorAgent(BaseAgent):
 
         self._sub_agents = {}
         self.disable_tools = disable_tools or []
-
+        self._topic_categories = load_topics_from_yaml()
         if self.disable_tools:
             logger.info(
                 f"Supervisor configured with disabled tools: {self.disable_tools}"
@@ -156,6 +157,14 @@ class SupervisorAgent(BaseAgent):
                 f"Error in routing query: {str(e)}. Falling back to account agent."
             )
             return AgentType.ACCOUNT
+        
+    @mlflow.trace(span_type=SpanType.AGENT)
+    def _classify_query(self, query: str) -> Dict[str, str]:
+        classification_result = topic_classification(query, self._topic_categories)
+        detected_topic = classification_result.get("topic")
+        if detected_topic is not None:
+            mlflow.update_current_trace(tags={"topic": detected_topic})
+        return classification_result
 
     def _prepare_agent_execution(
         self, request: ResponsesAgentRequest
@@ -211,6 +220,10 @@ class SupervisorAgent(BaseAgent):
 
         # get sub-agent
         sub_agent = self._get_sub_agent(agent_type)
+
+        # classify query based on topic categories
+        classification_result = self._classify_query(query)
+        custom_outputs["topic"] = classification_result.get("topic")
 
         # if sub-agent not implemented, prepare non-response
         if sub_agent is None:

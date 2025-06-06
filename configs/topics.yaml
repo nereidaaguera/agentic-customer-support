@@ -1,0 +1,19 @@
+topics:
+  - name: billing_dispute
+    description: Issues related to billing discrepancies, incorrect charges, payment disputes, or billing statement questions
+  - name: outage_credit
+    description: Requests for compensation or credits due to service outages, downtime, or service interruptions
+  - name: landline_repair
+    description: Issues with traditional phone line service, including physical line problems, connection issues, or hardware malfunctions
+  - name: internet_fault
+    description: Problems with internet connectivity, speed issues, or broadband service disruptions
+  - name: account_reset
+    description: Requests to reset account passwords, PINs, or account access credentials
+  - name: disconnection_request
+    description: Customer requests to disconnect or terminate service, including final billing and equipment return
+  - name: phone_activation
+    description: Issues related to activating new phone lines, SIM cards, or mobile devices
+  - name: cable_setup
+    description: Problems with cable TV installation, equipment setup, or channel configuration
+  - name: network_instability
+    description: Reports of intermittent service, unstable connections, or fluctuating network performance
