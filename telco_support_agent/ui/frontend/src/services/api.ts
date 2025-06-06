@@ -864,7 +864,7 @@ export const getPredefinedQuestions = async () => {
     },
     {
       preview: "April charges",
-      text: "What are the charges on the customer's from 2025-04-01 to 2025-04-30?"
+      text: "What are the charges on the customer's bill from 2025-04-01 to 2025-04-30?"
     },
     {
       preview: "Payment due date",
