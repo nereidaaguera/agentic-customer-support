@@ -7,10 +7,18 @@ env:
   - name: 'TELCO_SUPPORT_AGENT_ENV'
     value: 'dev'
   - name: 'DATABRICKS_HOST'
-    value: 'https://your-workspace.cloud.databricks.com'
+    value: 'https://db-ml-models-prod-us-west.cloud.databricks.com/'
   - name: 'DATABRICKS_TOKEN'
-    value: 'databricks-token'
+    value: 'your_databricks_token_here'
+  # Choose endpoint based on environment:
+  # dev endpoint:
   - name: 'DATABRICKS_ENDPOINT_NAME'
-    value: 'telco-customer-support-agent'
+    value: 'dev-telco-customer-support-agent'
+  # staging endpoint:
+  # - name: 'DATABRICKS_ENDPOINT_NAME'
+  #   value: 'staging-telco-customer-support-agent'
+  # prod endpoint:
+  # - name: 'DATABRICKS_ENDPOINT_NAME'
+  #   value: 'prod-telco-customer-support-agent'
   - name: 'CORS_ORIGINS'
     value: 'http://localhost:3000,http://localhost:5173'
