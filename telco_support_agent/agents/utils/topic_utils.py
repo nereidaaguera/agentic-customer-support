@@ -87,7 +87,9 @@ def _create_topic_classification_prompt(
         ]
     )[4:]
 
-    return f"""Consider the following message and topic categories, each containing a name and description. You must categorize the message into at most one of the existing topic categories using the topic name and description to inform the categorization. Do not return any markdown.
+    return f"""You are classifying customer support queries for a mobile/wireless telecommunications company.
+
+Consider the following customer message and topic categories. Categorize the message into at most one of the existing topic categories based on the primary intent of the customer's inquiry.
 
     <message>{message}</message>
     <topic_categories>
@@ -96,8 +98,8 @@ def _create_topic_classification_prompt(
 
     Please return the result using the following JSON format. Do not use any newlines or additional spaces:
     {{
-        "rationale": "Reason for the categorization.",
-        "topic": "The chosen topic. If none of the topics are applicable, return 'other'"
+        "rationale": "Brief explanation of why this topic was chosen based on the customer's primary intent.",
+        "topic": "The chosen topic name. If none of the topics are applicable, return 'other'"
     }}
     """
 
