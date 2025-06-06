@@ -66,7 +66,7 @@ environment_vars = deploy_agent_config.get("environment_vars", {}) | {"TELCO_SUP
 permissions = deploy_agent_config.get("permissions")
 instructions = deploy_agent_config.get("instructions")
 
-uc_model_name = f"{uc_config.agent['catalog']}.{uc_config.agent['schema']}.{uc_config.agent['model_name']}"
+uc_model_name = uc_config.get_uc_model_name()
 
 if "version" in uc_config.agent:
     model_version = uc_config.agent["version"]

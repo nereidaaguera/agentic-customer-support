@@ -15,7 +15,7 @@ workspace_client = WorkspaceClient()
 
 def register_plans_info(uc_config: UCConfig):
     """Register the get_plans_info UC function."""
-    function_name = uc_config.get_function_name("get_plans_info")
+    function_name = uc_config.get_uc_function_name("get_plans_info")
 
     try:
         sql = f"""

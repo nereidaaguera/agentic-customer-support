@@ -59,7 +59,7 @@ with open(CONFIG_PATH) as f:
     config = yaml.safe_load(f)
 
 uc_config = config_manager.get_uc_config()
-uc_model_name = f"{uc_config.agent['catalog']}.{uc_config.agent['schema']}.{uc_config.agent['model_name']}"
+uc_model_name = uc_config.get_uc_model_name()
 
 print("Configuration:")
 print(f"  Name: {config['name']}")

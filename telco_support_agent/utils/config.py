@@ -35,6 +35,12 @@ class UCConfig(BaseModel):
         data_schema = self.data["schema"]
         return f"{data_catalog}.{data_schema}.{table_name}"
 
+    def get_uc_model_name(self) -> str:
+        """Returns name of uc model based on config."""
+        return (
+            f"{self.agent['catalog']}.{self.agent['schema']}.{self.agent['model_name']}"
+        )
+
 
 ENV = os.environ.get("TELCO_SUPPORT_AGENT_ENV", "dev")
 UC_CONFIG_FILE = "uc_config.yaml"
