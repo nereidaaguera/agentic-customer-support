@@ -31,7 +31,7 @@ with mlflow.start_run():
             "mlflow",
             "backoff",
             "databricks-openai",
-            "git+https://github.com/aravind-segu/databricks-sdk-py.git@mcpSupport#egg=databricks-sdk[mcp]",
+            "databricks-mcp",
             f"databricks-connect=={get_distribution('databricks-connect').version}"
         ],
         auth_policy=AuthPolicy(

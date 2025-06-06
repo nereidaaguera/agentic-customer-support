@@ -1,124 +1,233 @@
 import json
-from typing import Any, Callable, Generator, List, Optional
+from typing import Any, Generator, List, Optional
 from uuid import uuid4
 
 import mlflow
 from mlflow.entities import SpanType
-from mlflow.pyfunc import ChatAgent
-from mlflow.types.agent import (
-    ChatAgentChunk,
-    ChatAgentMessage,
-    ChatAgentResponse,
-    ChatContext,
+from mlflow.pyfunc import ResponsesAgent
+from mlflow.types.responses import (
+    ResponsesAgentRequest,
+    ResponsesAgentResponse,
+    ResponsesAgentStreamEvent,
 )
 
 from databricks.sdk import WorkspaceClient
 from tools import get_mcp_tool_infos
-import logging
 
-logging.basicConfig(level=logging.WARNING)
-mlflow_logger = logging.getLogger("mlflow")
-mlflow_logger.setLevel(logging.WARNING)
-
+# -----------------------------------------------------------------------------
+# Configurable constants
+# -----------------------------------------------------------------------------
 LLM_ENDPOINT_NAME = "databricks-claude-3-7-sonnet"
 SYSTEM_PROMPT = "You are a helpful assistant."
 MCP_SERVER_URLS = [
-    # "https://telco-outage-server-dev-3888667486068890.aws.databricksapps.com/mcp/",
-    "https://dbc-d3f42956-2c15.cloud.databricks.com/api/2.0/mcp/functions/system/ai",
+    "https://db-ml-models-prod-us-west.cloud.databricks.com/api/2.0/mcp/functions/telco_customer_support_dev/agent",
+    "https://db-ml-models-prod-us-west.cloud.databricks.com/api/2.0/mcp/vector-search/telco_customer_support_dev/agent",
+    "https://mcp-telco-outage-server-3888667486068890.aws.databricksapps.com/mcp/",
 ]
 
-class ToolCallingAgent(ChatAgent):
+
+class ToolCallingAgent(ResponsesAgent):
+    """
+    A lightweight ResponsesAgent that (1) calls a Claude-like LLM endpoint
+    via Databricks’ model serving client, and (2) executes MCP‐based tools in‐between
+    LLM calls. We keep it as simple as possible: no base‐class magic, no parameter‐injector.
+    """
+
     def __init__(self, llm_endpoint: str):
         super().__init__()
         self.llm_endpoint = llm_endpoint
 
-    def get_tool_specs(self, workspace_client):
-        tool_infos = get_mcp_tool_infos(workspace_client=workspace_client, server_urls=MCP_SERVER_URLS)
+    def get_tool_specs(self, workspace_client: WorkspaceClient) -> List[dict]:
+        """
+        Fetch all MCP tool specs (OpenAI‐style) from each configured URL.
+        Returns a list of {"type": "function", "function": {...}} dicts.
+        """
+        tool_infos = get_mcp_tool_infos(
+            workspace_client=workspace_client, server_urls=MCP_SERVER_URLS
+        )
         return [tool_info.spec for tool_info in tool_infos]
 
     @mlflow.trace(span_type=SpanType.TOOL)
-    def execute_tool(self, tool_name: str, args: dict, workspace_client) -> Any:
-        tool_infos = get_mcp_tool_infos(workspace_client=workspace_client, server_urls=MCP_SERVER_URLS)
-        tools_dict = {tool.name: tool for tool in tool_infos}
+    def execute_tool(
+            self, tool_name: str, args: dict, workspace_client: WorkspaceClient
+    ) -> Any:
+        """
+        Execute exactly one MCP tool by name (using its exec_fn).
+        We re‐fetch tool_infos each time to keep things simple (no cache).
+        """
+        tool_infos = get_mcp_tool_infos(
+            workspace_client=workspace_client, server_urls=MCP_SERVER_URLS
+        )
+        tools_dict = {t.name: t for t in tool_infos}
         return tools_dict[tool_name].exec_fn(**args)
 
-    def prepare_messages_for_llm(self, messages: list[ChatAgentMessage]) -> list[dict[str, Any]]:
-        compatible_keys = ["role", "content", "name", "tool_calls", "tool_call_id"]
-        return [
-            {k: v for k, v in m.model_dump_compat(exclude_none=True).items() if k in compatible_keys} for m in messages
-        ]
+    def prepare_messages_for_llm(self, messages: List[dict]) -> List[dict]:
+        """
+        Given a sequence of “message dicts,” drop any keys the LLM doesn’t support.
+        We only allow the fields: role, content, name, tool_calls, tool_call_id.
+        """
+        allowed = {"role", "content", "name", "tool_calls", "tool_call_id"}
+        return [{k: v for k, v in msg.items() if k in allowed} for msg in messages]
 
-    @mlflow.trace(span_type=SpanType.AGENT)
-    def predict(
-            self,
-            messages: List[ChatAgentMessage],
-            context: Optional[ChatContext] = None,
-            custom_inputs: Optional[dict[str, Any]] = None,
-    ) -> ChatAgentResponse:
-        workspace_client = WorkspaceClient()
-        response_messages = [
-            chunk.delta
-            for chunk in self.predict_stream(messages, context, custom_inputs)
-        ]
-        return ChatAgentResponse(messages=response_messages)
-
-    @mlflow.trace(span_type=SpanType.AGENT)
-    def predict_stream(
-            self,
-            messages: List[ChatAgentMessage],
-            context: Optional[ChatContext] = None,
-            custom_inputs: Optional[dict[str, Any]] = None,
-    ) -> Generator[ChatAgentChunk, None, None]:
-        workspace_client = WorkspaceClient()
-        all_messages = [
-                           ChatAgentMessage(role="system", content=SYSTEM_PROMPT)
-                       ] + messages
-
-        for message in self.call_and_run_tools(messages=all_messages, workspace_client=workspace_client):
-            yield ChatAgentChunk(delta=message)
-
-    def chat_completion(self, messages: List[ChatAgentMessage], workspace_client):
+    def chat_completion(
+            self, messages: List[dict], workspace_client: WorkspaceClient
+    ) -> dict:
+        """
+        Invoke the Databricks‐hosted Chat Completions endpoint.
+        We pass “model=self.llm_endpoint,” the filtered messages, plus any tool specs.
+        """
         model_serving_client = workspace_client.serving_endpoints.get_open_ai_client()
         return model_serving_client.chat.completions.create(
             model=self.llm_endpoint,
             messages=self.prepare_messages_for_llm(messages),
             tools=self.get_tool_specs(workspace_client),
-            max_tokens=400,
         )
+
+    def call_and_run_tools(
+            self,
+            request_messages: List[dict],
+            workspace_client: WorkspaceClient,
+            max_iter: int = 10,
+    ) -> Generator[ResponsesAgentStreamEvent, None, None]:
+        """
+        Core “call‐tool‐response” loop.
+        Starting from request_messages (including SYSTEM_PROMPT + user messages),
+        iteratively:
+          1. Call the LLM → get a response dict → wrap it as a “function_call” event or normal assistant message.
+          2. If the LLM issued a tool_call, run the tool, append a tool_output message, and yield that as an event.
+          3. Stop when no more tool_calls or max_iter is reached.
+        """
+        # current history → always keep re‐using the evolving list
+        current_history = request_messages.copy()
+
+        for iteration in range(max_iter):
+            with mlflow.start_span(name=f"agent_iteration_{iteration + 1}", span_type=SpanType.AGENT):
+                # 1) Call LLM
+                llm_resp = self.chat_completion(messages=current_history, workspace_client=workspace_client)
+                # Extract the “assistant” message
+                choice = llm_resp.choices[0].message.to_dict()
+                assistant_dict = {
+                    "role": choice["role"],
+                    "content": choice.get("content"),
+                    "tool_calls": choice.get("tool_calls"),
+                    "name": choice.get("name"),
+                    # tool_call_id only appears if this message is in response to a function output.
+                }
+                assistant_dict["id"] = str(uuid4())
+                current_history.append(assistant_dict)
+
+                # 2) If the LLM asked for a tool, emit a “function_call” event
+                tool_calls = assistant_dict.get("tool_calls")
+                if tool_calls:
+                    # Yield a ResponsesAgentStreamEvent for each function_call
+                    for fc in tool_calls:
+                        function_call_payload = {
+                            "type": "function_call",
+                            "call_id": fc["id"],
+                            "name": fc["function"]["name"],
+                            "arguments": fc["function"]["arguments"],
+                            "id": str(uuid4()),
+                        }
+                        yield ResponsesAgentStreamEvent(
+                            type="response.output_item.done", item=function_call_payload
+                        )
+
+                    # 3) Now execute each tool, append “tool” messages, yield their output events
+                    for fc in tool_calls:
+                        fname = fc["function"]["name"]
+                        fargs = json.loads(fc["function"]["arguments"])
+                        result = None
+                        try:
+                            result = self.execute_tool(
+                                tool_name=fname, args=fargs, workspace_client=workspace_client
+                            )
+                        except Exception as e:
+                            result = f"Error executing tool {fname}: {e}"
+
+                        # wrap the result as a “tool” message
+                        tool_output_msg = {
+                            "role": "tool",
+                            "content": str(result),
+                            "tool_call_id": fc["id"],
+                            "id": str(uuid4()),
+                        }
+                        current_history.append(tool_output_msg)
+
+                        # emit a function_call_output event
+                        output_payload = {
+                            "type": "function_call_output",
+                            "call_id": fc["id"],
+                            "output": str(result),
+                        }
+                        yield ResponsesAgentStreamEvent(
+                            type="response.output_item.done", item=output_payload
+                        )
+
+                    # continue to next iteration (the newly‐appended tool outputs are in history now)
+                    continue
+
+                # 4) If no tool_calls, it's a plain “assistant” text reply → emit a message event and exit
+                text_payload = {
+                    "role": "assistant",
+                    "type": "message",
+                    "id": str(uuid4()),
+                    "content": [{"type": "output_text", "text": assistant_dict["content"]}],
+                }
+                yield ResponsesAgentStreamEvent(type="response.output_item.done", item=text_payload)
+                return
+
+        # 5) If max_iter reached without a normal assistant reply, send a final fallback
+        fallback_payload = {
+            "id": str(uuid4()),
+            "content": [
+                {
+                    "type": "output_text",
+                    "text": f"Max iterations ({max_iter}) reached. Stopping.",
+                }
+            ],
+            "role": "assistant",
+            "type": "message",
+        }
+        yield ResponsesAgentStreamEvent(type="response.output_item.done", item=fallback_payload)
 
     @mlflow.trace(span_type=SpanType.AGENT)
-    def call_and_run_tools(
-            self, messages, workspace_client, max_iter=10
-    ) -> Generator[ChatAgentMessage, None, None]:
-        current_msg_history = messages.copy()
-        for i in range(max_iter):
-            with mlflow.start_span(span_type="AGENT", name=f"iteration_{i + 1}"):
-                response = self.chat_completion(messages=current_msg_history, workspace_client=workspace_client)
-                llm_message = response.choices[0].message
-                assistant_message = ChatAgentMessage(**llm_message.to_dict(), id=str(uuid4()))
-                current_msg_history.append(assistant_message)
-                yield assistant_message
+    def predict_stream(
+            self, request: ResponsesAgentRequest
+    ) -> Generator[ResponsesAgentStreamEvent, None, None]:
+        """
+        Entrypoint for streaming. We take the incoming request, prepend a SYSTEM message,
+        then call our call_and_run_tools generator.
+        """
+        workspace_client = WorkspaceClient()
 
-                tool_calls = assistant_message.tool_calls
-                if not tool_calls:
-                    return
+        # Build the initial message list: first the system prompt, then whatever the user passed in.
+        initial_messages = [{"role": "system", "content": SYSTEM_PROMPT}] + [
+            i.model_dump() for i in request.input
+        ]
 
-                for tool_call in tool_calls:
-                    function = tool_call.function
-                    args = json.loads(function.arguments)
-                    result = str(self.execute_tool(tool_name=function.name, args=args, workspace_client=workspace_client))
-                    tool_call_msg = ChatAgentMessage(
-                        role="tool", name=function.name, tool_call_id=tool_call.id, content=result, id=str(uuid4())
-                    )
-                    current_msg_history.append(tool_call_msg)
-                    yield tool_call_msg
-
-        yield ChatAgentMessage(
-            content=f"I'm sorry, I couldn't determine the answer after trying {max_iter} times.",
-            role="assistant",
-            id=str(uuid4())
+        # Yield everything from call_and_run_tools(...)
+        yield from self.call_and_run_tools(
+            request_messages=initial_messages,
+            workspace_client=workspace_client,
+            max_iter=10,
         )
 
+    def predict(self, request: ResponsesAgentRequest) -> ResponsesAgentResponse:
+        """
+        Non‐streaming version. We simply collect all “.item” dicts from predict_stream()
+        that were marked type=“response.output_item.done” and bundle them into a ResponsesAgentResponse.
+        """
+        all_items = [
+            event.item
+            for event in self.predict_stream(request)
+            if event.type == "response.output_item.done"
+        ]
+        return ResponsesAgentResponse(output=all_items, custom_outputs=request.custom_inputs)
+
+
+# -----------------------------------------------------------------------------
+# Specify the model object to use when loaded for deployment
+# -----------------------------------------------------------------------------
 mlflow.openai.autolog()
 AGENT = ToolCallingAgent(llm_endpoint=LLM_ENDPOINT_NAME)
 mlflow.models.set_model(AGENT)
