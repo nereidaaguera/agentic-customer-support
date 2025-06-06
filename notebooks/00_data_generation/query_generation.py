@@ -67,12 +67,6 @@ deploy_client = get_deploy_client("databricks")
 
 # COMMAND ----------
 
-MLFLOW_EXPERIMENT_ID = "c6d626ab8d2c4780ab723ab3ee43f052"
-
-mlflow.set_experiment(experiment_id=MLFLOW_EXPERIMENT_ID)
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC ## Response Formatting Utilities
 
