@@ -1,11 +1,81 @@
 #!/bin/bash
 
-APP_FOLDER_IN_WORKSPACE=${1:-"/Workspace/telco-support-agent-ui"}
-LAKEHOUSE_APP_NAME=${2:-"telco-support-agent-ui"}
-DATABRICKS_PROFILE=${3:-"DEFAULT"}
+# Deployment script for dev/staging/prod environments
+# Usage: 
+#   ./deploy.sh dev [databricks_profile]
+#   ./deploy.sh staging [databricks_profile]
+#   ./deploy.sh prod [databricks_profile]
 
-echo "🚀 Deploying Telco Support Agent UI"
+set -e  # Exit on any error
+
+# Function to display usage
+show_usage() {
+    echo "Usage:"
+    echo "  ./deploy.sh dev [databricks_profile]        # Deploy to dev environment"
+    echo "  ./deploy.sh staging [databricks_profile]    # Deploy to staging environment"
+    echo "  ./deploy.sh prod [databricks_profile]       # Deploy to prod environment"
+    echo ""
+    echo "Examples:"
+    echo "  ./deploy.sh dev"
+    echo "  ./deploy.sh staging"
+    echo "  ./deploy.sh prod PRODUCTION"
+    echo "  ./deploy.sh dev dev-profile"
+}
+
+# Function to validate environment
+validate_environment() {
+    local env=$1
+    if [[ "$env" != "dev" && "$env" != "staging" && "$env" != "prod" ]]; then
+        echo "❌ Error: Environment must be 'dev', 'staging', or 'prod'"
+        show_usage
+        exit 1
+    fi
+}
+
+# Function to check if config file exists
+check_config_file() {
+    local config_file=$1
+    if [[ ! -f "$config_file" ]]; then
+        echo "❌ Error: Configuration file $config_file not found"
+        echo "Please ensure you have the environment-specific config file"
+        exit 1
+    fi
+}
+
+# Check arguments
+if [[ $# -eq 0 ]]; then
+    echo "❌ Error: No environment specified"
+    show_usage
+    exit 1
+fi
+
+# Environment-specific deployment
+ENVIRONMENT=$1
+DATABRICKS_PROFILE=${2:-"DEFAULT"}
+
+validate_environment "$ENVIRONMENT"
+
+# Set environment-specific variables
+if [[ "$ENVIRONMENT" == "dev" ]]; then
+    APP_FOLDER_IN_WORKSPACE="/Workspace/telco_support_agent/dev/databricks_app"
+    LAKEHOUSE_APP_NAME="telco-support-agent-dev"
+    CONFIG_FILE="app_dev.yaml"
+elif [[ "$ENVIRONMENT" == "staging" ]]; then
+    APP_FOLDER_IN_WORKSPACE="/Workspace/telco_support_agent/staging/databricks_app"
+    LAKEHOUSE_APP_NAME="telco-support-agent-staging"
+    CONFIG_FILE="app_staging.yaml"
+elif [[ "$ENVIRONMENT" == "prod" ]]; then
+    APP_FOLDER_IN_WORKSPACE="/Workspace/telco_support_agent/prod/databricks_app"
+    LAKEHOUSE_APP_NAME="telco-support-agent-prod"
+    CONFIG_FILE="app_prod.yaml"
+fi
+
+check_config_file "$CONFIG_FILE"
+
+echo "🚀 Deploying Telco Support Agent UI - $ENVIRONMENT Environment"
 echo "================================================"
+echo "Environment: $ENVIRONMENT"
+echo "Config file: $CONFIG_FILE"
 echo "Workspace folder: $APP_FOLDER_IN_WORKSPACE"
 echo "App name: $LAKEHOUSE_APP_NAME"
 echo "Databricks profile: $DATABRICKS_PROFILE"
@@ -16,7 +86,7 @@ echo "📦 Building frontend..."
 if [ -d "frontend" ]; then
     cd frontend
     
-    # clean previous build
+    # Clean previous build
     rm -rf dist/
     echo "Installing frontend dependencies..."
     npm install
@@ -55,11 +125,18 @@ rsync -av \
     --exclude='test/' \
     --exclude='deploy.sh' \
     --exclude='app_local.yaml*' \
+    --exclude='app_dev.yaml' \
+    --exclude='app_staging.yaml' \
+    --exclude='app_prod.yaml' \
     --exclude='**/.env*' \
     --exclude='**/venv/' \
     --exclude='**/.venv/' \
     --exclude='.databricks_app_build/' \
     ./ .databricks_app_build/
+
+# Copy the appropriate config file as app.yaml
+echo "📝 Using configuration file: $CONFIG_FILE"
+cp "$CONFIG_FILE" .databricks_app_build/app.yaml
 
 echo "✅ Deployment package created"
 
@@ -89,6 +166,8 @@ rm -rf .databricks_app_build/
 echo ""
 echo "🎉 Deployment completed successfully!"
 echo "================================================"
+echo "Environment: $ENVIRONMENT"
+echo "Endpoint: ${ENVIRONMENT}-telco-customer-support-agent"
 echo "App name: $LAKEHOUSE_APP_NAME"
 echo "Workspace folder: $APP_FOLDER_IN_WORKSPACE"
 echo ""
