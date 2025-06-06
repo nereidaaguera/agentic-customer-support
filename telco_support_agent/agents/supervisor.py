@@ -164,7 +164,7 @@ class SupervisorAgent(BaseAgent):
             )
             return AgentType.ACCOUNT
 
-    @mlflow.trace(span_type=SpanType.AGENT)
+    @mlflow.trace(span_type=SpanType.LLM)
     def _classify_query(self, query: str) -> dict[str, str]:
         classification_result = topic_classification(query, self._topic_categories)
         detected_topic = classification_result.get("topic")
