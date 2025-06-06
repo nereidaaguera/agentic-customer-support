@@ -1,14 +1,13 @@
 import json
 import logging
-import yaml
-from pathlib import Path
-
 from dataclasses import dataclass
-from typing import List, Dict, Optional, Any
+from pathlib import Path
+from typing import Any, Optional
 
+import yaml
 from mlflow.deployments import get_deploy_client
 
-from telco_support_agent.agents.config import config_manager
+from telco_support_agent import PROJECT_ROOT
 
 logging.basicConfig(
     level=logging.ERROR, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -41,7 +40,7 @@ class TopicCategory:
         return hash((self.name, self.description or ""))
 
     @classmethod
-    def from_dict(cls, topic_dict: Dict[str, Any]) -> "TopicCategory":
+    def from_dict(cls, topic_dict: dict[str, Any]) -> "TopicCategory":
         return cls(
             name=topic_dict.get("name") or topic_dict.get("topic"),
             description=topic_dict.get("description"),
@@ -49,7 +48,7 @@ class TopicCategory:
 
 
 def _create_topic_classification_prompt(
-    message: str, topic_categories: List[TopicCategory]
+    message: str, topic_categories: list[TopicCategory]
 ):
     formatted_topic_categories = "\n".join(
         [
@@ -76,9 +75,8 @@ def _create_topic_classification_prompt(
     """
 
 
-def topic_classification(content: str, topic_categories: List[TopicCategory]):
-    """
-    Classify content into topics using an LLM
+def topic_classification(content: str, topic_categories: list[TopicCategory]):
+    """Classify content into topics using an LLM.
 
     Args:
         content: The text content to classify
@@ -88,9 +86,7 @@ def topic_classification(content: str, topic_categories: List[TopicCategory]):
         Classification result from the model
     """
     try:
-        result = run_llm(
-            _create_topic_classification_prompt(content, topic_categories)
-        )
+        result = run_llm(_create_topic_classification_prompt(content, topic_categories))
         deserialized_result = json.loads(result)
         topic = deserialized_result["topic"]
         rationale = deserialized_result["rationale"]
@@ -101,7 +97,9 @@ def topic_classification(content: str, topic_categories: List[TopicCategory]):
         return {}
 
 
-def load_topics_from_yaml(yaml_path: Optional[str | Path] = None) -> List[TopicCategory]:
+def load_topics_from_yaml(
+    yaml_path: Optional[str | Path] = None,
+) -> list[TopicCategory]:
     """Load topic categories from a YAML file.
 
     Args:
@@ -117,10 +115,8 @@ def load_topics_from_yaml(yaml_path: Optional[str | Path] = None) -> List[TopicC
         ValueError: If the YAML structure is invalid
     """
     if yaml_path is None:
-        # Use config manager to find project root and look for topics.yaml
-        project_root = config_manager._project_root
         search_paths = [
-            project_root / "configs" / "topics.yaml",
+            PROJECT_ROOT / "configs" / "topics.yaml",
             Path("/Workspace/Repos/") / "*/telco-support-agent/configs/topics.yaml",
             Path.cwd() / "configs" / "topics.yaml",
             Path("/model/artifacts/configs") / "topics.yaml",
@@ -138,19 +134,23 @@ def load_topics_from_yaml(yaml_path: Optional[str | Path] = None) -> List[TopicC
                 break
 
         if yaml_path is None:
-            raise FileNotFoundError("Could not find topics.yaml in any of the expected locations")
+            raise FileNotFoundError(
+                "Could not find topics.yaml in any of the expected locations"
+            )
 
     try:
-        with open(yaml_path, 'r') as f:
+        with open(yaml_path) as f:
             data = yaml.safe_load(f)
 
-        if not isinstance(data, dict) or 'topics' not in data:
-            raise ValueError("YAML file must contain a 'topics' key with a list of topic definitions")
+        if not isinstance(data, dict) or "topics" not in data:
+            raise ValueError(
+                "YAML file must contain a 'topics' key with a list of topic definitions"
+            )
 
-        if not isinstance(data['topics'], list):
+        if not isinstance(data["topics"], list):
             raise ValueError("'topics' must be a list of topic definitions")
 
-        return [TopicCategory.from_dict(topic) for topic in data['topics']]
+        return [TopicCategory.from_dict(topic) for topic in data["topics"]]
     except FileNotFoundError:
         _logger.error(f"Topics YAML file not found at {yaml_path}")
         raise

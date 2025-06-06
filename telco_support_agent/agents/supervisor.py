@@ -1,7 +1,7 @@
 """Supervisor agent to orchestrate specialized sub-agents."""
 
 from collections.abc import Generator
-from typing import Dict, NamedTuple, Optional, Union
+from typing import NamedTuple, Optional, Union
 from uuid import uuid4
 
 import mlflow
@@ -22,8 +22,11 @@ from telco_support_agent.agents.types import AgentType
 from telco_support_agent.agents.utils.message_formatting import (
     extract_user_query,
 )
+from telco_support_agent.agents.utils.topic_utils import (
+    load_topics_from_yaml,
+    topic_classification,
+)
 from telco_support_agent.utils.logging_utils import get_logger, setup_logging
-from telco_support_agent.utils.topic_utils import load_topics_from_yaml, topic_classification
 
 setup_logging()
 logger = get_logger(__name__)
@@ -160,9 +163,9 @@ class SupervisorAgent(BaseAgent):
                 f"Error in routing query: {str(e)}. Falling back to account agent."
             )
             return AgentType.ACCOUNT
-        
+
     @mlflow.trace(span_type=SpanType.AGENT)
-    def _classify_query(self, query: str) -> Dict[str, str]:
+    def _classify_query(self, query: str) -> dict[str, str]:
         classification_result = topic_classification(query, self._topic_categories)
         detected_topic = classification_result.get("topic")
         if detected_topic is not None:
@@ -222,7 +225,7 @@ class SupervisorAgent(BaseAgent):
         sub_agent = self._get_sub_agent(agent_type)
 
         # classify query based on topic categories
-        classification_result = self._classify_query(query)
+        classification_result = self._classify_query(user_query)
         custom_outputs["topic"] = classification_result.get("topic")
 
         # if sub-agent not implemented, prepare non-response
