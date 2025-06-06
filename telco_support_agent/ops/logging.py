@@ -159,15 +159,13 @@ def _get_supervisor_resources(environment: str) -> list[Resource]:
                 logger.info(f"Added LLM endpoint: {endpoint}")
 
     uc_config = config_manager.get_uc_config()
-    agent_catalog = uc_config.agent["catalog"]
-    agent_schema = uc_config.agent["schema"]
 
     # UC functions
     uc_functions = set()
     for _, config in agent_configs.items():
         if "uc_functions" in config:
             for func_name in config["uc_functions"]:
-                uc_func_name = f"{agent_catalog}.{agent_schema}.{func_name}"
+                uc_func_name = uc_config.get_uc_function_name(func_name)
                 if uc_func_name not in uc_functions:
                     resources.append(DatabricksFunction(function_name=uc_func_name))
                     uc_functions.add(uc_func_name)
@@ -181,8 +179,8 @@ def _get_supervisor_resources(environment: str) -> list[Resource]:
 
     # Vector Search indexes
     vector_indexes = [
-        f"{agent_catalog}.{agent_schema}.knowledge_base_index",
-        f"{agent_catalog}.{agent_schema}.support_tickets_index",
+        uc_config.get_uc_index_name("knowledge_base_index"),
+        uc_config.get_uc_index_name("support_tickets_index"),
     ]
 
     for index_name in vector_indexes:

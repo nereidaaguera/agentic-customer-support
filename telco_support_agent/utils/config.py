@@ -17,6 +17,24 @@ class UCConfig(BaseModel):
     data: dict[str, Any]
     agent: dict[str, Any]
 
+    def get_uc_function_name(self, function_name: str) -> str:
+        """Returns name of uc function based on config."""
+        agent_catalog = self.agent["catalog"]
+        agent_schema = self.agent["schema"]
+        return f"{agent_catalog}.{agent_schema}.{function_name}"
+
+    def get_uc_index_name(self, index_name: str) -> str:
+        """Returns name of uc index based on config."""
+        data_catalog = self.data["catalog"]
+        indexes_schema = self.data["indexes_schema"]
+        return f"{data_catalog}.{indexes_schema}.{index_name}"
+
+    def get_uc_table_name(self, table_name: str) -> str:
+        """Returns name of uc table based on config."""
+        data_catalog = self.data["catalog"]
+        data_schema = self.data["schema"]
+        return f"{data_catalog}.{data_schema}.{table_name}"
+
 
 ENV = os.environ.get("TELCO_SUPPORT_AGENT_ENV", "dev")
 UC_CONFIG_FILE = "uc_config.yaml"
