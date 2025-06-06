@@ -19,6 +19,9 @@ from telco_support_agent.agents.billing import BillingAgent
 from telco_support_agent.agents.product import ProductAgent
 from telco_support_agent.agents.tech_support import TechSupportAgent
 from telco_support_agent.agents.types import AgentType
+from telco_support_agent.agents.utils.message_formatting import (
+    extract_user_query,
+)
 from telco_support_agent.utils.logging_utils import get_logger, setup_logging
 from telco_support_agent.utils.topic_utils import load_topics_from_yaml, topic_classification
 
@@ -180,8 +183,8 @@ class SupervisorAgent(BaseAgent):
             AgentExecutionResult containing all necessary information for execution
         """
         # extract the user query from the input
-        user_messages = [msg for msg in request.input if msg.role == "user"]
-        if not user_messages:
+        user_query = extract_user_query(request.input)
+        if not user_query:
             # no user messages found, return error response
             error_response = {
                 "role": "assistant",
@@ -202,11 +205,8 @@ class SupervisorAgent(BaseAgent):
                 error_response=error_response,
             )
 
-        # use last user message as the query
-        query = user_messages[-1].content
-
         # determine which agent should handle query
-        agent_type = self.route_query(query)
+        agent_type = self.route_query(user_query)
 
         # prepare custom outputs with routing decision
         custom_outputs = request.custom_inputs.copy() if request.custom_inputs else {}
@@ -227,11 +227,11 @@ class SupervisorAgent(BaseAgent):
 
         # if sub-agent not implemented, prepare non-response
         if sub_agent is None:
-            error_response = self.generate_non_response(agent_type, query)
+            error_response = self.generate_non_response(agent_type, user_query)
             return AgentExecutionResult(
                 sub_agent=None,
                 agent_type=agent_type,
-                query=query,
+                query=user_query,
                 custom_outputs=custom_outputs,
                 error_response=error_response,
             )
@@ -239,7 +239,7 @@ class SupervisorAgent(BaseAgent):
         return AgentExecutionResult(
             sub_agent=sub_agent,
             agent_type=agent_type,
-            query=query,
+            query=user_query,
             custom_outputs=custom_outputs,
             error_response=None,
         )
@@ -257,6 +257,11 @@ class SupervisorAgent(BaseAgent):
         execution_result = self._prepare_agent_execution(request)
 
         if execution_result.error_response:
+            self.update_trace_preview(
+                request_data=request.model_dump(),
+                response_data={"output": [execution_result.error_response]},
+            )
+
             return ResponsesAgentResponse(
                 output=[execution_result.error_response],
                 custom_outputs=execution_result.custom_outputs,
@@ -294,6 +299,11 @@ class SupervisorAgent(BaseAgent):
                     "response": sub_response.output,
                     "custom_outputs": final_custom_outputs,
                 }
+            )
+
+            self.update_trace_preview(
+                user_query=f"{execution_result.query}",
+                response_data={"output": sub_response.output},
             )
 
         return ResponsesAgentResponse(

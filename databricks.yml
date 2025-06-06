@@ -1,9 +1,15 @@
 bundle:
   name: telco-support-agent
 
+variables:
+  experiment_name:
+    default: /telco_support_agent/dev/experiments/dev_telco_support_agent
+
 permissions:
   - level: CAN_MANAGE
     group_name: telco-customer-support-dev
+  - level: CAN_MANAGE
+    group_name: telco-customer-support-prod
   - level: CAN_VIEW
     group_name: users
 
@@ -14,8 +20,24 @@ targets:
   dev:
     default: true
     workspace:
-      host: https://db-ml-models-prod-us-west.cloud.databricks.com   
-  # prod:
-  #   default: false
-  #   workspace:
-  #     host: https://db-ml-models-prod-us-west.cloud.databricks.com
+      host: https://db-ml-models-prod-us-west.cloud.databricks.com
+    run_as:
+      service_principal_name: ${workspace.current_user.userName}
+    variables:
+      experiment_name: /telco_support_agent/dev/experiments/dev_telco_support_agent
+  staging:
+    default: false
+    workspace:
+      host: https://db-ml-models-prod-us-west.cloud.databricks.com
+    run_as:
+      service_principal_name: ${workspace.current_user.userName}
+    variables:
+      experiment_name: /telco_support_agent/staging/experiments/staging_telco_support_agent
+  prod:
+    default: false
+    workspace:
+      host: https://db-ml-models-prod-us-west.cloud.databricks.com
+    run_as:
+      service_principal_name: ${workspace.current_user.userName}
+    variables:
+      experiment_name: /telco_support_agent/prod/experiments/prod_telco_support_agent

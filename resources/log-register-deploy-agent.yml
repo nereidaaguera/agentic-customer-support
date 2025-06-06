@@ -1,0 +1,22 @@
+# yaml-language-server: $schema=../bundle_config_schema.json
+resources:
+  jobs:
+    telco_log_register_deploy_agent:
+      name: telco_log_register_deploy_agent_${bundle.target}
+      tasks:
+        - task_key: log_register_agent
+          notebook_task:
+            notebook_path: ../notebooks/03_log_register_agent/log_register_agent.py
+            base_parameters:
+              env: ${bundle.target}
+              git_commit: ${bundle.git.commit}
+              experiment_name: ${var.experiment_name}
+        - task_key: deploy_agent
+          depends_on:
+            - task_key: log_register_agent
+          notebook_task:
+            notebook_path: ../notebooks/04_deploy_agent/deploy_agent.py
+            base_parameters:
+              env: ${bundle.target}
+              git_commit: ${bundle.git.commit}
+              experiment_name: ${var.experiment_name}

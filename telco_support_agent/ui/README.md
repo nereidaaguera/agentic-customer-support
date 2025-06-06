@@ -94,6 +94,10 @@ uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
 
 ## Deployment to Databricks
 
+### Environment-Specific Deployment
+
+The deployment system supports separate dev, staging, and prod environments with different endpoints.
+
 ### Prerequisites for Deployment
 
 **Databricks CLI configured:**
@@ -102,18 +106,143 @@ databricks configure
 # Or use OAuth: databricks auth login
 ```
 
-### Deploy
+### Environment Configuration
+
+The system uses environment-specific configuration files:
+
+- **Dev Environment**: `app_dev.yaml`
+  - Endpoint: `dev-telco-customer-support-agent`
+  - Workspace: `/Workspace/telco_support_agent/dev/databricks_app`
+  - App Name: `telco-support-agent-dev`
+
+- **Staging Environment**: `app_staging.yaml`
+  - Endpoint: `staging-telco-customer-support-agent`
+  - Workspace: `/Workspace/telco_support_agent/staging/databricks_app`
+  - App Name: `telco-support-agent-staging`
+
+- **Prod Environment**: `app_prod.yaml`
+  - Endpoint: `prod-telco-customer-support-agent`
+  - Workspace: `/Workspace/telco_support_agent/prod/databricks_app`
+  - App Name: `telco-support-agent-prod`
+
+### Deploy Commands
+
+**Deploy to Development:**
+```bash
+# Deploy to dev environment with default profile
+./deploy.sh dev
+
+# Deploy to dev environment with specific profile
+./deploy.sh dev dev-profile
+```
+
+**Deploy to Staging:**
+```bash
+# Deploy to staging environment with default profile
+./deploy.sh staging
+
+# Deploy to staging environment with specific profile
+./deploy.sh staging staging-profile
+```
+
+**Deploy to Production:**
+```bash
+# Deploy to prod environment with default profile
+./deploy.sh prod
+
+# Deploy to prod environment with specific profile
+./deploy.sh prod PRODUCTION
+```
+
+### Deployment Process
+
+The deployment script will:
+
+1. **Validate Environment**: Ensure environment is 'dev', 'staging', or 'prod'
+2. **Build Frontend**: Compile Vue.js application
+3. **Create Package**: Bundle application files (excluding dev files)
+4. **Copy Configuration**: Use environment-specific config as `app.yaml`
+5. **Upload to Workspace**: Deploy to environment-specific workspace folder
+6. **Create/Update App**: Deploy as Databricks Lakehouse App
+
+### Environment Variables
+
+Each environment config file sets appropriate variables:
+
+**Development (`app_dev.yaml`):**
+- `ENV=dev`
+- `TELCO_SUPPORT_AGENT_ENV=dev`
+- `DATABRICKS_ENDPOINT_NAME=dev-telco-customer-support-agent`
+
+**Staging (`app_staging.yaml`):**
+- `ENV=staging`
+- `TELCO_SUPPORT_AGENT_ENV=staging`
+- `DATABRICKS_ENDPOINT_NAME=staging-telco-customer-support-agent`
+
+**Production (`app_prod.yaml`):**
+- `ENV=prod`
+- `TELCO_SUPPORT_AGENT_ENV=prod`
+- `DATABRICKS_ENDPOINT_NAME=prod-telco-customer-support-agent`
+
+### Monitoring Deployments
+
+**Check app status:**
+```bash
+# Dev environment
+databricks apps get telco-support-agent-dev --profile dev-profile
+
+# Staging environment
+databricks apps get telco-support-agent-staging --profile staging-profile
+
+# Prod environment  
+databricks apps get telco-support-agent-prod --profile PRODUCTION
+```
+
+**View logs:**
+```bash
+# Dev environment
+databricks apps logs telco-support-agent-dev --profile dev-profile
+
+# Staging environment
+databricks apps logs telco-support-agent-staging --profile staging-profile
+
+# Prod environment
+databricks apps logs telco-support-agent-prod --profile PRODUCTION
+```
+
+### Best Practices
+
+1. **Use Separate Profiles**: Configure different Databricks CLI profiles for dev, staging, and prod
+2. **Follow Promotion Path**: Always test dev → staging → prod
+3. **Environment Verification**: Always verify you're deploying to the correct environment
+4. **Config Management**: Keep environment configs in version control
+5. **Rollback Plan**: Know how to quickly rollback if issues occur
+
+### Typical Workflow
 
 ```bash
-# Deploy with default settings
-./deploy.sh
+# 1. Develop and test locally
+npm run dev  # frontend
+uvicorn backend.app.main:app --reload  # backend
 
-# Deploy to specific workspace location
-./deploy.sh "/Workspace/your-path/telco-support-agent" "my-telco-app"
+# 2. Deploy to dev for integration testing
+./deploy.sh dev
 
-# Deploy using specific Databricks profile
-./deploy.sh "/Workspace/your-path/telco-support-agent" "my-telco-app" "PRODUCTION"
+# 3. After dev testing, promote to staging
+./deploy.sh staging
+
+# 4. After staging validation, deploy to production
+./deploy.sh prod PRODUCTION
 ```
+
+### Troubleshooting
+
+**Common Issues:**
+
+1. **Config File Missing**: Ensure `app_dev.yaml`, `app_staging.yaml`, and `app_prod.yaml` exist
+2. **Wrong Profile**: Verify Databricks CLI profile has access to target workspace
+3. **Endpoint Access**: Confirm agent endpoints exist and are accessible
+4. **Workspace Permissions**: Ensure profile has write access to workspace folders
 
 ## Configuration
 
@@ -142,7 +271,6 @@ Configure these in the Databricks Apps UI under the "Resources" tab.
 ## Testing
 
 TODO
-
 
 ## Monitoring and Logs
 

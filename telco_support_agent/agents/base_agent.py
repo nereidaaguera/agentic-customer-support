@@ -2,7 +2,6 @@
 
 import abc
 import json
-from collections import defaultdict
 from collections.abc import Generator
 from pathlib import Path
 from typing import Any, Optional, Union
@@ -12,7 +11,6 @@ import backoff
 import mlflow
 from databricks.sdk import WorkspaceClient
 from mlflow.entities import SpanType
-from mlflow.entities.trace_info import TraceInfo
 from mlflow.pyfunc import ResponsesAgent
 from mlflow.types.responses import (
     ResponsesAgentRequest,
@@ -23,233 +21,27 @@ from unitycatalog.ai.core.databricks import DatabricksFunctionClient
 from unitycatalog.ai.openai.toolkit import UCFunctionToolkit
 
 from telco_support_agent.agents import AgentConfig
+from telco_support_agent.agents.utils.exceptions import (
+    AgentConfigurationError,
+    MissingCustomInputError,
+    ToolExecutionError,
+)
+from telco_support_agent.agents.utils.message_formatting import (
+    prepare_messages_for_llm,
+)
+from telco_support_agent.agents.utils.tool_injection import ToolParameterInjector
+from telco_support_agent.agents.utils.trace_utils import (
+    create_request_structure,
+    create_response_structure,
+    patch_trace_info,
+    update_trace_preview,
+)
 from telco_support_agent.utils.logging_utils import get_logger, setup_logging
 
 setup_logging()
 logger = get_logger(__name__)
 
-# Monkey patch TraceInfo.__init__ so we have better previews in the UI.
-TRACE_REQUEST_RESPONSE_PREVIEW_MAX_LENGTH = 10000
-
-
-class MissingCustomInputError(ValueError):
-    """Raise when custom inputs are missing from the request."""
-
-    pass
-
-
-def compute_request_preview(request: str) -> str:
-    """Compute preview of request for tracing.
-
-    Extracts most recent user message content for display in trace previews.
-
-    Args:
-        request: raw request string to process
-
-    Returns:
-        preview string truncated to max length
-    """
-    preview = ""
-
-    if isinstance(request, str):
-        try:
-            data = json.loads(request)
-        except (json.JSONDecodeError, TypeError):
-            preview = request
-            return preview[:TRACE_REQUEST_RESPONSE_PREVIEW_MAX_LENGTH]
-    else:
-        data = request
-
-    if isinstance(data, dict):
-        try:
-            input_list = data.get("request", {}).get("input", [])
-            if isinstance(input_list, list):
-                for item in reversed(input_list):
-                    if (
-                        isinstance(item, dict)
-                        and item.get("role") == "user"
-                        and isinstance(item.get("content"), str)
-                    ):
-                        preview = item["content"]
-                        break
-        except (KeyError, TypeError, AttributeError) as e:
-            logger.debug(f"Error extracting user content from request: {e}")
-
-    if not preview:
-        preview = str(request)
-
-    return preview[:TRACE_REQUEST_RESPONSE_PREVIEW_MAX_LENGTH]
-
-
-def compute_response_preview(response: str) -> str:
-    """Compute preview of response for tracing.
-
-    Extracts assistant response for display in trace previews.
-
-    Args:
-        response: The raw response string to process
-
-    Returns:
-        A preview string truncated to max length
-    """
-    preview = ""
-
-    if isinstance(response, str):
-        try:
-            data = json.loads(response)
-        except (json.JSONDecodeError, TypeError):
-            preview = response
-            return preview[:TRACE_REQUEST_RESPONSE_PREVIEW_MAX_LENGTH]
-    else:
-        data = response
-
-    if isinstance(data, dict):
-        try:
-            output = data.get("output")
-            if isinstance(output, list):
-                for item in reversed(output):
-                    if (
-                        isinstance(item, dict)
-                        and item.get("role") == "assistant"
-                        and isinstance(item.get("content"), list)
-                    ):
-                        for part in reversed(item["content"]):
-                            if (
-                                isinstance(part, dict)
-                                and part.get("type") == "output_text"
-                                and isinstance(part.get("text"), str)
-                            ):
-                                preview = part["text"]
-                                break
-                        if preview:
-                            break
-        except (KeyError, TypeError, AttributeError) as e:
-            logger.debug(f"Error extracting assistant content from response: {e}")
-
-    if not preview:
-        preview = str(response)
-
-    return preview[:TRACE_REQUEST_RESPONSE_PREVIEW_MAX_LENGTH]
-
-
-is_patched = False
-
-if not is_patched:
-    # Monkey-patch the __init__
-    original_init = TraceInfo.__init__
-
-    def patched_init(self, request_preview=None, response_preview=None, **kwargs):  # NoQA: D417
-        """Patched TraceInfo.__init__ that computes better previews.
-
-        Args:
-            request_preview: Raw request preview data
-            response_preview: Raw response preview data
-            **kwargs: Additional arguments passed to original __init__
-        """
-        if request_preview is not None:
-            request_preview = compute_request_preview(request_preview)
-        if response_preview is not None:
-            response_preview = compute_response_preview(response_preview)
-        original_init(
-            self,
-            request_preview=request_preview,
-            response_preview=response_preview,
-            **kwargs,
-        )
-
-    TraceInfo.__init__ = patched_init
-    is_patched = True
-
-
-class ToolParameterInjector:
-    """Handle injection of runtime params into tool calls."""
-
-    def __init__(self, inject_params: list[str]):
-        """Initialize the parameter injector.
-
-        Args:
-            inject_params: List of parameter names to inject at runtime
-        """
-        self.inject_params = inject_params
-        self.tools_with_injected_params: dict[str, list[str]] = defaultdict(list)
-
-    def prepare_tool_spec_for_llm(self, tool_spec: dict[str, Any]) -> dict[str, Any]:
-        """Remove injected parameters from tool spec for LLM consumption.
-
-        Args:
-            tool_spec: Original tool specification
-
-        Returns:
-            Tool specification with injected parameters removed
-        """
-        if "function" not in tool_spec:
-            return tool_spec
-
-        # deep copy - avoid modifying original
-        cleaned_spec = {
-            "type": "function",
-            "function": {
-                "name": tool_spec["function"]["name"],
-                "description": tool_spec["function"].get("description", ""),
-                "parameters": {
-                    "type": "object",
-                    "properties": {},
-                    "required": [],
-                },
-            },
-        }
-
-        if "parameters" in tool_spec["function"]:
-            if "properties" in tool_spec["function"]["parameters"]:
-                cleaned_spec["function"]["parameters"]["properties"] = tool_spec[
-                    "function"
-                ]["parameters"]["properties"].copy()
-
-            if "required" in tool_spec["function"]["parameters"]:
-                cleaned_spec["function"]["parameters"]["required"] = tool_spec[
-                    "function"
-                ]["parameters"]["required"].copy()
-
-        func_name = cleaned_spec["function"]["name"]
-        parameters = cleaned_spec["function"]["parameters"]["properties"]
-        required_params = cleaned_spec["function"]["parameters"]["required"]
-
-        for param in self.inject_params:
-            if param in parameters:
-                parameters.pop(param)
-                self.tools_with_injected_params[func_name].append(param)
-
-            if param in required_params:
-                required_params.remove(param)
-
-        return cleaned_spec
-
-    def inject_parameters(
-        self, function_name: str, args: dict[str, Any], custom_inputs: dict[str, Any]
-    ) -> dict[str, Any]:
-        """Inject runtime params into function arguments.
-
-        Args:
-            function_name: Name of the function being called
-            args: Original function arguments
-            custom_inputs: Custom inputs containing values to inject
-
-        Returns:
-            Function arguments with injected parameters
-        """
-        if function_name not in self.tools_with_injected_params:
-            return args
-
-        enhanced_args = args.copy()
-        for param in self.tools_with_injected_params[function_name]:
-            if param in custom_inputs:
-                enhanced_args[param] = custom_inputs[param]
-            else:
-                logger.warning(
-                    f"Missing custom input '{param}' for function {function_name}"
-                )
-
-        return enhanced_args
+patch_trace_info()
 
 
 class BaseAgent(ResponsesAgent, abc.ABC):
@@ -302,26 +94,14 @@ class BaseAgent(ResponsesAgent, abc.ABC):
 
         # set up tools
         raw_tools = tools or self._load_tools_from_config()
-        self.tools = self._filter_disable_tools(raw_tools)
+        self.tools = self._filter_disabled_tools(raw_tools)
 
-        # Filter vector search tools as well
-        self.vector_search_tools = vector_search_tools or {}
-        if self.disable_tools and self.vector_search_tools:
-            filtered_vector_tools = {}
-            for tool_name, tool_obj in self.vector_search_tools.items():
-                simple_name = (
-                    tool_name.split(".")[-1] if "." in tool_name else tool_name
-                )
-                is_disabled = (
-                    tool_name in self.disable_tools or simple_name in self.disable_tools
-                )
-                if not is_disabled:
-                    filtered_vector_tools[tool_name] = tool_obj
-                else:
-                    logger.info(f"Disabling vector search tool: {tool_name}")
-            self.vector_search_tools = filtered_vector_tools
+        # vector search
+        self.vector_search_tools = self._filter_disabled_vector_tools(
+            vector_search_tools or {}
+        )
 
-        # init parameter injector
+        # tool parameter injector
         self.parameter_injector = ToolParameterInjector(inject_tool_args or [])
         self.llm_tool_specs = self._prepare_llm_tool_specs()
 
@@ -347,28 +127,27 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             return cls._config_cache[agent_type]
 
         try:
-            from telco_support_agent.agents.config import config_manager
+            from telco_support_agent.utils.config import config_manager
 
             config_dict = config_manager.get_config(agent_type)
-            config = AgentConfig(**config_dict)
+            uc_config = config_manager.get_uc_config()
+            config = AgentConfig(**config_dict, uc_config=uc_config)
             cls._config_cache[agent_type] = config
-
             return config
 
         except (FileNotFoundError, ValueError) as e:
-            raise ValueError(f"Invalid configuration for {agent_type}: {e}") from e
+            raise AgentConfigurationError(agent_type, str(e)) from e
 
     def _load_tools_from_config(self) -> list[dict]:
-        """Load UC function tools based on the agent's domain.
-
-        Returns:
-            List of UC function tool specifications
-        """
+        """Load UC function tools based on the agent's configuration."""
         try:
-            # get UC functions for the agent / sub-agent's domain
-            function_names = (
-                self.config.uc_functions if hasattr(self.config, "uc_functions") else []
-            )
+            catalog = self.config.uc_config.agent["catalog"]
+            schema = self.config.uc_config.agent["schema"]
+
+            function_names = [
+                f"{catalog}.{schema}.{function_name}"
+                for function_name in getattr(self.config, "uc_functions", [])
+            ]
 
             if not function_names:
                 logger.warning(
@@ -376,7 +155,6 @@ class BaseAgent(ResponsesAgent, abc.ABC):
                 )
                 return []
 
-            # toolkit with specified functions
             toolkit = UCFunctionToolkit(function_names=function_names)
             return toolkit.tools
 
@@ -384,15 +162,8 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             logger.error(f"Error loading UC function tools: {str(e)}")
             return []
 
-    def _filter_disable_tools(self, tools: list[dict]) -> list[dict]:
-        """Filter disabled tools from the tools list.
-
-        Args:
-            tools: List of tool specifications
-
-        Returns:
-            Filtered list of tools with disabled tools removed
-        """
+    def _filter_disabled_tools(self, tools: list[dict]) -> list[dict]:
+        """Filter disabled tools from the tools list."""
         if not self.disable_tools:
             return tools
 
@@ -400,39 +171,11 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         disabled_count = 0
 
         for tool in tools:
-            tool_name = None
-
-            if "function" in tool and "name" in tool["function"]:
-                # UC function format
-                tool_name = tool["function"]["name"]
-            elif "name" in tool:
-                # direct name format
-                tool_name = tool["name"]
-            elif hasattr(tool, "tool_name"):
-                # VectorSearchRetrieverTool format
-                tool_name = tool.tool_name
-
-            if tool_name:
-                # UC functions use underscores: telco_customer_support_dev__agent__get_usage_info
-                # Other tools might use dots: some.namespace.tool_name
-                if "." in tool_name:
-                    simple_name = tool_name.split(".")[-1]
-                elif "__" in tool_name:
-                    simple_name = tool_name.split("__")[-1]
-                else:
-                    simple_name = tool_name
-
-                is_disabled = (
-                    tool_name in self.disable_tools or simple_name in self.disable_tools
-                )
-
-                if is_disabled:
-                    logger.info(
-                        f"Disabling tool: {tool_name} (simple name: {simple_name})"
-                    )
-                    disabled_count += 1
-                    continue
-
+            tool_name = self._extract_tool_name(tool)
+            if tool_name and self._is_tool_disabled(tool_name):
+                disabled_count += 1
+                logger.info(f"Disabling tool: {tool_name}")
+                continue
             filtered_tools.append(tool)
 
         if disabled_count > 0:
@@ -441,6 +184,43 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             )
 
         return filtered_tools
+
+    def _filter_disabled_vector_tools(
+        self, vector_tools: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Filter disabled vector search tools."""
+        if not self.disable_tools:
+            return vector_tools
+
+        filtered_tools = {}
+        for tool_name, tool_obj in vector_tools.items():
+            if not self._is_tool_disabled(tool_name):
+                filtered_tools[tool_name] = tool_obj
+            else:
+                logger.info(f"Disabling vector search tool: {tool_name}")
+
+        return filtered_tools
+
+    def _extract_tool_name(self, tool: dict) -> Optional[str]:
+        """Extract tool name from tool specification."""
+        if "function" in tool and "name" in tool["function"]:
+            return tool["function"]["name"]
+        elif "name" in tool:
+            return tool["name"]
+        elif hasattr(tool, "tool_name"):
+            return tool.tool_name
+        return None
+
+    def _is_tool_disabled(self, tool_name: str) -> bool:
+        """Check if a tool is disabled."""
+        if "." in tool_name:
+            simple_name = tool_name.split(".")[-1]
+        elif "__" in tool_name:
+            simple_name = tool_name.split("__")[-1]
+        else:
+            simple_name = tool_name
+
+        return tool_name in self.disable_tools or simple_name in self.disable_tools
 
     def _prepare_llm_tool_specs(self) -> list[dict[str, Any]]:
         """Prepare tool specifications for LLM by removing injected parameters.
@@ -478,22 +258,11 @@ class BaseAgent(ResponsesAgent, abc.ABC):
 
         if missing_inputs:
             raise MissingCustomInputError(
-                f"Missing required custom inputs: {missing_inputs}. "
-                f"This agent requires: {self.parameter_injector.inject_params}"
+                missing_inputs, self.parameter_injector.inject_params
             )
 
     def execute_tool(self, tool_name: str, args: dict) -> Any:
-        """Execute tool.
-
-        Handles both Unity Catalog functions and VectorSearchRetrieverTool objects.
-
-        Args:
-            tool_name: Name of the tool to execute
-            args: Arguments to pass to the tool
-
-        Returns:
-            Tool execution result
-        """
+        """Execute tool (UC function or vector search)."""
         trace_tool_name = tool_name.replace("__", ".").split(".")[-1]
 
         with mlflow.start_span(
@@ -510,20 +279,13 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             )
 
             try:
-                # check if vector search tool
                 if tool_name in self.vector_search_tools:
-                    vector_tool = self.vector_search_tools[tool_name]
-                    result = vector_tool.execute(**args)
+                    result = self.vector_search_tools[tool_name].execute(**args)
                 else:
-                    # otherwise treat as UC function
-                    # replace any underscores to dots in function name
                     uc_function_name = tool_name.replace("__", ".")
-
-                    # execute tool using UC function client
                     result = self.uc_client.execute_function(
                         function_name=uc_function_name, parameters=args
-                    )
-                    result = result.value
+                    ).value
 
                 span.set_outputs(result)
                 return result
@@ -533,56 +295,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
                 span.set_attributes({"error": True, "error_message": error_msg})
                 span.set_outputs({"error": error_msg})
                 logger.error(error_msg)
-                return error_msg
-
-    def convert_to_chat_completion_format(
-        self, message: dict[str, Any]
-    ) -> list[dict[str, Any]]:
-        """Convert from Responses API to ChatCompletion compatible."""
-        msg_type = message.get("type", None)
-        if msg_type == "function_call":
-            return [
-                {
-                    "role": "assistant",
-                    "content": None
-                    if self.llm_endpoint == "databricks-claude-3-7-sonnet"
-                    else "tool call",
-                    "tool_calls": [
-                        {
-                            "id": message["call_id"],
-                            "type": "function",
-                            "function": {
-                                "arguments": message["arguments"],
-                                "name": message["name"],
-                            },
-                        }
-                    ],
-                }
-            ]
-        elif msg_type == "message" and isinstance(message["content"], list):
-            return [
-                {"role": message["role"], "content": content["text"]}
-                for content in message["content"]
-            ]
-        elif msg_type == "function_call_output":
-            return [
-                {
-                    "role": "tool",
-                    "content": message["output"],
-                    "tool_call_id": message["call_id"],
-                }
-            ]
-        compatible_keys = ["role", "content", "name", "tool_calls", "tool_call_id"]
-        return [{k: v for k, v in message.items() if k in compatible_keys}]
-
-    def prepare_messages_for_llm(
-        self, messages: list[dict[str, Any]]
-    ) -> list[dict[str, Any]]:
-        """Filter out message fields that are not compatible with LLM message formats and convert from Responses API to ChatCompletion compatible."""
-        chat_msgs = []
-        for msg in messages:
-            chat_msgs.extend(self.convert_to_chat_completion_format(msg))
-        return chat_msgs
+                raise ToolExecutionError(tool_name, error_msg, e) from e
 
     @backoff.on_exception(backoff.expo, Exception)
     @mlflow.trace(span_type=SpanType.LLM)
@@ -591,7 +304,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         try:
             params = {
                 "model": self.llm_endpoint,
-                "messages": self.prepare_messages_for_llm(messages),
+                "messages": prepare_messages_for_llm(messages, self.llm_endpoint),
                 "tools": self.get_tool_specs(),
                 **self.llm_params,
             }
@@ -614,16 +327,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         tool_calls: list[dict[str, Any]],
         custom_inputs: Optional[dict[str, Any]] = None,
     ) -> tuple[list[dict[str, Any]], list[ResponsesAgentStreamEvent]]:
-        """Execute tool calls and return updated messages and response events.
-
-        Args:
-            messages: Current message history
-            tool_calls: Tool calls to execute
-            custom_inputs: Optional custom inputs
-
-        Returns:
-            Tuple of (updated_messages, response_events)
-        """
+        """Execute tool calls and return updated messages and response events."""
         updated_messages = messages.copy()
         events = []
 
@@ -632,7 +336,6 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             args = json.loads(function["arguments"])
 
             try:
-                # inject params before calling tool
                 enhanced_args = self.parameter_injector.inject_parameters(
                     function["name"], args, custom_inputs or {}
                 )
@@ -641,34 +344,29 @@ class BaseAgent(ResponsesAgent, abc.ABC):
                     tool_name=function["name"], args=enhanced_args
                 )
                 result_str = str(result)
-            except Exception as e:
-                logger.error(f"Error executing tool {function['name']}: {e}")
+            except ToolExecutionError as e:
+                logger.error(f"Tool execution failed: {e}")
                 result_str = f"Error executing tool: {str(e)}"
 
-            # add tool result to message history
             updated_messages.append(
                 {"role": "tool", "content": result_str, "tool_call_id": tool_call["id"]}
             )
 
-            # create response event
-            responses_tool_call_output = {
-                "type": "function_call_output",
-                "call_id": tool_call["id"],
-                "output": result_str,
-            }
-
             events.append(
                 ResponsesAgentStreamEvent(
-                    type="response.output_item.done", item=responses_tool_call_output
+                    type="response.output_item.done",
+                    item={
+                        "type": "function_call_output",
+                        "call_id": tool_call["id"],
+                        "output": result_str,
+                    },
                 )
             )
 
         return updated_messages, events
 
     def call_and_run_tools(
-        self,
-        request: ResponsesAgentRequest,
-        max_iter: int = 10,
+        self, request: ResponsesAgentRequest, max_iter: int = 10
     ) -> Generator[ResponsesAgentStreamEvent, None, None]:
         """Run the call-tool-response loop up to max_iter times.
 
@@ -689,7 +387,6 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         for _ in range(max_iter):
             last_msg = current_messages[-1]
 
-            # handle tool calls if present
             if tool_calls := last_msg.get("tool_calls", None):
                 updated_messages, events = self.handle_tool_call(
                     current_messages, tool_calls, request.custom_inputs
@@ -701,6 +398,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             else:
                 llm_output = self.call_llm(current_messages)
                 current_messages.append(llm_output)
+
                 if tool_calls := llm_output.get("tool_calls", None):
                     for tool_call in tool_calls:
                         yield ResponsesAgentStreamEvent(
@@ -721,10 +419,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
                             "type": "message",
                             "id": str(uuid4()),
                             "content": [
-                                {
-                                    "type": "output_text",
-                                    "text": llm_output["content"],
-                                }
+                                {"type": "output_text", "text": llm_output["content"]}
                             ],
                         },
                     )
@@ -761,3 +456,16 @@ class BaseAgent(ResponsesAgent, abc.ABC):
     ) -> Generator[ResponsesAgentStreamEvent, None, None]:
         """Stream predictions."""
         yield from self.call_and_run_tools(request)
+
+    # convenience methods for trace utilities
+    def update_trace_preview(self, **kwargs):
+        """Convenience method for updating trace previews."""
+        return update_trace_preview(**kwargs)
+
+    def create_request_structure(self, **kwargs):
+        """Convenience method for creating request structures."""
+        return create_request_structure(**kwargs)
+
+    def create_response_structure(self, **kwargs):
+        """Convenience method for creating response structures."""
+        return create_response_structure(**kwargs)

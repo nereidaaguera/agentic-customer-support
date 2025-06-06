@@ -44,4 +44,7 @@ dmypy.json
 # Poetry
 poetry.lock
 .poetry
+
+# Databricks
 .databricks
+bundle-schema.json

@@ -3,32 +3,26 @@
 from unitycatalog.ai.openai.toolkit import UCFunctionToolkit
 
 from telco_support_agent.agents.types import AgentType
+from telco_support_agent.utils.config import config_manager
 from telco_support_agent.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 
-# default catalog and schema
-DEFAULT_CATALOG = "telco_customer_support_dev"
-DEFAULT_SCHEMA = "agent"
-
 # mapping of domains to function names
 DOMAIN_FUNCTION_MAP = {
     AgentType.ACCOUNT.value: [
-        f"{DEFAULT_CATALOG}.{DEFAULT_SCHEMA}.get_customer_info",
-        f"{DEFAULT_CATALOG}.{DEFAULT_SCHEMA}.get_customer_subscriptions",
+        "get_customer_info",
+        "customer_subscriptions",
     ],
     AgentType.BILLING.value: [
-        f"{DEFAULT_CATALOG}.{DEFAULT_SCHEMA}.get_billing_info",
-        f"{DEFAULT_CATALOG}.{DEFAULT_SCHEMA}.get_usage_info",
-    ],
-    AgentType.TECH_SUPPORT.value: [
-        # TODO: add tech support functions
+        "get_billing_info",
+        "get_usage_info",
     ],
     AgentType.PRODUCT.value: [
-        f"{DEFAULT_CATALOG}.{DEFAULT_SCHEMA}.get_plans_info",
-        f"{DEFAULT_CATALOG}.{DEFAULT_SCHEMA}.get_devices_info",
-        f"{DEFAULT_CATALOG}.{DEFAULT_SCHEMA}.get_promotions_info",
-        f"{DEFAULT_CATALOG}.{DEFAULT_SCHEMA}.get_customer_devices",
+        "get_plans_info",
+        "get_devices_info",
+        "get_promotions_info",
+        "get_customer_devices",
     ],
 }
 
@@ -48,7 +42,7 @@ def get_toolkit_for_domain(domain: str) -> UCFunctionToolkit:
     except ValueError:
         logger.warning(f"Requested toolkit for non-standard domain: {domain}")
 
-    function_names = DOMAIN_FUNCTION_MAP.get(domain, [])
+    function_names = get_functions_for_domain(domain)
     return UCFunctionToolkit(function_names=function_names)
 
 
@@ -61,7 +55,12 @@ def get_functions_for_domain(domain: str) -> list[str]:
     Returns:
         List of function names for the domain
     """
-    return DOMAIN_FUNCTION_MAP.get(domain, [])
+    uc_config = config_manager.get_uc_config()
+    function_names = [
+        uc_config.get_uc_function_name(function_name)
+        for function_name in DOMAIN_FUNCTION_MAP.get(domain, [])
+    ]
+    return function_names
 
 
 def check_function_exists(function_name: str) -> bool:
@@ -112,6 +111,7 @@ def _register_domain_functions(domain: str) -> dict[str, bool]:
 
     # import module to trigger registration
     try:
+        logger.info(f"Importing functions for domain: {domain}")
         importlib.import_module(domain_modules[domain])
 
         for func_name in get_functions_for_domain(domain):

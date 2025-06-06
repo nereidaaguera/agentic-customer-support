@@ -121,6 +121,160 @@ def deploy_agent(
         raise AgentDeploymentError(error_msg) from e
 
 
+def cleanup_old_deployments(
+    model_name: str,
+    current_version: str,
+    endpoint_name: str,
+    keep_previous_count: int = 1,
+    max_deletion_attempts: int = 3,
+    wait_between_attempts: int = 30,
+    wait_after_deletion: int = 10,
+    raise_on_error: bool = False,
+) -> dict[str, Any]:
+    """Clean up older deployed agent versions.
+
+    Retrieves all deployed versions for a given model and deletes older
+    versions while keeping the current version and a configurable number of previous versions.
+
+    Args:
+        model_name: The full UC model name
+        current_version: The current version number (string) that should be kept
+        endpoint_name: The name of the endpoint
+        keep_previous_count: Number of previous versions to keep (default: 1)
+        max_deletion_attempts: Maximum number of attempts to delete a version (default: 3)
+        wait_between_attempts: Seconds to wait between deletion attempts (default: 30)
+        wait_after_deletion: Seconds to wait after successful deletion (default: 10)
+        raise_on_error: Whether to raise exceptions on cleanup errors (default: False)
+
+    Returns:
+        Dictionary containing:
+            - versions_deleted: List of successfully deleted versions
+            - versions_failed: List of versions that couldn't be deleted
+            - versions_kept: List of versions that were kept
+
+    Raises:
+        AgentDeploymentError: If raise_on_error is True and cleanup fails
+    """
+    result = {
+        "versions_deleted": [],
+        "versions_failed": [],
+        "versions_kept": [int(current_version)],
+    }
+
+    try:
+        # get all deployed versions for this model
+        all_deployments = agents.get_deployments(model_name=model_name)
+
+        if not all_deployments:
+            logger.info("No existing deployments found to clean up")
+            return result
+
+        endpoint_deployments = [
+            dep for dep in all_deployments if dep.endpoint_name == endpoint_name
+        ]
+
+        logger.info(
+            f"Found {len(endpoint_deployments)} existing deployments for {model_name} in endpoint {endpoint_name}"
+        )
+
+        current_version_int = int(current_version)
+        deployed_versions = [int(dep.model_version) for dep in endpoint_deployments]
+        deployed_versions.sort(reverse=True)
+
+        previous_versions = [v for v in deployed_versions if v < current_version_int]
+        versions_to_keep = [current_version_int]
+        if previous_versions and keep_previous_count > 0:
+            versions_to_keep.extend(previous_versions[:keep_previous_count])
+        versions_to_delete = [v for v in deployed_versions if v not in versions_to_keep]
+
+        result["versions_kept"] = versions_to_keep
+
+        if not versions_to_delete:
+            logger.info("No older versions to delete")
+            return result
+
+        logger.info(f"Current version: {current_version_int}")
+        logger.info(f"Versions to keep: {versions_to_keep}")
+        logger.info(f"Versions to delete: {versions_to_delete}")
+
+        w = WorkspaceClient()
+
+        # can only delete one at a time, need to wait for endpoint to update
+        for version in versions_to_delete:
+            attempt = 0
+            deleted = False
+
+            while attempt < max_deletion_attempts and not deleted:
+                attempt += 1
+                try:
+                    # check if endpoint is ready for updates
+                    endpoint_status = w.serving_endpoints.get(endpoint_name)
+                    if (
+                        endpoint_status.state.config_update
+                        == EndpointStateConfigUpdate.IN_PROGRESS
+                    ):
+                        logger.info(
+                            f"Endpoint update in progress, waiting before deleting version {version} "
+                            f"(attempt {attempt}/{max_deletion_attempts})"
+                        )
+                        time.sleep(wait_between_attempts)
+                        continue
+
+                    # delete the deployment
+                    agents.delete_deployment(
+                        model_name=model_name, model_version=version
+                    )
+                    logger.info(
+                        f"Successfully deleted deployment for version {version}"
+                    )
+                    deleted = True
+                    result["versions_deleted"].append(version)
+
+                    # wait for endpoint update to complete
+                    logger.info(
+                        f"Waiting for endpoint update to complete after deleting version {version}"
+                    )
+                    wait_start = time.time()
+                    while time.time() - wait_start < wait_after_deletion:
+                        endpoint_status = w.serving_endpoints.get(endpoint_name)
+                        if (
+                            endpoint_status.state.config_update
+                            != EndpointStateConfigUpdate.IN_PROGRESS
+                        ):
+                            logger.info(
+                                f"Endpoint update completed for version {version}"
+                            )
+                            break
+                        time.sleep(10)
+
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to delete deployment for version {version} "
+                        f"(attempt {attempt}/{max_deletion_attempts}): {str(e)}"
+                    )
+                    if attempt == max_deletion_attempts:
+                        result["versions_failed"].append(version)
+                    time.sleep(
+                        wait_between_attempts * 2
+                    )  # wait longer between retry attempts
+
+            if not deleted:
+                logger.warning(
+                    f"Gave up deleting version {version} after {max_deletion_attempts} attempts"
+                )
+
+        return result
+
+    except Exception as e:
+        error_msg = f"Error while cleaning up older deployments: {str(e)}"
+        logger.warning(error_msg)
+
+        if raise_on_error:
+            raise AgentDeploymentError(error_msg) from e
+
+        return result
+
+
 def _wait_for_endpoint_ready(endpoint_name: str) -> None:
     """Wait for endpoint to be ready."""
     logger.info(f"Starting to wait for endpoint {endpoint_name}")

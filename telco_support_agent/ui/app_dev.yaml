@@ -1,0 +1,11 @@
+command: ["python", "main.py"]
+
+env:
+  - name: 'ENV'
+    value: 'dev'
+  - name: 'TELCO_SUPPORT_AGENT_ENV'
+    value: 'dev'
+  - name: 'DATABRICKS_ENDPOINT_NAME'
+    value: 'dev-telco-customer-support-agent'
+  - name: 'DATABRICKS_HOST'
+    value: 'https://db-ml-models-prod-us-west.cloud.databricks.com/'
