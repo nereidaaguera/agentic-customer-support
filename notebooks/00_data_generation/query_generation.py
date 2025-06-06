@@ -239,7 +239,7 @@ QUERY_TEMPLATES = {
             QueryContext("product", True, False, "price-conscious customer", "plan comparison"),
             QueryContext("product", True, False, "tech enthusiast", "device upgrade"),
             QueryContext("product", True, False, "family customer", "multi-line planning"),
-            QueryContext("product", False, False, "potential customer", "service exploration"),
+            QueryContext("product", True, False, "potential customer", "service exploration"), 
             QueryContext("product", True, False, "existing customer", "optimization"),
         ],
         "base_scenarios": [
@@ -362,9 +362,8 @@ Generate ONE realistic question following this pattern. Don't include any preamb
         """Enhance query with appropriate context (customer ID, dates, etc.)."""
         custom_inputs = {}
         
-        # add customer ID if required
-        if context.requires_customer_id:
-            custom_inputs["customer"] = self.generate_customer_id()
+        # always add customer ID
+        custom_inputs["customer"] = self.generate_customer_id()
         
         # add temporal context for billing queries
         if context.requires_dates and "billing" in context.category:
@@ -1114,18 +1113,18 @@ def run_continuous_simulation(batches: int = 3, delay_between_batches: int = 300
 
 # COMMAND ----------
 
-print("Generating sample queries...")
-generate_sample_queries_for_testing()
+# print("Generating sample queries...")
+# generate_sample_queries_for_testing()
 
 # COMMAND ----------
 
-print("Running single query test...")
-single_test_success = test_single_query()
+# print("Running single query test...")
+# single_test_success = test_single_query()
 
 # COMMAND ----------
 
-print("Running small batch test...")
-test_results = test_small_batch()
+# print("Running small batch test...")
+# test_results = test_small_batch()
 
 # COMMAND ----------
 
@@ -1136,8 +1135,8 @@ test_results = test_small_batch()
 
 # COMMAND ----------
 
-print("Running batch execution...")
-batch_summary = run_synthetic_query_batch(num_queries=QUERIES_PER_BATCH)
+# print("Running batch execution...")
+# batch_summary = run_synthetic_query_batch(num_queries=QUERIES_PER_BATCH)
 
 # COMMAND ----------
 
