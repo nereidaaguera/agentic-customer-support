@@ -37,6 +37,7 @@ def log_agent(
         input_example: Optional input example for MLflow signature inference
         resources: Optional list of resources (if None, will auto-detect)
         environment: Environment for resource detection (dev, prod)
+        disable_tools: Optional list of tool names to disable. Can be simple names or full UC function names.
 
     Returns:
         ModelInfo object containing details of the logged model
@@ -71,7 +72,10 @@ def log_agent(
         if disable_tools:
             import json
             import tempfile
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".json", delete=False
+            ) as f:
                 json.dump({"disable_tools": disable_tools}, f)
                 artifacts["disable_tools.json"] = f.name
             logger.info(f"Storing disable_tools artifact: {disable_tools}")

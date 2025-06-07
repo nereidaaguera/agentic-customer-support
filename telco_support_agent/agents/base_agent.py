@@ -163,13 +163,14 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         except Exception as e:
             logger.error(f"Error loading UC function tools: {str(e)}")
             return []
-        
+
     def _load_disable_tools_from_artifact(self) -> list[str]:
         """Load disable_tools from artifact if available."""
         try:
-            from mlflow.artifacts import download_artifacts
             import json
-            
+
+            from mlflow.artifacts import download_artifacts
+
             # try to download the disable_tools artifact
             artifact_path = download_artifacts(artifact_path="disable_tools.json")
             if artifact_path and Path(artifact_path).exists():
@@ -181,8 +182,8 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         except Exception:
             # if anything fails, just return empty list - no big deal for demo
             pass
-        
-        return []           
+
+        return []
 
     def _filter_disabled_tools(self, tools: list[dict]) -> list[dict]:
         """Filter disabled tools from the tools list."""
@@ -221,7 +222,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             else:
                 logger.info(f"Disabling vector search tool: {tool_name}")
 
-        return filtered_tools 
+        return filtered_tools
 
     def _extract_tool_name(self, tool: dict) -> Optional[str]:
         """Extract tool name from tool specification."""
