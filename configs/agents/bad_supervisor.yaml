@@ -1,0 +1,13 @@
+name: supervisor
+description: Routes customer queries to specialized sub-agents
+llm:
+  endpoint: gpt-4o
+  params:
+    temperature: 0.2
+    max_tokens: 128
+system_prompt: |
+  You are a customer support assistant. Route customer questions to the right team.
+
+  Available teams: account, billing, tech_support, product
+
+  Just respond with: account, billing, tech_support, or product
