@@ -1,33 +1,56 @@
-name: Staging Databricks Infra CI/CD
+# name: Staging UI Deploy
 
-on:
-  push:
-    branches:
-      - main
-env:
-  DATABRICKS_CLIENT_ID: ${{secrets.STAGING_DATABRICKS_CLIENT_ID}}
-  DATABRICKS_CLIENT_SECRET: ${{secrets.STAGING_DATABRICKS_CLIENT_SECRET}}
-  DATABRICKS_BUNDLE_TARGET: staging
+# on:
+#   push:
+#     branches: [ main ]
+#     paths: [ 'ui/**' ]
+#   workflow_dispatch:
 
-jobs:
-  deploy:
-    name: Deploy pipeline
-    environment: staging
-    runs-on:
-      group: databricks-field-eng-protected-runner-group
-      labels: linux-ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - name: Setup databricks CLI
-        uses: databricks/setup-cli@main
-      - name: Validate bundle for staging
-        id: validate
-        run: |
-          databricks bundle validate
-      - name: Deploy bundle to staging
-        id: deploy
-        run: |
-          databricks bundle deploy
+# env:
+#   DATABRICKS_CLIENT_ID: ${{secrets.STAGING_DATABRICKS_CLIENT_ID}}
+#   DATABRICKS_CLIENT_SECRET: ${{secrets.STAGING_DATABRICKS_CLIENT_SECRET}}
+
+# jobs:
+#   deploy-ui:
+#     name: Deploy UI to Staging
+#     environment: staging
+#     runs-on:
+#       group: databricks-field-eng-protected-runner-group
+#       labels: linux-ubuntu-latest
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v4
+        
+#       - name: Setup Node.js (no cache)
+#         uses: actions/setup-node@v4
+#         with:
+#           node-version: '18'
+          
+#       - name: Debug file structure
+#         run: |
+#           echo "Repository root contents:"
+#           ls -la
+#           echo ""
+#           echo "UI directory contents:"
+#           ls -la ui/ || echo "ui directory not found"
+#           echo ""
+#           echo "Frontend directory contents:"
+#           ls -la ui/frontend/ || echo "ui/frontend directory not found"
+          
+#       - name: Install and build frontend
+#         run: |
+#           cd ui/frontend
+#           echo "Working in: $(pwd)"
+#           echo "Installing dependencies..."
+#           npm install
+#           echo "Building frontend..."
+#           npm run build
+          
+#       - name: Setup Databricks CLI
+#         uses: databricks/setup-cli@main
+        
+#       - name: Deploy UI App
+#         run: |
+#           cd ui
+#           chmod +x deploy.sh
+#           ./deploy.sh staging
