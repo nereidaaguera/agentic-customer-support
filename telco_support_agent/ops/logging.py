@@ -27,6 +27,7 @@ def log_agent(
     input_example: Optional[dict] = None,
     resources: Optional[list[Resource]] = None,
     environment: str = "prod",
+    disable_tools: Optional[list[str]] = None,
 ) -> ModelInfo:
     """Log agent using MLflow Models from Code approach.
 
@@ -66,6 +67,14 @@ def log_agent(
 
     with mlflow.start_run():
         _log_config_dicts()
+
+        if disable_tools:
+            import json
+            import tempfile
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+                json.dump({"disable_tools": disable_tools}, f)
+                artifacts["disable_tools.json"] = f.name
+            logger.info(f"Storing disable_tools artifact: {disable_tools}")
 
         model_info = mlflow.pyfunc.log_model(
             python_model=module_path,

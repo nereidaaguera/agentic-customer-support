@@ -74,6 +74,8 @@ class SupervisorAgent(BaseAgent):
         )
 
         self._sub_agents = {}
+        if disable_tools is None:
+            disable_tools = self._load_disable_tools_from_artifact()
         self.disable_tools = disable_tools or []
         self._topic_categories = load_topics_from_yaml()
         if self.disable_tools:

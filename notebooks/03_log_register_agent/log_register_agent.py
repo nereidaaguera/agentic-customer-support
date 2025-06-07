@@ -32,7 +32,8 @@ sys.path.append(project_root)
 env = dbutils.widgets.get("env")
 git_commit = dbutils.widgets.get("git_commit")
 experiment_name = dbutils.widgets.get("experiment_name")
-disable_tools = dbutils.widgets.get("disable_tools").split(",")
+disable_tools_str = dbutils.widgets.get("disable_tools")
+disable_tools = [tool.strip() for tool in disable_tools_str.split(",") if tool.strip()] if disable_tools_str else []
 
 os.environ['TELCO_SUPPORT_AGENT_ENV'] = env
 
@@ -131,6 +132,7 @@ logged_model_info = log_agent(
     name=config["name"],
     input_example=config["input_example"],
     environment=env,
+    disable_tools=disable_tools,
 )
 
 print(f"Logged agent: {logged_model_info.model_uri}")
