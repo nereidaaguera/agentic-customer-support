@@ -1,19 +1,19 @@
-name: Prod UI Deploy
+name: Staging UI Deploy
 
 on:
   push:
-    branches: [ release ]
+    branches: [ main ]
     paths: [ 'ui/**' ]
   workflow_dispatch:
 
 env:
-  DATABRICKS_CLIENT_ID: ${{secrets.PROD_DATABRICKS_CLIENT_ID}}
-  DATABRICKS_CLIENT_SECRET: ${{secrets.PROD_DATABRICKS_CLIENT_SECRET}}
+  DATABRICKS_CLIENT_ID: ${{secrets.STAGING_DATABRICKS_CLIENT_ID}}
+  DATABRICKS_CLIENT_SECRET: ${{secrets.STAGING_DATABRICKS_CLIENT_SECRET}}
 
 jobs:
   deploy-ui:
-    name: Deploy UI to Production
-    environment: prod
+    name: Deploy UI to Staging
+    environment: staging
     runs-on:
       group: databricks-field-eng-protected-runner-group
       labels: linux-ubuntu-latest
@@ -53,4 +53,4 @@ jobs:
         run: |
           cd ui
           chmod +x deploy.sh
-          ./deploy.sh prod
+          ./deploy.sh staging

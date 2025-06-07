@@ -15,9 +15,8 @@ workspace_client = WorkspaceClient()
 
 def register_customer_info(uc_config: UCConfig):
     """Register the get_customer_info UC function."""
-    function_name = (
-        f"{uc_config.agent['catalog']}.{uc_config.agent['schema']}.get_customer_info"
-    )
+    function_name = uc_config.get_uc_function_name("get_customer_info")
+    table_name = uc_config.get_uc_table_name("customers")
 
     try:
         sql = f"""
@@ -43,7 +42,7 @@ def register_customer_info(uc_config: UCConfig):
             )
           )
         )
-        FROM {uc_config.data["catalog"]}.{uc_config.data["schema"]}.customers
+        FROM {table_name}
         WHERE customer_id = customer
         LIMIT 1
         """
@@ -65,11 +64,9 @@ def register_customer_info(uc_config: UCConfig):
 
 def register_customer_subscriptions(uc_config: UCConfig):
     """Register the get_customer_subscriptions UC function."""
-    function_name = f"{uc_config.agent['catalog']}.{uc_config.agent['schema']}.get_customer_subscriptions"
+    function_name = uc_config.get_uc_function_name("customer_subscriptions")
 
     try:
-        data_catalog = uc_config.data["catalog"]
-        data_schema = uc_config.data["schema"]
         sql = f"""
         CREATE OR REPLACE FUNCTION {function_name}(
           customer STRING COMMENT 'The customer ID in the format CUS-XXXXX'
@@ -101,8 +98,8 @@ def register_customer_subscriptions(uc_config: UCConfig):
               )
             )
           )
-          FROM {data_catalog}.{data_schema}.subscriptions s
-          JOIN {data_catalog}.{data_schema}.plans p ON s.plan_id = p.plan_id
+          FROM {uc_config.get_uc_table_name("subscriptions")} s
+          JOIN {uc_config.get_uc_table_name("plans")} p ON s.plan_id = p.plan_id
           WHERE s.customer_id = customer
           GROUP BY s.customer_id
           LIMIT 1

@@ -4,10 +4,7 @@ on:
   push:
     branches: [ main ]
     paths: [ 'ui/**' ]
-  workflow_run:
-    workflows: ["Dev Databricks Infra CI/CD"]
-    types: [completed]
-    branches: [ main ]
+  workflow_dispatch:
 
 env:
   DATABRICKS_CLIENT_ID: ${{secrets.DEV_DATABRICKS_CLIENT_ID}}
@@ -20,31 +17,40 @@ jobs:
     runs-on:
       group: databricks-field-eng-protected-runner-group
       labels: linux-ubuntu-latest
-    # run if agent deployment succeeded or if UI changes were made
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'push' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         
-      - name: Setup Node.js
+      - name: Setup Node.js (no cache)
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: ui/frontend/package-lock.json
+          
+      - name: Debug file structure
+        run: |
+          echo "Repository root contents:"
+          ls -la
+          echo ""
+          echo "UI directory contents:"
+          ls -la ui/ || echo "ui directory not found"
+          echo ""
+          echo "Frontend directory contents:"
+          ls -la ui/frontend/ || echo "ui/frontend directory not found"
+          
+      - name: Install and build frontend
+        run: |
+          cd ui/frontend
+          echo "Working in: $(pwd)"
+          echo "Installing dependencies..."
+          npm install
+          echo "Building frontend..."
+          npm run build
           
       - name: Setup Databricks CLI
         uses: databricks/setup-cli@main
         
       - name: Deploy UI App
-        working-directory: ui
         run: |
+          cd ui
           chmod +x deploy.sh
-          ./deploy.sh dev dev
-          
-      - name: Verify Deployment
-        run: |
-          # Wait for deployment to register
-          sleep 60
-          # Check if app is running
-          databricks apps get telco-support-agent-dev --profile dev
+          ./deploy.sh dev

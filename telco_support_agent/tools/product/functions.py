@@ -15,9 +15,7 @@ workspace_client = WorkspaceClient()
 
 def register_plans_info(uc_config: UCConfig):
     """Register the get_plans_info UC function."""
-    function_name = (
-        f"{uc_config.agent['catalog']}.{uc_config.agent['schema']}.get_plans_info"
-    )
+    function_name = uc_config.get_uc_function_name("get_plans_info")
 
     try:
         sql = f"""
@@ -37,7 +35,7 @@ def register_plans_info(uc_config: UCConfig):
                 'plan_description', description
               ))
             )
-            FROM {uc_config.data["catalog"]}.{uc_config.data["schema"]}.plans
+            FROM {uc_config.get_uc_table_name("plans")}
             """
 
         client.create_function(sql_function_body=sql)
@@ -57,9 +55,7 @@ def register_plans_info(uc_config: UCConfig):
 
 def register_devices_info(uc_config: UCConfig):
     """Register the get_devices_info UC function."""
-    function_name = (
-        f"{uc_config.agent['catalog']}.{uc_config.agent['schema']}.get_devices_info"
-    )
+    function_name = uc_config.get_uc_function_name("get_devices_info")
 
     try:
         sql = f"""
@@ -82,7 +78,7 @@ def register_devices_info(uc_config: UCConfig):
               )
               )
             )
-            FROM {uc_config.data["catalog"]}.{uc_config.data["schema"]}.devices
+            FROM {uc_config.get_uc_table_name("devices")}
             """
 
         client.create_function(sql_function_body=sql)
@@ -102,9 +98,7 @@ def register_devices_info(uc_config: UCConfig):
 
 def register_promos_info(uc_config: UCConfig):
     """Register the get_promotions_info UC function."""
-    function_name = (
-        f"{uc_config.agent['catalog']}.{uc_config.agent['schema']}.get_promotions_info"
-    )
+    function_name = uc_config.get_uc_function_name("get_promotions_info")
 
     try:
         sql = f"""
@@ -125,7 +119,7 @@ def register_promos_info(uc_config: UCConfig):
               )
               )
             )
-            FROM {uc_config.data["catalog"]}.{uc_config.data["schema"]}.promotions
+            FROM {uc_config.get_uc_table_name("promotions")}
             """
 
         client.create_function(sql_function_body=sql)
@@ -145,13 +139,9 @@ def register_promos_info(uc_config: UCConfig):
 
 def register_customer_devices_info(uc_config: UCConfig):
     """Register the get_customer_devices UC function."""
-    function_name = (
-        f"{uc_config.agent['catalog']}.{uc_config.agent['schema']}.get_customer_devices"
-    )
+    function_name = uc_config.get_uc_function_name("get_customer_devices")
 
     try:
-        data_catalog = uc_config.data["catalog"]
-        data_schema = uc_config.data["schema"]
         sql = f"""
             CREATE OR REPLACE FUNCTION {function_name}(
                 customer STRING COMMENT 'The customer ID in the format CUS-XXXXX'
@@ -179,8 +169,8 @@ def register_customer_devices_info(uc_config: UCConfig):
                         )
                     )
                 )
-            FROM {data_catalog}.{data_schema}.subscriptions s
-            JOIN {data_catalog}.{data_schema}.devices d ON s.device_id = d.device_id
+            FROM {uc_config.get_uc_table_name("subscriptions")} s
+            JOIN {uc_config.get_uc_table_name("devices")} d ON s.device_id = d.device_id
             WHERE s.customer_id = customer
             GROUP BY s.customer_id
             LIMIT 1

@@ -15,9 +15,7 @@ workspace_client = WorkspaceClient()
 
 def register_get_billing_info(uc_config: UCConfig):
     """Register the get_billing_info UC function."""
-    function_name = (
-        f"{uc_config.agent['catalog']}.{uc_config.agent['schema']}.get_billing_info"
-    )
+    function_name = uc_config.get_uc_function_name("get_billing_info")
 
     try:
         sql = f"""
@@ -50,7 +48,7 @@ def register_get_billing_info(uc_config: UCConfig):
                   )
                 )
               )
-        FROM {uc_config.data["catalog"]}.{uc_config.data["schema"]}.billing AS billing_table
+        FROM {uc_config.get_uc_table_name("billing")} AS billing_table
         WHERE billing_table.customer_id = customer
           AND billing_table.billing_date >= billing_start_date_input
           AND billing_table.billing_date < billing_end_date_input
@@ -88,13 +86,9 @@ def register_get_billing_info(uc_config: UCConfig):
 
 def register_get_usage_info(uc_config: UCConfig):
     """Register the get_usage_info UC function for usage details."""
-    function_name = (
-        f"{uc_config.agent['catalog']}.{uc_config.agent['schema']}.get_usage_info"
-    )
+    function_name = uc_config.get_uc_function_name("get_usage_info")
 
     try:
-        data_catalog = uc_config.data["catalog"]
-        data_schema = uc_config.data["schema"]
         sql = f"""
         CREATE OR REPLACE FUNCTION {function_name}(
           customer STRING COMMENT 'The customer ID in the format CUS-XXXXX',
@@ -123,8 +117,8 @@ def register_get_usage_info(uc_config: UCConfig):
             )
           )
         )
-        FROM {data_catalog}.{data_schema}.usage u
-        JOIN {data_catalog}.{data_schema}.subscriptions s ON u.subscription_id = s.subscription_id
+        FROM {uc_config.get_uc_table_name("usage")} u
+        JOIN {uc_config.get_uc_table_name("subscriptions")} s ON u.subscription_id = s.subscription_id
         WHERE s.customer_id = customer
           AND u.date >= usage_start_date
           AND u.date < usage_end_date
