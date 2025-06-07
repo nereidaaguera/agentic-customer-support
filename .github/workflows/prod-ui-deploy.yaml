@@ -4,16 +4,7 @@ on:
   push:
     branches: [ release ]
     paths: [ 'ui/**' ]
-  workflow_run:
-    workflows: ["Prod Databricks Infra CI/CD"]
-    types: [completed]
-    branches: [ release ]
   workflow_dispatch:
-    inputs:
-      reason:
-        description: 'Reason for manual deployment'
-        required: true
-        default: 'Manual production deployment'
 
 env:
   DATABRICKS_CLIENT_ID: ${{secrets.PROD_DATABRICKS_CLIENT_ID}}
@@ -26,41 +17,40 @@ jobs:
     runs-on:
       group: databricks-field-eng-protected-runner-group
       labels: linux-ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         
-      - name: Setup Node.js
+      - name: Setup Node.js (no cache)
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: 'ui/frontend/package-lock.json'
           
-      - name: Install frontend dependencies
-        working-directory: ui/frontend
+      - name: Debug file structure
         run: |
-          npm ci --prefer-offline --no-audit
+          echo "Repository root contents:"
+          ls -la
+          echo ""
+          echo "UI directory contents:"
+          ls -la ui/ || echo "ui directory not found"
+          echo ""
+          echo "Frontend directory contents:"
+          ls -la ui/frontend/ || echo "ui/frontend directory not found"
           
-      - name: Build frontend
-        working-directory: ui/frontend
+      - name: Install and build frontend
         run: |
+          cd ui/frontend
+          echo "Working in: $(pwd)"
+          echo "Installing dependencies..."
+          npm install
+          echo "Building frontend..."
           npm run build
           
       - name: Setup Databricks CLI
         uses: databricks/setup-cli@main
-          
+        
       - name: Deploy UI App
-        working-directory: ui
         run: |
+          cd ui
           chmod +x deploy.sh
-          ./deploy.sh prod prod
-          
-      - name: Post-deployment Verification
-        run: |
-          # Wait for deployment to register
-          sleep 60
-          # Check if app is running
-          databricks apps get telco-support-agent-prod --profile prod
-          echo "✅ Production deployment completed successfully"
+          ./deploy.sh prod
