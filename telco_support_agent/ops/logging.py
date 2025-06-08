@@ -6,9 +6,12 @@ from typing import Optional
 import mlflow
 import yaml
 from mlflow.models.model import ModelInfo
-from mlflow.models.resources import (DatabricksFunction,
-                                     DatabricksServingEndpoint,
-                                     DatabricksVectorSearchIndex, Resource)
+from mlflow.models.resources import (
+    DatabricksFunction,
+    DatabricksServingEndpoint,
+    DatabricksVectorSearchIndex,
+    Resource,
+)
 from mlflow.types.responses import ResponsesAgentRequest
 
 from telco_support_agent import PACKAGE_DIR, PROJECT_ROOT
@@ -69,21 +72,16 @@ def log_agent(
         if disable_tools:
             import json
 
-            # Write disable_tools.json to the configs directory to ensure it gets included
             disable_tools_path = PROJECT_ROOT / "configs" / "disable_tools.json"
-            
             try:
-                # Ensure the configs directory exists
                 disable_tools_path.parent.mkdir(parents=True, exist_ok=True)
-                
-                # Write the disable_tools configuration
                 with open(disable_tools_path, "w") as f:
                     json.dump({"disable_tools": disable_tools}, f, indent=2)
-                
-                # Add to artifacts with the configs path
                 artifacts["configs/disable_tools.json"] = str(disable_tools_path)
-                logger.info(f"Adding disable_tools artifact: {disable_tools} at {disable_tools_path}")
-                
+                logger.info(
+                    f"Adding disable_tools artifact: {disable_tools} at {disable_tools_path}"
+                )
+
             except Exception as e:
                 logger.error(f"Failed to create disable_tools.json: {e}")
 

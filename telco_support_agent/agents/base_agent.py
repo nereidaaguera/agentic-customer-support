@@ -166,32 +166,11 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         """Load disable_tools from artifact if available."""
         logger.info("Attempting to load disable_tools from artifact...")
 
-        # Search for disable_tools.json in multiple locations
         search_paths = [
-            # Model serving paths (most likely location)
             Path("/model/artifacts/disable_tools.json"),
             Path("/model/artifacts/configs/disable_tools.json"),
             Path("/model/artifacts/configs/agents/disable_tools.json"),
         ]
-
-        # Try development/local paths
-        try:
-            from telco_support_agent.utils.config import config_manager
-
-            # Add development paths
-            project_root = config_manager._project_root
-            search_paths.extend(
-                [
-                    project_root / "configs" / "disable_tools.json",
-                    project_root / "configs" / "agents" / "disable_tools.json",
-                    Path.cwd() / "configs" / "disable_tools.json",
-                    Path.cwd() / "disable_tools.json",
-                ]
-            )
-        except Exception as e:
-            logger.debug(f"Could not access config_manager for additional paths: {e}")
-
-        # Try each path
         for path in search_paths:
             try:
                 if path.exists():
@@ -206,7 +185,6 @@ class BaseAgent(ResponsesAgent, abc.ABC):
                 logger.debug(f"Could not read disable_tools.json from {path}: {e}")
                 continue
 
-        # Try using MLflow artifact download as fallback
         try:
             from mlflow.artifacts import download_artifacts
 
@@ -214,7 +192,6 @@ class BaseAgent(ResponsesAgent, abc.ABC):
                 "Trying to download disable_tools.json using MLflow artifacts..."
             )
 
-            # Try downloading without specifying run_id (uses current context)
             try:
                 artifact_path = download_artifacts(artifact_path="disable_tools.json")
                 if artifact_path and Path(artifact_path).exists():
@@ -233,37 +210,6 @@ class BaseAgent(ResponsesAgent, abc.ABC):
                     )
             except Exception as e:
                 logger.debug(f"MLflow artifact download without run_id failed: {e}")
-
-            # If we're in a model serving context, the artifacts might be in the current model
-            # Try looking for environment variables that might give us the model info
-            try:
-                import os
-
-                model_name = os.environ.get("MLFLOW_MODEL_NAME")
-                model_version = os.environ.get("MLFLOW_MODEL_VERSION")
-
-                if model_name and model_version:
-                    logger.info(f"Found model context: {model_name}:{model_version}")
-                    model_uri = f"models:/{model_name}/{model_version}"
-                    artifact_path = download_artifacts(
-                        artifact_path="disable_tools.json", artifact_uri=model_uri
-                    )
-                    if artifact_path and Path(artifact_path).exists():
-                        logger.info(
-                            f"Downloaded disable_tools.json from model: {artifact_path}"
-                        )
-                        with open(artifact_path) as f:
-                            data = json.load(f)
-                            logger.info(f"Loaded JSON data from model: {data}")
-                            disable_tools = data.get("disable_tools", [])
-                            logger.info(
-                                f"Extracted disable_tools from model: {disable_tools}"
-                            )
-                            return disable_tools
-                else:
-                    logger.debug("No model context environment variables found")
-            except Exception as e:
-                logger.debug(f"Model context artifact download failed: {e}")
 
         except Exception as e:
             logger.debug(f"Could not load disable_tools artifact via MLflow: {e}")
