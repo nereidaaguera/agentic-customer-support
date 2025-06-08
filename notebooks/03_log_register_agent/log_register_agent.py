@@ -49,6 +49,7 @@ from telco_support_agent.ops.registry import register_agent_to_uc
 mlflow.set_experiment(experiment_name)
 
 # COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## Load log_register_agent config
 
@@ -111,7 +112,7 @@ print(f"Created supervisor agent (LLM: {supervisor.llm_endpoint})")
 from mlflow.types.responses import ResponsesAgentRequest
 
 test_request = ResponsesAgentRequest(
-    input=[{"role": "user", "content": "What plan am I currently on?"}],
+    input=[{"role": "user", "content": "how much data did the customer use in May?"}],
     custom_inputs={"customer": "CUS-10001"}
 )
 
