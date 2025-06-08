@@ -133,12 +133,22 @@ def _collect_config_artifacts() -> dict[str, str]:
             artifacts[artifact_key] = str(config_file)
             logger.info(f"Adding config artifact: {artifact_key}")
 
+    # UC config file
     uc_config_path = PROJECT_ROOT / "configs" / UC_CONFIG_FILE
     uc_config_key = f"configs/{UC_CONFIG_FILE}"
-
     logger.info(f"Adding uc config file as artifact: {uc_config_key}")
-
     artifacts[uc_config_key] = str(uc_config_path)
+
+    # topics.yaml file
+    topics_config_path = PROJECT_ROOT / "configs" / "topics.yaml"
+    if topics_config_path.exists():
+        topics_config_key = "configs/topics.yaml"
+        artifacts[topics_config_key] = str(topics_config_path)
+        logger.info(f"Adding topics config file as artifact: {topics_config_key}")
+    else:
+        logger.warning(
+            "topics.yaml not found - topic classification may not work in deployment"
+        )
 
     return artifacts
 

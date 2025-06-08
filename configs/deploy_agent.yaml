@@ -34,6 +34,12 @@ instructions: |
   Please test various query types and provide feedback on response quality.
 
 permissions:
-  users:
-    - telco-customer-support-dev
-  permission_level: CAN_MANAGE  # CAN_VIEW, CAN_RUN, CAN_MANAGE
+  - users:
+      - telco-customer-support-prod
+    permission_level: CAN_MANAGE
+  - users:
+      - telco-customer-support-dev
+    permission_level: CAN_MANAGE
+  - users:
+      - users
+    permission_level: CAN_RUN
