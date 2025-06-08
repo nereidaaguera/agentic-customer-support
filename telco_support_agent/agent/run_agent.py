@@ -2,18 +2,7 @@ import logging
 from agent import AGENT
 
 def query_agent(query):
-    assistant_response = {
-        "type": "message",
-        "id": "0bd86922-aa94-4857-817f-4b1bcf653643",
-        "content": [
-            {
-                "type": "output_text",
-                "text": "Hello! I'm here to help you with any questions you might have about telecommunications services, billing information, subscription plans, devices, or technical support. How can I assist you today?"
-            }
-        ],
-        "role": "assistant"
-    }
-    for event in AGENT.predict_stream({"input": [{"role": "user", "content": "hi"}, assistant_response, {"role": "user", "content": query}]}):
+    for event in AGENT.predict_stream({"input": [{"role": "user", "content": query}]}):
         if item:= getattr(event, "item", None):
             item_type = item.get("type")
 
@@ -44,7 +33,8 @@ if __name__ == "__main__":
     logger = logging.getLogger("mlflow")
     logger.setLevel(logging.WARNING)
 
-    query = "What was customer CUS-10001's average total bill per month over the last year?"
+    # query = "What was customer CUS-10001's average total bill per month over the last year?"
+    query = "Is there an outage in Moscone Center? I'm having trouble sending text messages"
     # query = "What can I do if I have added charges on my bill?"
     query_agent(query=query)
 

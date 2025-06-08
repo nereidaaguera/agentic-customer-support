@@ -1,8 +1,8 @@
 ## CLI setup
 
 ```bash
-export DB_CLI_PROFILE="ml-models-prod" 
-databricks auth login --profile $DB_CLI_PROFILE --host https://db-ml-models-prod-us-west.cloud.databricks.com
+export DB_CLI_PROFILE="ml-models-dev" 
+databricks auth login --profile $DB_CLI_PROFILE --host https://db-ml-models-dev-us-west.cloud.databricks.com
 ```
 
 ## Env setup
@@ -12,7 +12,7 @@ variables and install dependencies. Run the following commands from the root dir
 ```bash
 export DATABRICKS_CONFIG_PROFILE="$DB_CLI_PROFILE"
 export MLFLOW_TRACKING_URI="databricks://$DB_CLI_PROFILE"
-export MLFLOW_EXPERIMENT_ID=2985175900678329
+export MLFLOW_EXPERIMENT_ID=1387201099629454
 
 pip install -r telco_support_agent/agent/requirements.txt
 pip install -r telco_support_agent/mcp_servers/outage_info_server/requirements.txt

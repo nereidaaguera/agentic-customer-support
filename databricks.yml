@@ -14,7 +14,7 @@ targets:
   dev:
     default: true
     workspace:
-      host: https://db-ml-models-prod-us-west.cloud.databricks.com   
+      host: https://db-ml-models-dev-us-west.cloud.databricks.com
   # prod:
   #   default: false
   #   workspace:
