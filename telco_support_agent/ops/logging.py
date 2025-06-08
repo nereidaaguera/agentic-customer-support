@@ -71,19 +71,15 @@ def log_agent(
 
         if disable_tools:
             import json
+            import os
+            import tempfile
 
-            disable_tools_path = PROJECT_ROOT / "configs" / "disable_tools.json"
-            try:
-                disable_tools_path.parent.mkdir(parents=True, exist_ok=True)
-                with open(disable_tools_path, "w") as f:
-                    json.dump({"disable_tools": disable_tools}, f, indent=2)
-                artifacts["configs/disable_tools.json"] = str(disable_tools_path)
-                logger.info(
-                    f"Adding disable_tools artifact: {disable_tools} at {disable_tools_path}"
-                )
-
-            except Exception as e:
-                logger.error(f"Failed to create disable_tools.json: {e}")
+            temp_dir = tempfile.gettempdir()
+            disable_tools_path = os.path.join(temp_dir, "disable_tools.json")
+            with open(disable_tools_path, "w") as f:
+                json.dump({"disable_tools": disable_tools}, f)
+            artifacts["disable_tools.json"] = disable_tools_path
+            logger.info(f"Adding disable_tools artifact: {disable_tools}")
 
         model_info = mlflow.pyfunc.log_model(
             python_model=module_path,
