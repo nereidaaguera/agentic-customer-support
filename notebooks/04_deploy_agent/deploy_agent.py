@@ -94,7 +94,7 @@ try:
     print("✅ Model loaded successfully")
 
     test_input = {
-        "input": [{"role": "user", "content": "What plan am I currently on?"}],
+        "input": [{"role": "user", "content": "what was the customer's data usage last month?"}],
         "custom_inputs": {"customer": "CUS-10001"}
     }
 
@@ -190,7 +190,7 @@ print("="*50)
 
 # MAGIC %md
 # MAGIC ## Clean up old model serving endpoints
-# MAGIC
+
 # COMMAND ----------
 
 cleanup_enabled = deploy_agent_config.get("cleanup_old_versions", False)

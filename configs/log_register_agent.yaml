@@ -6,6 +6,6 @@ description: Multi-agent system for telco customer support
 input_example:
   input:
     - role: user
-      content: What plan am I currently on?
+      content: What was the customer's data usage last month?
   custom_inputs:
     customer: CUS-10001
