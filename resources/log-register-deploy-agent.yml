@@ -11,7 +11,7 @@ resources:
               env: ${bundle.target}
               git_commit: ${bundle.git.commit}
               experiment_name: ${var.experiment_name}
-              disable_tools: ${var.disable_tools:""}
+              disable_tools: ${var.disable_tools}
         - task_key: deploy_agent
           depends_on:
             - task_key: log_register_agent
