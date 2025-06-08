@@ -170,33 +170,47 @@ class BaseAgent(ResponsesAgent, abc.ABC):
 
         try:
             import json
+            import os
 
             from mlflow.artifacts import download_artifacts
 
-            logger.info("Downloading disable_tools.json artifact...")
-            artifact_path = download_artifacts(artifact_path="disable_tools.json")
-            logger.info(f"Download result: {artifact_path}")
+            # Try multiple common artifact paths
+            artifact_paths = [
+                "disable_tools.json",
+                "artifacts/disable_tools.json",  # This is likely the correct one
+            ]
 
-            if artifact_path:
-                artifact_path_obj = Path(artifact_path)
-                logger.info(f"Checking if artifact path exists: {artifact_path_obj}")
-                logger.info(f"Path exists: {artifact_path_obj.exists()}")
+            for artifact_path in artifact_paths:
+                try:
+                    logger.info(f"Trying to download: {artifact_path}")
+                    downloaded_path = download_artifacts(artifact_path=artifact_path)
 
-                if artifact_path_obj.exists():
-                    logger.info(f"Reading disable_tools from: {artifact_path}")
-                    with open(artifact_path) as f:
-                        data = json.load(f)
-                        logger.info(f"Loaded JSON data: {data}")
-                        disable_tools = data.get("disable_tools", [])
-                        logger.info(f"Extracted disable_tools: {disable_tools}")
-                        return disable_tools
-                else:
-                    logger.warning(f"Artifact path does not exist: {artifact_path}")
-            else:
-                logger.warning("download_artifacts returned None/empty path")
+                    if downloaded_path and Path(downloaded_path).exists():
+                        logger.info(f"Successfully downloaded from: {artifact_path}")
+                        with open(downloaded_path) as f:
+                            data = json.load(f)
+                            disable_tools = data.get("disable_tools", [])
+                            logger.info(f"Loaded disable_tools: {disable_tools}")
+                            return disable_tools
+
+                except Exception as e:
+                    logger.debug(f"Failed to download {artifact_path}: {e}")
+                    continue
+
+            # Fallback: try environment variable
+            env_disable_tools = os.environ.get("DISABLE_TOOLS", "").strip()
+            if env_disable_tools:
+                logger.info(
+                    f"Using disable_tools from environment: {env_disable_tools}"
+                )
+                return [
+                    tool.strip()
+                    for tool in env_disable_tools.split(",")
+                    if tool.strip()
+                ]
 
         except Exception as e:
-            logger.debug(f"Could not load disable_tools artifact: {e}")
+            logger.warning(f"Could not load disable_tools artifact: {e}")
 
         logger.info("Falling back to empty disable_tools list")
         return []
