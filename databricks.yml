@@ -25,7 +25,7 @@ targets:
       service_principal_name: ${workspace.current_user.userName}
     variables:
       experiment_name: /telco_support_agent/dev/experiments/dev_telco_support_agent
-      disable_tools:
+      disable_tools: ""
   staging:
     default: false
     workspace:
@@ -43,4 +43,4 @@ targets:
       service_principal_name: ${workspace.current_user.userName}
     variables:
       experiment_name: /telco_support_agent/prod/experiments/prod_telco_support_agent
-      disable_tools:
+      disable_tools: ""
