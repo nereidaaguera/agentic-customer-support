@@ -73,11 +73,12 @@ def log_agent(
             import json
             import tempfile
 
-            with tempfile.NamedTemporaryFile(
+            temp_file = tempfile.NamedTemporaryFile(
                 mode="w", suffix=".json", delete=False
-            ) as f:
-                json.dump({"disable_tools": disable_tools}, f)
-                artifacts["disable_tools.json"] = f.name
+            )
+            json.dump({"disable_tools": disable_tools}, temp_file)
+            temp_file.close()
+            artifacts["disable_tools.json"] = temp_file.name
             logger.info(f"Storing disable_tools artifact: {disable_tools}")
 
         model_info = mlflow.pyfunc.log_model(

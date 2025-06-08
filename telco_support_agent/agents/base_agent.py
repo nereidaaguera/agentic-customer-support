@@ -171,7 +171,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
 
             from mlflow.artifacts import download_artifacts
 
-            # try to download the disable_tools artifact
+            # Try to download the disable_tools artifact
             artifact_path = download_artifacts(artifact_path="disable_tools.json")
             if artifact_path and Path(artifact_path).exists():
                 with open(artifact_path) as f:
@@ -179,9 +179,9 @@ class BaseAgent(ResponsesAgent, abc.ABC):
                     disable_tools = data.get("disable_tools", [])
                     logger.info(f"Loaded disable_tools from artifact: {disable_tools}")
                     return disable_tools
-        except Exception:
-            # if anything fails, just return empty list - no big deal for demo
-            pass
+        except Exception as e:
+            # If anything fails, just return empty list - no big deal for demo
+            logger.debug(f"Could not load disable_tools artifact: {e}")
 
         return []
 
