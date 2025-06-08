@@ -12,22 +12,28 @@ import mlflow
 from databricks.sdk import WorkspaceClient
 from mlflow.entities import SpanType
 from mlflow.pyfunc import ResponsesAgent
-from mlflow.types.responses import (ResponsesAgentRequest,
-                                    ResponsesAgentResponse,
-                                    ResponsesAgentStreamEvent)
+from mlflow.types.responses import (
+    ResponsesAgentRequest,
+    ResponsesAgentResponse,
+    ResponsesAgentStreamEvent,
+)
 from unitycatalog.ai.core.databricks import DatabricksFunctionClient
 from unitycatalog.ai.openai.toolkit import UCFunctionToolkit
 
 from telco_support_agent.agents import AgentConfig
 from telco_support_agent.agents.utils.exceptions import (
-    AgentConfigurationError, MissingCustomInputError, ToolExecutionError)
-from telco_support_agent.agents.utils.message_formatting import \
-    prepare_messages_for_llm
-from telco_support_agent.agents.utils.tool_injection import \
-    ToolParameterInjector
+    AgentConfigurationError,
+    MissingCustomInputError,
+    ToolExecutionError,
+)
+from telco_support_agent.agents.utils.message_formatting import prepare_messages_for_llm
+from telco_support_agent.agents.utils.tool_injection import ToolParameterInjector
 from telco_support_agent.agents.utils.trace_utils import (
-    create_request_structure, create_response_structure, patch_trace_info,
-    update_trace_preview)
+    create_request_structure,
+    create_response_structure,
+    patch_trace_info,
+    update_trace_preview,
+)
 from telco_support_agent.utils.logging_utils import get_logger, setup_logging
 
 setup_logging()
@@ -161,34 +167,38 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         logger.info("Attempting to load disable_tools from artifact...")
 
         try:
-            import json
-
             from mlflow.artifacts import download_artifacts
 
-            logger.info("Downloading disable_tools.json artifact...")
-            artifact_path = download_artifacts(artifact_path="artifacts/disable_tools.json")
-            logger.info(f"Download result: {artifact_path}")
+            artifact_paths = [
+                "disable_tools.json",
+                "artifacts/disable_tools.json",
+            ]
 
-            if artifact_path:
-                artifact_path_obj = Path(artifact_path)
-                logger.info(f"Checking if artifact path exists: {artifact_path_obj}")
-                logger.info(f"Path exists: {artifact_path_obj.exists()}")
+            for artifact_path in artifact_paths:
+                try:
+                    logger.info(f"Downloading artifact: {artifact_path}")
+                    downloaded_path = download_artifacts(artifact_path=artifact_path)
+                    logger.info(f"Download result: {downloaded_path}")
 
-                if artifact_path_obj.exists():
-                    logger.info(f"Reading disable_tools from: {artifact_path}")
-                    with open(artifact_path) as f:
-                        data = json.load(f)
-                        logger.info(f"Loaded JSON data: {data}")
-                        disable_tools = data.get("disable_tools", [])
-                        logger.info(f"Extracted disable_tools: {disable_tools}")
-                        return disable_tools
-                else:
-                    logger.warning(f"Artifact path does not exist: {artifact_path}")
-            else:
-                logger.warning("download_artifacts returned None/empty path")
+                    if downloaded_path and Path(downloaded_path).exists():
+                        logger.info(f"Reading disable_tools from: {downloaded_path}")
+                        with open(downloaded_path) as f:
+                            data = json.load(f)
+                            logger.info(f"Loaded JSON data: {data}")
+                            disable_tools = data.get("disable_tools", [])
+                            logger.info(f"Extracted disable_tools: {disable_tools}")
+                            return disable_tools
+                    else:
+                        logger.warning(
+                            f"Download failed or path doesn't exist: {downloaded_path}"
+                        )
+
+                except Exception as e:
+                    logger.warning(f"Failed to download {artifact_path}: {e}")
+                    continue
 
         except Exception as e:
-            logger.debug(f"Could not load disable_tools artifact: {e}")
+            logger.warning(f"Could not load disable_tools artifact: {e}")
 
         logger.info("Falling back to empty disable_tools list")
         return []
