@@ -87,22 +87,31 @@ def compute_response_preview(response: Any) -> str:
         output = data["output"]
         if isinstance(output, list):
             for item in reversed(output):
+                # Helper function to get value from either attribute or dict key
+                def get_value(obj, key):
+                    if hasattr(obj, key):
+                        return getattr(obj, key)
+                    elif isinstance(obj, dict):
+                        return obj.get(key)
+                    return None
+
+                item_type = get_value(item, "type")
+                item_role = get_value(item, "role")
+                item_content = get_value(item, "content")
+
                 if (
-                    hasattr(item, "type")
-                    and item.type == "message"
-                    and hasattr(item, "role")
-                    and item.role == "assistant"
-                    and hasattr(item, "content")
+                    item_type == "message"
+                    and item_role == "assistant"
+                    and item_content is not None
                 ):
-                    content = item.content
+                    content = item_content
                     if isinstance(content, list):
                         for content_item in content:
-                            if (
-                                isinstance(content_item, dict)
-                                and content_item.get("type") == "output_text"
-                                and "text" in content_item
-                            ):
-                                preview = content_item["text"]
+                            content_type = get_value(content_item, "type")
+                            content_text = get_value(content_item, "text")
+
+                            if content_type == "output_text" and content_text:
+                                preview = content_text
                                 break
 
                     if preview:
