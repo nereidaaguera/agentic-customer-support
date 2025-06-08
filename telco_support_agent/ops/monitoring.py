@@ -38,7 +38,6 @@ def create_agent_monitor(
         AgentMonitoringError: If monitor creation fails
     """
     try:
-        # Check if monitor already exists
         if replace_existing:
             try:
                 get_external_monitor(experiment_name=experiment_name)
@@ -46,17 +45,15 @@ def create_agent_monitor(
                 logger.info("Deleting existing monitor for replacement...")
                 delete_external_monitor(experiment_name=experiment_name)
             except ValueError:
-                # No existing monitor found, which is fine
                 logger.info(
                     f"No existing monitor found for experiment: {experiment_name}"
                 )
 
-        # Create monitor with empty assessments for now
+        # create monitor with empty assessments
         logger.info(f"Creating external monitor for experiment: {experiment_name}")
 
-        # Simple config with no assessments initially
         assessments_config = AssessmentsSuiteConfig(
-            sample=0.1,  # Sample 10% of traces
+            sample=None,
             paused=False,  # Start monitoring immediately
             assessments=[],  # Empty assessments array for first deployment
         )
