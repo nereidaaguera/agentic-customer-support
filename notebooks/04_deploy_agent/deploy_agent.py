@@ -189,6 +189,69 @@ print("="*50)
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC ## Create External Monitor
+# MAGIC
+# MAGIC Set up agent monitoring for the deployed agent
+
+# COMMAND ----------
+
+from telco_support_agent.ops.monitoring import (
+    create_agent_monitor,
+    AgentMonitoringError
+)
+
+monitoring_config = deploy_agent_config.get("monitoring", {})
+
+if monitoring_config.get("enabled", False):
+    print("="*50)
+    print("SETTING UP AGENT MONITORING")
+    print("="*50)
+    print(f"Experiment: {experiment_name}")
+    print(f"Data catalog: {uc_config.data['catalog']}")
+    print(f"Data schema: {uc_config.data['schema']}")
+    print("Assessments: [] (empty for initial deployment)")
+    print()
+
+    try:
+        # create external monitor with empty assessments
+        monitor = create_agent_monitor(
+            uc_config=uc_config,
+            experiment_name=experiment_name,
+            replace_existing=monitoring_config.get("replace_existing", False),
+        )
+        
+        print("✅ External monitor created successfully!")
+        print(f"Monitor ID: {getattr(monitor, 'id', 'N/A')}")
+        print(f"Experiment ID: {getattr(monitor, 'experiment_id', 'N/A')}")
+        print(f"Evaluated traces table: {getattr(monitor, 'evaluated_traces_table', 'N/A')}")
+        
+        if hasattr(monitor, 'monitoring_page_url'):
+            print(f"Monitoring page: {monitor.monitoring_page_url}")
+        
+        print("\nNote: Monitor created with empty assessments.")
+        print("You can add assessments later via the monitoring configuration.")
+        
+    except AgentMonitoringError as e:
+        print(f"❌ Failed to create monitor: {str(e)}")
+        if monitoring_config.get("fail_on_error", False):
+            raise
+        else:
+            print("Continuing deployment despite monitoring setup failure...")
+    except Exception as e:
+        print(f"❌ Unexpected monitoring error: {str(e)}")
+        if monitoring_config.get("fail_on_error", False):
+            raise
+        else:
+            print("Continuing deployment despite monitoring setup failure...")
+    
+    print("="*50)
+else:
+    print("External monitoring is disabled in configuration")
+    print("To enable, set 'monitoring.enabled: true' in deploy_agent.yaml")
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC ## Clean up old model serving endpoints
 
 # COMMAND ----------
