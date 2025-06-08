@@ -209,7 +209,7 @@ if monitoring_config.get("enabled", False):
     print(f"Experiment: {experiment_name}")
     print(f"Data catalog: {uc_config.data['catalog']}")
     print(f"Data schema: {uc_config.data['schema']}")
-    print("Assessments: [] (empty for initial deployment)")
+    print("Assessments: []")
     print()
 
     try:
@@ -229,20 +229,19 @@ if monitoring_config.get("enabled", False):
             print(f"Monitoring page: {monitor.monitoring_page_url}")
         
         print("\nNote: Monitor created with empty assessments.")
-        print("You can add assessments later via the monitoring configuration.")
         
     except AgentMonitoringError as e:
         print(f"❌ Failed to create monitor: {str(e)}")
         if monitoring_config.get("fail_on_error", False):
             raise
         else:
-            print("Continuing deployment despite monitoring setup failure...")
+            print("Continuing deployment...")
     except Exception as e:
         print(f"❌ Unexpected monitoring error: {str(e)}")
         if monitoring_config.get("fail_on_error", False):
             raise
         else:
-            print("Continuing deployment despite monitoring setup failure...")
+            print("Continuing deployment...")
     
     print("="*50)
 else:
