@@ -87,6 +87,7 @@ def compute_response_preview(response: Any) -> str:
         output = data["output"]
         if isinstance(output, list):
             for item in reversed(output):
+
                 def get_value(obj, key):
                     if hasattr(obj, key):
                         return getattr(obj, key)
