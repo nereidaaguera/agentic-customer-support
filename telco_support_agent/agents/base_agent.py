@@ -166,23 +166,39 @@ class BaseAgent(ResponsesAgent, abc.ABC):
 
     def _load_disable_tools_from_artifact(self) -> list[str]:
         """Load disable_tools from artifact if available."""
+        logger.info("Attempting to load disable_tools from artifact...")
+
         try:
             import json
 
             from mlflow.artifacts import download_artifacts
 
-            # Try to download the disable_tools artifact
+            logger.info("Downloading disable_tools.json artifact...")
             artifact_path = download_artifacts(artifact_path="disable_tools.json")
-            if artifact_path and Path(artifact_path).exists():
-                with open(artifact_path) as f:
-                    data = json.load(f)
-                    disable_tools = data.get("disable_tools", [])
-                    logger.info(f"Loaded disable_tools from artifact: {disable_tools}")
-                    return disable_tools
+            logger.info(f"Download result: {artifact_path}")
+
+            if artifact_path:
+                artifact_path_obj = Path(artifact_path)
+                logger.info(f"Checking if artifact path exists: {artifact_path_obj}")
+                logger.info(f"Path exists: {artifact_path_obj.exists()}")
+
+                if artifact_path_obj.exists():
+                    logger.info(f"Reading disable_tools from: {artifact_path}")
+                    with open(artifact_path) as f:
+                        data = json.load(f)
+                        logger.info(f"Loaded JSON data: {data}")
+                        disable_tools = data.get("disable_tools", [])
+                        logger.info(f"Extracted disable_tools: {disable_tools}")
+                        return disable_tools
+                else:
+                    logger.warning(f"Artifact path does not exist: {artifact_path}")
+            else:
+                logger.warning("download_artifacts returned None/empty path")
+
         except Exception as e:
-            # If anything fails, just return empty list - no big deal for demo
             logger.debug(f"Could not load disable_tools artifact: {e}")
 
+        logger.info("Falling back to empty disable_tools list")
         return []
 
     def _filter_disabled_tools(self, tools: list[dict]) -> list[dict]:
