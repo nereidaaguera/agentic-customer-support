@@ -167,8 +167,17 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         logger.info("Attempting to load disable_tools from artifact...")
 
         try:
-            from mlflow.artifacts import download_artifacts
+            from mlflow.artifacts import download_artifacts, list_artifacts
 
+            # First, let's see what artifacts are available
+            try:
+                logger.info("Listing available artifacts...")
+                artifacts = list_artifacts()
+                logger.info(f"Available artifacts: {artifacts}")
+            except Exception as e:
+                logger.warning(f"Could not list artifacts: {e}")
+
+            # Try to download using different approaches
             artifact_paths = [
                 "disable_tools.json",
                 "artifacts/disable_tools.json",
