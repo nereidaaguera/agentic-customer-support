@@ -23,6 +23,7 @@ def create_agent_monitor(
     uc_config: UCConfig,
     experiment_name: str,
     replace_existing: bool = True,
+    sample: float = None,
 ) -> any:
     """Create an external monitor for the deployed agent with minimal configuration.
 
@@ -30,6 +31,7 @@ def create_agent_monitor(
         uc_config: Unity Catalog configuration
         experiment_name: MLflow experiment name
         replace_existing: Whether to replace existing monitor
+        sample: Sampling rate for traces (0.0 < rate <= 1.0)
 
     Returns:
         Created external monitor
@@ -51,21 +53,24 @@ def create_agent_monitor(
 
         # create monitor with empty assessments
         logger.info(f"Creating external monitor for experiment: {experiment_name}")
+        logger.info(f"Using agent catalog: {uc_config.agent['catalog']}")
+        logger.info(f"Using agent schema: {uc_config.agent['schema']}")
 
         assessments_config = AssessmentsSuiteConfig(
-            sample=None,
-            paused=False,  # Start monitoring immediately
-            assessments=[],  # Empty assessments array for first deployment
+            sample=sample,
+            paused=False,
+            assessments=[],
         )
 
         monitor = create_external_monitor(
-            catalog_name=uc_config.data["catalog"],
-            schema_name=uc_config.data["schema"],
+            catalog_name=uc_config.agent["catalog"],
+            schema_name=uc_config.agent["schema"],
             assessments_config=assessments_config,
             experiment_name=experiment_name,
         )
 
         logger.info("Successfully created external monitor with empty assessments")
+        logger.info(f"Monitor will create tables in: {uc_config.agent['catalog']}.{uc_config.agent['schema']}")
         return monitor
 
     except Exception as e:
