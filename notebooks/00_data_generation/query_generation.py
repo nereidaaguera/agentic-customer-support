@@ -195,20 +195,35 @@ QUERY_TEMPLATES = {
             QueryContext("billing", True, True, "concerned customer", "bill inquiry"),
             QueryContext("billing", True, True, "budget-conscious customer", "payment planning"),
             QueryContext("billing", True, False, "confused customer", "charge explanation"),
-            QueryContext("billing", True, True, "data-heavy user", "usage verification"),
+            QueryContext("billing", True, True, "data-heavy user", "usage verification"),  # Enhanced
             QueryContext("billing", True, True, "traveling customer", "roaming charges"),
+            QueryContext("billing", True, True, "usage-monitoring customer", "usage tracking"),
+            QueryContext("billing", True, True, "business customer", "usage reporting"),
+            QueryContext("billing", True, True, "family plan customer", "usage analysis"),
         ],
         "base_scenarios": [
             "customer sees unexpected charges on their bill",
             "customer wants to know when payment is due",
             "customer needs breakdown of current month charges",
-            "customer is questioning data usage amounts",
+            "customer is questioning data usage amounts", 
             "customer wants payment history for tax purposes",
             "customer needs to understand prorated charges",
             "customer is asking about auto-pay status",
             "customer wants to dispute a specific charge",
             "customer needs usage details for expense reporting",
-            "customer is planning data usage for upcoming month"
+            "customer is planning data usage for upcoming month",
+            "customer wants to know their data usage for a specific month",
+            "customer needs to check voice minutes used in last billing cycle", 
+            "customer is asking about SMS usage over a date range",
+            "customer wants to compare usage between different months",
+            "customer needs total usage breakdown for expense reporting",
+            "customer is checking if they're approaching data limits",
+            "customer wants to analyze usage patterns over time",
+            "customer needs usage details for a specific billing period",
+            "customer is tracking usage to optimize their plan",
+            "customer wants to know peak usage periods",
+            "customer needs usage data for tax deduction purposes",
+            "customer is monitoring family member usage on shared plan",
         ]
     },
     
@@ -317,6 +332,9 @@ Examples of good questions:
 - Customer sees a $25 charge on their April bill they don't recognize - can you explain what it's for?
 - The customer's iPhone 15 isn't getting 5G speeds even though they're in a coverage area
 - Are there any promotions for upgrading to unlimited data
+- How much data did the customer use last month?
+- Customer wants to know their voice minutes usage for May 2025
+- Customer is asking about their total usage breakdown for the last billing cycle
 
 Generate ONE realistic question following this pattern. Don't include any preamble or explanation."""
 
@@ -342,6 +360,21 @@ Generate ONE realistic question following this pattern. Don't include any preamb
             {
                 "description": "last 3 months",
                 "start_date": (now.replace(day=1) - timedelta(days=90)).strftime("%Y-%m-%d"),
+                "end_date": now.strftime("%Y-%m-%d")
+            },
+            {
+                "description": "last billing cycle",
+                "start_date": (now.replace(day=1) - timedelta(days=1)).replace(day=1).strftime("%Y-%m-%d"),
+                "end_date": (now.replace(day=1) - timedelta(days=1)).strftime("%Y-%m-%d")
+            },
+            {
+                "description": "past 30 days",
+                "start_date": (now - timedelta(days=30)).strftime("%Y-%m-%d"),
+                "end_date": now.strftime("%Y-%m-%d")
+            },
+            {
+                "description": "past 7 days", 
+                "start_date": (now - timedelta(days=7)).strftime("%Y-%m-%d"),
                 "end_date": now.strftime("%Y-%m-%d")
             },
             {
