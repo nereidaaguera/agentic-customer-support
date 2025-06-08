@@ -87,7 +87,6 @@ def compute_response_preview(response: Any) -> str:
         output = data["output"]
         if isinstance(output, list):
             for item in reversed(output):
-                # Helper function to get value from either attribute or dict key
                 def get_value(obj, key):
                     if hasattr(obj, key):
                         return getattr(obj, key)
