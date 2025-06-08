@@ -4,6 +4,8 @@ bundle:
 variables:
   experiment_name:
     default: /telco_support_agent/dev/experiments/dev_telco_support_agent
+  disable_tools:
+    default: ""
 
 permissions:
   - level: CAN_MANAGE
