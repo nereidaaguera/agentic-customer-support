@@ -163,59 +163,117 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             return []
 
     def _load_disable_tools_from_artifact(self) -> list[str]:
-        """Load disable_tools from artifact if available."""
-        logger.info("Attempting to load disable_tools from artifact...")
+        """Load disable_tools from artifact if available.
 
+        Searches for disable_tools.json in multiple locations:
+        1. Model serving artifact paths
+        2. MLflow downloaded artifacts
+        3. Development/local paths
+
+        Returns:
+            List of tool names to disable, empty list if not found.
+        """
+        logger.info("Loading disable_tools from artifact...")
+
+        search_paths = self._get_disable_tools_search_paths()
+
+        # Try local file paths first
+        for path in search_paths:
+            disable_tools = self._try_load_from_path(path)
+            if disable_tools is not None:
+                return disable_tools
+
+        # Try MLflow artifact download
+        disable_tools = self._try_load_from_mlflow_artifacts()
+        if disable_tools is not None:
+            return disable_tools
+
+        logger.info("No disable_tools configuration found, using empty list")
+        return []
+
+    def _get_disable_tools_search_paths(self) -> list[Path]:
+        """Get all possible paths where disable_tools.json might be located.
+
+        Returns:
+            List of Path objects to search.
+        """
         search_paths = [
+            # Model serving paths
             Path("/model/artifacts/disable_tools.json"),
             Path("/model/artifacts/configs/disable_tools.json"),
-            Path("/model/artifacts/configs/agents/disable_tools.json"),
+            # Current working directory
+            Path.cwd() / "disable_tools.json",
+            Path.cwd() / "configs" / "disable_tools.json",
         ]
-        for path in search_paths:
-            try:
-                if path.exists():
-                    logger.info(f"Found disable_tools.json at: {path}")
-                    with open(path) as f:
-                        data = json.load(f)
-                        logger.info(f"Loaded JSON data: {data}")
-                        disable_tools = data.get("disable_tools", [])
-                        logger.info(f"Extracted disable_tools: {disable_tools}")
-                        return disable_tools
-            except Exception as e:
-                logger.debug(f"Could not read disable_tools.json from {path}: {e}")
-                continue
 
+        # Add development paths if config_manager is available
+        try:
+            from telco_support_agent.utils.config import config_manager
+
+            project_root = config_manager._project_root
+            search_paths.extend(
+                [
+                    project_root / "configs" / "disable_tools.json",
+                    project_root / "configs" / "agents" / "disable_tools.json",
+                ]
+            )
+        except Exception as e:
+            logger.debug(f"Could not access config_manager for development paths: {e}")
+
+        return search_paths
+
+    def _try_load_from_path(self, path: Path) -> Optional[list[str]]:
+        """Try to load disable_tools from a specific file path.
+
+        Args:
+            path: Path to the disable_tools.json file.
+
+        Returns:
+            List of disabled tools if successful, None if failed.
+        """
+        try:
+            if path.exists():
+                logger.info(f"Found disable_tools.json at: {path}")
+                with open(path) as f:
+                    data = json.load(f)
+                    disable_tools = data.get("disable_tools", [])
+                    logger.info(f"Loaded {len(disable_tools)} disabled tools")
+                    return disable_tools
+        except Exception as e:
+            logger.debug(f"Could not read disable_tools.json from {path}: {e}")
+
+        return None
+
+    def _try_load_from_mlflow_artifacts(self) -> Optional[list[str]]:
+        """Try to load disable_tools from MLflow artifacts.
+
+        Returns:
+            List of disabled tools if successful, None if failed.
+        """
         try:
             from mlflow.artifacts import download_artifacts
 
-            logger.info(
-                "Trying to download disable_tools.json using MLflow artifacts..."
+            logger.debug(
+                "Attempting to download disable_tools.json via MLflow artifacts"
             )
+            artifact_path = download_artifacts(artifact_path="disable_tools.json")
 
-            try:
-                artifact_path = download_artifacts(artifact_path="disable_tools.json")
-                if artifact_path and Path(artifact_path).exists():
-                    logger.info(f"Downloaded disable_tools.json to: {artifact_path}")
-                    with open(artifact_path) as f:
-                        data = json.load(f)
-                        logger.info(f"Loaded JSON data from download: {data}")
-                        disable_tools = data.get("disable_tools", [])
-                        logger.info(
-                            f"Extracted disable_tools from download: {disable_tools}"
-                        )
-                        return disable_tools
-                else:
-                    logger.debug(
-                        "MLflow download_artifacts returned None or non-existent path"
+            if artifact_path and Path(artifact_path).exists():
+                logger.info("Successfully downloaded disable_tools.json from MLflow")
+                with open(artifact_path) as f:
+                    data = json.load(f)
+                    disable_tools = data.get("disable_tools", [])
+                    logger.info(
+                        f"Loaded {len(disable_tools)} disabled tools from MLflow"
                     )
-            except Exception as e:
-                logger.debug(f"MLflow artifact download without run_id failed: {e}")
+                    return disable_tools
+            else:
+                logger.debug("MLflow artifact download returned no valid path")
 
         except Exception as e:
-            logger.debug(f"Could not load disable_tools artifact via MLflow: {e}")
+            logger.debug(f"MLflow artifact download failed: {e}")
 
-        logger.info("Falling back to empty disable_tools list")
-        return []
+        return None
 
     def _filter_disabled_tools(self, tools: list[dict]) -> list[dict]:
         """Filter disabled tools from the tools list."""
