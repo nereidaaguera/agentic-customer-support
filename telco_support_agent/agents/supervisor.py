@@ -330,6 +330,11 @@ class SupervisorAgent(BaseAgent):
         execution_result = self._prepare_agent_execution(request)
 
         if execution_result.error_response:
+            self.update_trace_preview(
+                request_data=request.model_dump(),
+                response_data={"output": [execution_result.error_response]},
+            )
+
             yield ResponsesAgentStreamEvent(
                 type="response.output_item.done", item=execution_result.error_response
             )
@@ -364,12 +369,41 @@ class SupervisorAgent(BaseAgent):
                     }
                 )
 
+                events = []
                 response_count = 0
                 for event in execution_result.sub_agent.predict_stream(request):
                     response_count += 1
+                    events.append(event)
                     yield event
 
                 span.set_outputs({"events_streamed": response_count})
+
+                # update trace preview with final response if available
+                try:
+                    if (
+                        events
+                        and hasattr(events[-1], "item")
+                        and isinstance(events[-1].item, dict)
+                        and "content" in events[-1].item
+                        and isinstance(events[-1].item["content"], list)
+                        and len(events[-1].item["content"]) > 0
+                        and isinstance(events[-1].item["content"][0], dict)
+                        and "text" in events[-1].item["content"][0]
+                    ):
+                        final_response_text = events[-1].item["content"][0]["text"]
+                        self.update_trace_preview(
+                            user_query=execution_result.query,
+                            assistant_response=final_response_text,
+                        )
+                    else:
+                        logger.debug(
+                            "Unable to extract final response for trace preview - unexpected event structure"
+                        )
+
+                except (IndexError, KeyError, AttributeError, TypeError) as e:
+                    logger.debug(
+                        f"Could not update trace preview with final response: {e}"
+                    )
 
         except Exception as e:
             logger.error(
