@@ -32,7 +32,8 @@ sys.path.append(project_root)
 env = dbutils.widgets.get("env")
 git_commit = dbutils.widgets.get("git_commit")
 experiment_name = dbutils.widgets.get("experiment_name")
-disable_tools = dbutils.widgets.get("disable_tools").split(",")
+disable_tools_str = dbutils.widgets.get("disable_tools")
+disable_tools = [tool.strip() for tool in disable_tools_str.split(",") if tool.strip()] if disable_tools_str else []
 
 os.environ['TELCO_SUPPORT_AGENT_ENV'] = env
 
@@ -48,6 +49,7 @@ from telco_support_agent.ops.registry import register_agent_to_uc
 mlflow.set_experiment(experiment_name)
 
 # COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## Load log_register_agent config
 
@@ -110,7 +112,7 @@ print(f"Created supervisor agent (LLM: {supervisor.llm_endpoint})")
 from mlflow.types.responses import ResponsesAgentRequest
 
 test_request = ResponsesAgentRequest(
-    input=[{"role": "user", "content": "What plan am I currently on?"}],
+    input=[{"role": "user", "content": "how much data did the customer use in May?"}],
     custom_inputs={"customer": "CUS-10001"}
 )
 
@@ -131,6 +133,7 @@ logged_model_info = log_agent(
     name=config["name"],
     input_example=config["input_example"],
     environment=env,
+    disable_tools=disable_tools,
 )
 
 print(f"Logged agent: {logged_model_info.model_uri}")

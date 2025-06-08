@@ -134,7 +134,14 @@ if environment_vars:
     print(f"Environment variables: {list(environment_vars.keys())}")
 
 if permissions:
-    print(f"Setting permissions for: {permissions.get('users', [])}")
+    if isinstance(permissions, list):
+        print("Setting permissions for:")
+        for perm_config in permissions:
+            users = perm_config.get('users', [])
+            permission_level = perm_config.get('permission_level', 'Unknown')
+            print(f"  - {permission_level}: {', '.join(users)}")
+    else:
+        print(f"Setting permissions for: {permissions.get('users', [])}")
 
 if instructions:
     print("Setting review instructions")
