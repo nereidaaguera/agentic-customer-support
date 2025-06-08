@@ -311,7 +311,7 @@ def _set_permissions(model_name: str, permissions: Union[dict, list[dict]]) -> N
             Single permission:
             {
                 "users": List[str],  # List of user/group names
-                "permission_level": str  # One of CAN_VIEW, CAN_RUN, CAN_MANAGE
+                "permission_level": str  # One of CAN_VIEW, CAN_QUERY, CAN_MANAGE
             }
 
             Multiple permissions:

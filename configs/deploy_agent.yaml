@@ -21,6 +21,12 @@ cleanup_old_versions: true
 cleanup:
   keep_previous_count: 1  # Number of previous versions to keep (in addition to current)
 
+# Monitoring config
+monitoring:
+  enabled: true
+  replace_existing: false  # whether to replace existing monitors
+  fail_on_error: false  # continue deployment if monitoring setup fails  
+
 # Agent Instructions - will be visible in the Review App
 instructions: |
   Telco Customer Support Agent
@@ -42,4 +48,4 @@ permissions:
     permission_level: CAN_MANAGE
   - users:
       - users
-    permission_level: CAN_RUN
+    permission_level: CAN_QUERY
