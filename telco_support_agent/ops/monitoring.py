@@ -70,7 +70,9 @@ def create_agent_monitor(
         )
 
         logger.info("Successfully created external monitor with empty assessments")
-        logger.info(f"Monitor will create tables in: {uc_config.agent['catalog']}.{uc_config.agent['schema']}")
+        logger.info(
+            f"Monitor will create tables in: {uc_config.agent['catalog']}.{uc_config.agent['schema']}"
+        )
         return monitor
 
     except Exception as e:
