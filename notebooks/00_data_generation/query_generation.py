@@ -42,8 +42,14 @@ from telco_support_agent.data.config import CONFIG
 
 # COMMAND ----------
 
-AGENT_ENDPOINT_NAME = "prod-telco-customer-support-agent"
-LLM_ENDPOINT = "databricks-claude-3-7-sonnet"
+dbutils.widgets.text("env", "dev")
+dbutils.widgets.text("experiment_name", "/telco_support_agent/dev/experiments/dev_telco_support_agent")
+
+# COMMAND ----------
+
+env = dbutils.widgets.get("env")
+AGENT_ENDPOINT_NAME = f"{env}-telco-customer-support-agent"
+LLM_ENDPOINT = "databricks-claude-sonnet-4"
 MAX_WORKERS = 5  # parallel query execution
 QUERIES_PER_BATCH = 50  # number of queries to generate per execution
 
@@ -307,10 +313,10 @@ The question should:
 - Reflect the persona of a {context.persona_context}
 
 Examples of good questions:
-- "Customer is asking what plan they're currently on and when it expires"
-- "Customer sees a $25 charge on their April bill they don't recognize - can you explain what it's for?"
-- "Customer's iPhone 15 isn't getting 5G speeds even though they're in a coverage area"
-- "Customer wants to know if there are any promotions for upgrading to unlimited data"
+- Customer is asking what plan they're currently on and when it expires
+- Customer sees a $25 charge on their April bill they don't recognize - can you explain what it's for?
+- The customer's iPhone 15 isn't getting 5G speeds even though they're in a coverage area
+- Are there any promotions for upgrading to unlimited data
 
 Generate ONE realistic question following this pattern. Don't include any preamble or explanation."""
 
@@ -437,6 +443,8 @@ class TelcoAgentClient:
 
 # COMMAND ----------
 
+from mlflow.genai import judges
+
 class FeedbackGenerator:
     """Generate synthetic feedback for agent responses."""
     
@@ -448,7 +456,7 @@ class FeedbackGenerator:
         """Get a random agent name."""
         return random.choice(self.agent_names)
     
-    def generate_feedback(self, query: str, response: Dict[str, Any], metadata: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def generate_feedback(self, query: str, response: Dict[str, Any], metadata: Dict[str, Any], trace_id: str) -> List[Dict[str, Any]]:
         """Generate varied feedback for a query/response pair."""
         feedbacks = []
         agent_name = self.get_random_agent()
@@ -457,23 +465,225 @@ class FeedbackGenerator:
         num_feedbacks = random.randint(1, 4)
         
         feedback_types = [
-            self._generate_helpfulness_feedback,
-            self._generate_accuracy_feedback,
-            self._generate_clarity_feedback,
-            self._generate_completeness_feedback,
-            self._generate_relevance_feedback,
-            self._generate_data_usage_feedback,
+            self._generate_user_feedback,
+            self._generate_query_answered,
+            self._generate_user_router_feedback
+            # self._generate_accuracy_feedback,
+            # self._generate_clarity_feedback,
+            # self._generate_completeness_feedback,
+            # self._generate_relevance_feedback,
+            # self._generate_data_usage_feedback,
         ]
         
         selected_feedback_types = random.sample(feedback_types, min(num_feedbacks, len(feedback_types)))
         
         for feedback_func in selected_feedback_types:
-            feedback = feedback_func(query, response, metadata, agent_name)
+            feedback = feedback_func(query, response, metadata, agent_name, trace_id)
             if feedback:
                 feedbacks.append(feedback)
         
         return feedbacks
     
+    def _generate_user_feedback(self, query: str, response: Dict[str, Any], 
+                                metadata: Dict[str, Any], agent_name: str, trace_id: str) -> Dict[str, Any]:
+        """Generate user feedback by reading the response."""
+        text_response = response['output'][-1]['content'][-1]['text']
+        user_feedback = judges.meets_guidelines(
+            guidelines=[
+                "The response must not be an error message, it must sound like a person would respond.",
+                "The response must not say that there were any technical errors or issues."
+            ],
+            context={
+                "response": text_response
+            }
+        )
+        # Don't log good feedback as this is not realistic.
+        if user_feedback.value == "yes" and random.random() < 0.8:
+            return
+        
+        real_route, expected_route = self._compute_correct_routing(
+            query, response, metadata, agent_name, trace_id
+        )
+
+        # Don't log all the time as this is not realistic.
+        should_log = random.random() < 0.5 or real_route != expected_route
+        if not should_log:
+            return
+        
+        human_rationale = self._call_llm(
+            system_prompt="""
+                Your job is to convert computer generated explanations about why a certain response was bad or good into a human readable explanation.
+                The response should be short and concise as if a human explained why a response was bad after they gaves a thumbs down. Usually should be less than 10 words and can sometimes be formal, sometimes informal.
+
+                As input you will get:
+                <response>The agent's response</response>
+                <computer_rationale>A computer generated rationale of why the response was bad.</computer_rationale>
+
+                For example:
+                <response>Max iterations (10) reached. Stopping.</response>
+                <computer_rationale>The response 'Max iterations (10) reached. Stopping.' is an error message and indicates a technical issue. Therefore, it does not satisfy the guideline that the response must not be an error message and must not say that there were any technical errors or issues.<computer_rationale>
+
+                Example outputs:
+                - the agent seems broken
+                - help me
+                - the agent is broken
+                - the agent is not working
+            """,
+            user_prompt=f"""
+            <response>{text_response}</response>
+            <computer_rationale>{user_feedback.rationale}</computer_rationale>
+            """
+        )
+
+        return {
+            "name": "user_feedback",
+            "value": user_feedback.value == "yes",
+            "source": agent_name,
+            "rationale": human_rationale
+        }
+
+    @retry(tries=3, delay=2)
+    def _call_llm(self, system_prompt: str, user_prompt: str) -> str:
+        """Call LLM endpoint with retry logic."""
+        try:
+            response = deploy_client.predict(
+                endpoint=LLM_ENDPOINT,
+                inputs={
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt}
+                    ]
+                }
+            )
+            return response['choices'][0]['message']['content'].strip()
+        except Exception as e:
+            print(f"LLM call failed: {e}")
+            raise
+    
+    def _generate_user_router_feedback(self, query: str, response: Dict[str, Any], 
+                                metadata: Dict[str, Any], agent_name: str, trace_id: str) -> Dict[str, Any]:
+        route_output, good_supervisor_response = self._compute_correct_routing(query, response, metadata, agent_name, trace_id)
+        if route_output != good_supervisor_response:
+            return {
+                "name": "user_feedback",
+                "value": False,
+                "source": "databricks",
+                "rationale": f"Route: {route_output}, Best route: {good_supervisor_response}"
+            }
+            
+    def _compute_correct_routing(self, query: str, response: Dict[str, Any], 
+                                metadata: Dict[str, Any], agent_name: str, trace_id: str) -> Dict[str, Any]:
+        """Generate user feedback by reading the response."""
+        text_response = response['output'][-1]['content'][-1]['text']
+        good_supervisor_prompt = """
+            You are an intelligent AI assistant for a telecom customer support system. Your job is to analyze customer queries and route them to the appropriate specialized agent based on the query's intent, required data sources, and the specific capabilities of each agent.
+
+            ## SPECIALIZED AGENTS AND THEIR CAPABILITIES:
+
+            ### 1. ACCOUNT AGENT
+            **Purpose**: Customer profile information, account status, subscription details, and account management
+            **Data Access**: Customer profiles, subscription details, plan information, account metrics 
+            **Route to ACCOUNT for queries about**:
+            - Current plan/subscription details ("What plan am I on?", "Show me my subscriptions")
+            - Account status and profile ("Is my account active?", "What's my loyalty tier?")
+            - Account history ("When did I create my account?", "How long have I been a customer?")
+            - Subscription management ("Is autopay enabled on my account?", "How many lines do I have?")
+            - Customer segment information ("What customer tier am I in?")
+
+            ### 2. BILLING AGENT  
+            **Purpose**: Bills, payments, charges, billing cycles, usage data, and financial inquiries
+            **Data Access**: Billing records, payment history, usage statistics, billing cycles
+            **Route to BILLING for queries about**:
+            - Bill amounts and charges ("Why is my bill $X?", "What are my charges for [date]?")
+            - Payment information ("When is my payment due?", "Did my payment go through?")
+            - Usage statistics ("How much data did I use?", "Show me my usage for [period]")
+            - Billing disputes ("I don't recognize this charge", "My bill seems wrong")
+            - Billing cycles and patterns ("Why is my bill different this month?")
+
+            ### 3. TECH_SUPPORT AGENT
+            **Purpose**: Technical troubleshooting, connectivity issues, device problems, and how-to guidance
+            **Data Access**: Knowledge base articles (FAQs, troubleshooting guides), historical support tickets
+            **Tools Available**:
+            **Route to TECH_SUPPORT for queries about**:
+            - Device connectivity ("My phone won't connect", "WiFi not working")
+            - Service issues ("Can't make calls", "No signal", "Internet is slow")
+            - Technical setup ("How do I set up voicemail?", "Configure international roaming")
+            - Troubleshooting steps ("My device keeps restarting", "Apps won't work")
+            - Technical how-to questions ("Reset network settings", "Update device software")
+
+            ### 4. PRODUCT AGENT
+            **Purpose**: Service plans, devices, promotions, product comparisons, and recommendations
+            **Data Access**: Plan catalog, device specifications, current promotions, customer device info
+            **Route to PRODUCT for queries about**:
+            - Plan comparisons ("What's the difference between Standard and Premium?")
+            - Device information ("Is my phone 5G compatible?", "What Samsung devices are available?")
+            - Promotions and offers ("Do you have any promotions?", "Are there iPhone upgrade deals?")
+            - Product recommendations ("Which plan has the most data?", "Best device for my needs?")
+            - Upgrade eligibility ("Can I upgrade my device early?", "What plans work with 5G?")
+
+            ## ROUTING DECISION CRITERIA:
+
+            **Primary Indicators**:
+            - Keywords related to money/payments → BILLING
+            - Technical problems/troubleshooting → TECH_SUPPORT  
+            - Plan/device comparisons or shopping → PRODUCT
+            - Account status/profile questions → ACCOUNT
+
+            **For Ambiguous Queries**:
+            - "What devices do I have?" → PRODUCT (customer-specific device info)
+            - "When does my contract end?" → ACCOUNT (subscription details)
+            - "How much do I owe?" → BILLING (payment/balance info)
+            - "My service isn't working" → TECH_SUPPORT (troubleshooting needed)
+
+            **Multi-Domain Queries**:
+            - If query spans multiple domains, route to the PRIMARY domain:
+                - "How much does the Premium plan cost and do I qualify?" → PRODUCT (primary: plan info)
+                - "My bill is high, what plan options do I have?" → BILLING (primary: bill inquiry)
+
+            ## RESPONSE FORMAT:
+            Analyze the query and respond with ONLY ONE of these four agent types:
+            - account
+            - billing  
+            - tech_support
+            - product
+
+            Do NOT include any explanation, reasoning, or additional text in your response.
+        """
+
+        good_supervisor_response = self._call_llm(
+            system_prompt=good_supervisor_prompt,
+            user_prompt=f"""<request>{query}</query>"""
+        )
+        trace = mlflow.get_trace(trace_id)
+        route_query_span = trace.search_spans(name='route_query')
+        route_output = route_query_span[0].outputs
+
+        print('Route comparison, bad output:', route_output, 'better route:', good_supervisor_response)
+
+        return route_output, good_supervisor_response
+
+    def _generate_query_answered(self, query: str, response: Dict[str, Any], 
+                                metadata: Dict[str, Any], agent_name: str, trace_id: str) -> Dict[str, Any]:
+        """Generate user feedback by reading the response."""
+        text_response = response['output'][-1]['content'][-1]['text']
+        query_answered = judges.meets_guidelines(
+            guidelines=[
+                "The response answer the user's query.",
+                "The response must be helpful."
+            ],
+            context={
+                "response": text_response
+            }
+        )
+
+        return {
+            "name": "query_answered",
+            "value": query_answered.value,
+            "source": "databricks",
+            "source_type": AssessmentSourceType.LLM_JUDGE,
+            "rationale": query_answered.rationale
+        }
+
     def _generate_helpfulness_feedback(self, query: str, response: Dict[str, Any], 
                                      metadata: Dict[str, Any], agent_name: str) -> Dict[str, Any]:
         """Generate helpfulness feedback (mostly positive)."""
@@ -641,8 +851,9 @@ class FeedbackLogger:
                 feedback_value = feedback["value"]
                 feedback_source = feedback["source"]
                 feedback_rationale = feedback["rationale"]
+                feedback_source_type = feedback.get("source_type", AssessmentSourceType.HUMAN)
                 source = AssessmentSource(
-                    source_type=AssessmentSourceType.HUMAN,
+                    source_type=feedback_source_type,
                     source_id=feedback_source,
                 )
                 
@@ -768,7 +979,7 @@ class SyntheticQueryEngine:
                 execution_time = time.time() - start_time
                 
                 # Generate feedback
-                feedbacks = self.feedback_generator.generate_feedback(query, response, metadata)
+                feedbacks = self.feedback_generator.generate_feedback(query, response, metadata, trace_id)
                 
                 # Log feedback
                 feedback_success = False
@@ -935,7 +1146,7 @@ def test_single_query():
         if trace_id:
             print(f"\nGenerating and logging feedback...")
             metadata = {"category": "account", "persona": "test", "scenario": "test"}
-            feedbacks = feedback_gen.generate_feedback(test_query, response, metadata)
+            feedbacks = feedback_gen.generate_feedback(test_query, response, metadata, trace_id)
             feedback_success = feedback_logger.log_feedback_for_query(feedbacks, trace_id)
             
             if feedback_success:
@@ -1104,17 +1315,17 @@ def run_continuous_simulation(batches: int = 3, delay_between_batches: int = 300
 # COMMAND ----------
 
 # print("Generating sample queries...")
-# generate_sample_queries_for_testing()
+generate_sample_queries_for_testing()
 
 # COMMAND ----------
 
 # print("Running single query test...")
-# single_test_success = test_single_query()
+single_test_success = test_single_query()
 
 # COMMAND ----------
 
 # print("Running small batch test...")
-# test_results = test_small_batch()
+test_results = test_small_batch()
 
 # COMMAND ----------
 
