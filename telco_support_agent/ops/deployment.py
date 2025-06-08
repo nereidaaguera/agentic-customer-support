@@ -302,39 +302,55 @@ def _wait_for_endpoint_ready(endpoint_name: str) -> None:
     logger.info(f"Endpoint {endpoint_name} is ready")
 
 
-def _set_permissions(model_name: str, permissions: dict) -> None:
-    """Set agent permissions.
+def _set_permissions(model_name: str, permissions: Union[dict, list[dict]]) -> None:
+    """Set agent permissions for one or more permission configurations.
 
     Args:
         model_name: Full UC model name
-        permissions: Permission configuration dictionary with structure:
+        permissions: Permission configuration dictionary or list of dictionaries with structure:
+            Single permission:
             {
                 "users": List[str],  # List of user/group names
                 "permission_level": str  # One of CAN_VIEW, CAN_RUN, CAN_MANAGE
             }
+
+            Multiple permissions:
+            [
+                {
+                    "users": List[str],
+                    "permission_level": str
+                },
+                ...
+            ]
     """
     logger.info(f"Setting permissions for {model_name}")
     logger.debug(f"Permission config: {permissions}")
 
     try:
-        users = permissions.get("users")
-        permission_level = permissions.get("permission_level")
+        permission_configs = (
+            permissions if isinstance(permissions, list) else [permissions]
+        )
 
-        if not users or not permission_level:
-            raise ValueError(
-                "Both 'users' and 'permission_level' must be specified in permissions config"
+        for permission_config in permission_configs:
+            users = permission_config.get("users")
+            permission_level = permission_config.get("permission_level")
+
+            if not users or not permission_level:
+                raise ValueError(
+                    "Both 'users' and 'permission_level' must be specified in each permission config"
+                )
+
+            logger.info(
+                f"Setting {permission_level} permission for users: {', '.join(users)}"
             )
 
-        logger.info(
-            f"Setting {permission_level} permission for users: {', '.join(users)}"
-        )
+            agents.set_permissions(
+                model_name=model_name,
+                users=users,
+                permission_level=getattr(agents.PermissionLevel, permission_level),
+            )
 
-        agents.set_permissions(
-            model_name=model_name,
-            users=users,
-            permission_level=getattr(agents.PermissionLevel, permission_level),
-        )
-        logger.info("Permissions set successfully")
+        logger.info("All permissions set successfully")
 
     except ValueError as e:
         error_msg = f"Invalid permission configuration: {str(e)}"
