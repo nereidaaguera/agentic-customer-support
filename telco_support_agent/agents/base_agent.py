@@ -167,44 +167,33 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         logger.info("Attempting to load disable_tools from artifact...")
 
         try:
-            from mlflow.artifacts import download_artifacts, list_artifacts
+            import os
 
-            # First, let's see what artifacts are available
-            try:
-                logger.info("Listing available artifacts...")
-                artifacts = list_artifacts()
-                logger.info(f"Available artifacts: {artifacts}")
-            except Exception as e:
-                logger.warning(f"Could not list artifacts: {e}")
-
-            # Try to download using different approaches
-            artifact_paths = [
-                "disable_tools.json",
-                "artifacts/disable_tools.json",
+            # When model is loaded, artifacts are available in local filesystem
+            # Check common locations where MLflow extracts artifacts
+            potential_paths = [
+                "disable_tools.json",  # Direct in current dir
+                "artifacts/disable_tools.json",  # In artifacts subdir
+                "./artifacts/disable_tools.json",  # Explicit relative path
+                os.path.join(os.getcwd(), "disable_tools.json"),
+                os.path.join(os.getcwd(), "artifacts", "disable_tools.json"),
             ]
 
-            for artifact_path in artifact_paths:
-                try:
-                    logger.info(f"Downloading artifact: {artifact_path}")
-                    downloaded_path = download_artifacts(artifact_path=artifact_path)
-                    logger.info(f"Download result: {downloaded_path}")
-
-                    if downloaded_path and Path(downloaded_path).exists():
-                        logger.info(f"Reading disable_tools from: {downloaded_path}")
-                        with open(downloaded_path) as f:
+            for file_path in potential_paths:
+                if os.path.exists(file_path):
+                    logger.info(f"Found disable_tools.json at: {file_path}")
+                    try:
+                        with open(file_path) as f:
                             data = json.load(f)
                             logger.info(f"Loaded JSON data: {data}")
                             disable_tools = data.get("disable_tools", [])
                             logger.info(f"Extracted disable_tools: {disable_tools}")
                             return disable_tools
-                    else:
-                        logger.warning(
-                            f"Download failed or path doesn't exist: {downloaded_path}"
-                        )
-
-                except Exception as e:
-                    logger.warning(f"Failed to download {artifact_path}: {e}")
-                    continue
+                    except Exception as read_e:
+                        logger.warning(f"Could not read {file_path}: {read_e}")
+                        continue
+                else:
+                    logger.debug(f"Path does not exist: {file_path}")
 
         except Exception as e:
             logger.warning(f"Could not load disable_tools artifact: {e}")
