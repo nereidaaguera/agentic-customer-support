@@ -169,17 +169,38 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         try:
             import os
 
-            # When model is loaded, artifacts are available in local filesystem
+            # Debug: Show current working directory and its contents
+            cwd = os.getcwd()
+            logger.info(f"Current working directory: {cwd}")
+
+            try:
+                files_in_cwd = os.listdir(cwd)
+                logger.info(f"Files in current directory: {files_in_cwd}")
+            except Exception as e:
+                logger.warning(f"Could not list current directory: {e}")
+
+            # Check if artifacts subdirectory exists and list its contents
+            artifacts_dir = os.path.join(cwd, "artifacts")
+            if os.path.exists(artifacts_dir):
+                try:
+                    artifacts_files = os.listdir(artifacts_dir)
+                    logger.info(f"Files in artifacts directory: {artifacts_files}")
+                except Exception as e:
+                    logger.warning(f"Could not list artifacts directory: {e}")
+            else:
+                logger.info("No 'artifacts' subdirectory found")
+
             # Check common locations where MLflow extracts artifacts
             potential_paths = [
-                "disable_tools.json",  # Direct in current dir
-                "artifacts/disable_tools.json",  # In artifacts subdir
-                "./artifacts/disable_tools.json",  # Explicit relative path
-                os.path.join(os.getcwd(), "disable_tools.json"),
-                os.path.join(os.getcwd(), "artifacts", "disable_tools.json"),
+                "disable_tools.json",
+                "artifacts/disable_tools.json",
+                "./artifacts/disable_tools.json",
+                os.path.join(cwd, "disable_tools.json"),
+                os.path.join(cwd, "artifacts", "disable_tools.json"),
             ]
 
             for file_path in potential_paths:
+                logger.info(f"Checking path: {file_path}")
                 if os.path.exists(file_path):
                     logger.info(f"Found disable_tools.json at: {file_path}")
                     try:
@@ -193,7 +214,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
                         logger.warning(f"Could not read {file_path}: {read_e}")
                         continue
                 else:
-                    logger.debug(f"Path does not exist: {file_path}")
+                    logger.info(f"Path does not exist: {file_path}")
 
         except Exception as e:
             logger.warning(f"Could not load disable_tools artifact: {e}")
