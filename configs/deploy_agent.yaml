@@ -48,4 +48,4 @@ permissions:
     permission_level: CAN_MANAGE
   - users:
       - users
-    permission_level: CAN_RUN
+    permission_level: CAN_QUERY
