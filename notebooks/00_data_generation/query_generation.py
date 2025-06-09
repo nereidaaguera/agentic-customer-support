@@ -45,7 +45,7 @@ from telco_support_agent.data.config import CONFIG
 dbutils.widgets.text("env", "dev")
 dbutils.widgets.text("experiment_name", "/telco_support_agent/dev/experiments/dev_telco_support_agent")
 dbutils.widgets.text("agent_endpoint_name", "dev-telco-customer-support-agent")
-dbutils.widgets.dropdown("include_multi_domain", "true", ["true", "false"])
+dbutils.widgets.dropdown("include_multi_domain", "false", ["true", "false"])
 
 # COMMAND ----------
 
