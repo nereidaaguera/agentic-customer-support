@@ -1,4 +1,6 @@
 topics:
+  # Single-domain topics
+  
   # Account-related queries
   - name: account_information
     description: Questions about customer account details, profile information, registration date, customer status, loyalty tier, and account metrics
@@ -47,3 +49,7 @@ topics:
   
   - name: device_management
     description: Questions about customer's current devices, device upgrades, trade-in options, and device account management
+
+  # Multi-domain topic
+  - name: multi_domain
+    description: Complex queries that span multiple service domains, such as billing issues combined with plan changes, account problems with technical support needs, or comprehensive service reviews involving billing, account, product, and technical aspects. These queries require coordination across multiple agent specializations to fully resolve.
