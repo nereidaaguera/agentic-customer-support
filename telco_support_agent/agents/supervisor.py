@@ -369,41 +369,21 @@ class SupervisorAgent(BaseAgent):
                     }
                 )
 
-                events = []
+                # collect all events to reconstruct the final response
+                all_events = []
                 response_count = 0
+
                 for event in execution_result.sub_agent.predict_stream(request):
                     response_count += 1
-                    events.append(event)
+                    all_events.append(event)
                     yield event
 
                 span.set_outputs({"events_streamed": response_count})
 
-                # update trace preview with final response if available
-                try:
-                    if (
-                        events
-                        and hasattr(events[-1], "item")
-                        and isinstance(events[-1].item, dict)
-                        and "content" in events[-1].item
-                        and isinstance(events[-1].item["content"], list)
-                        and len(events[-1].item["content"]) > 0
-                        and isinstance(events[-1].item["content"][0], dict)
-                        and "text" in events[-1].item["content"][0]
-                    ):
-                        final_response_text = events[-1].item["content"][0]["text"]
-                        self.update_trace_preview(
-                            user_query=execution_result.query,
-                            assistant_response=final_response_text,
-                        )
-                    else:
-                        logger.debug(
-                            "Unable to extract final response for trace preview - unexpected event structure"
-                        )
-
-                except (IndexError, KeyError, AttributeError, TypeError) as e:
-                    logger.debug(
-                        f"Could not update trace preview with final response: {e}"
-                    )
+                # reconstruct complete response from all events for trace preview
+                self._update_stream_trace_preview(
+                    execution_result.query, all_events, execution_result.custom_outputs
+                )
 
         except Exception as e:
             logger.error(
@@ -423,6 +403,49 @@ class SupervisorAgent(BaseAgent):
                     "type": "message",
                 },
             )
+
+    def _update_stream_trace_preview(
+        self,
+        user_query: str,
+        events: list[ResponsesAgentStreamEvent],
+        custom_outputs: dict,
+    ) -> None:
+        """Update trace preview by reconstructing response from streaming events.
+
+        Args:
+            user_query: The original user query
+            events: List of all streaming events
+            custom_outputs: Custom outputs to include
+        """
+        try:
+            reconstructed_output = []
+
+            for event in events:
+                if (
+                    hasattr(event, "type")
+                    and event.type == "response.output_item.done"
+                    and hasattr(event, "item")
+                    and isinstance(event.item, dict)
+                ):
+                    reconstructed_output.append(event.item)
+
+            if reconstructed_output:
+                self.update_trace_preview(
+                    user_query=user_query,
+                    response_data={
+                        "output": reconstructed_output,
+                        "custom_outputs": custom_outputs,
+                    },
+                )
+            else:
+                self.update_trace_preview(user_query=user_query)
+
+        except Exception as e:
+            logger.debug(f"Could not update trace preview from streaming events: {e}")
+            try:
+                self.update_trace_preview(user_query=user_query)
+            except Exception as fallback_e:
+                logger.debug(f"Fallback trace preview update also failed: {fallback_e}")
 
     def generate_non_response(
         self, agent_type: Union[AgentType, str], query: str

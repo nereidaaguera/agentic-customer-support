@@ -44,12 +44,13 @@ from telco_support_agent.data.config import CONFIG
 
 dbutils.widgets.text("env", "dev")
 dbutils.widgets.text("experiment_name", "/telco_support_agent/dev/experiments/dev_telco_support_agent")
+dbutils.widgets.text("agent_endpoint_name", "dev-telco-customer-support-agent")
 dbutils.widgets.dropdown("include_multi_domain", "true", ["true", "false"])
 
 # COMMAND ----------
 
 env = dbutils.widgets.get("env")
-AGENT_ENDPOINT_NAME = f"{env}-telco-customer-support-agent"
+AGENT_ENDPOINT_NAME = dbutils.widgets.get("agent_endpoint_name")
 LLM_ENDPOINT = "databricks-claude-sonnet-4"
 MAX_WORKERS = 5  # parallel query execution
 QUERIES_PER_BATCH = 50  # number of queries to generate per execution
