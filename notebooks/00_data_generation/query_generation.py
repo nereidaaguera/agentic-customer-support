@@ -1467,18 +1467,18 @@ def run_continuous_simulation(batches: int = 3, delay_between_batches: int = 300
 
 # COMMAND ----------
 
-# print("Generating sample queries...")
-generate_sample_queries_for_testing()
+# # print("Generating sample queries...")
+# generate_sample_queries_for_testing()
 
 # COMMAND ----------
 
-# print("Running single query test...")
-single_test_success = test_single_query()
+# # print("Running single query test...")
+# single_test_success = test_single_query()
 
 # COMMAND ----------
 
-# print("Running small batch test...")
-test_results = test_small_batch()
+# # print("Running small batch test...")
+# test_results = test_small_batch()
 
 # COMMAND ----------
 
@@ -1489,8 +1489,8 @@ test_results = test_small_batch()
 
 # COMMAND ----------
 
-print("Running batch execution...")
-batch_summary = run_synthetic_query_batch(num_queries=QUERIES_PER_BATCH)
+# print("Running batch execution...")
+# batch_summary = run_synthetic_query_batch(num_queries=QUERIES_PER_BATCH)
 
 # COMMAND ----------
 
@@ -1501,11 +1501,6 @@ batch_summary = run_synthetic_query_batch(num_queries=QUERIES_PER_BATCH)
 
 # COMMAND ----------
 
-# print("Running continuous simulation...")
-# simulation_summary = run_continuous_simulation(batches=6, delay_between_batches=120)
-# print(f"Simulation summary: {simulation_summary}")
-
-# COMMAND ----------
-
-# import pyspark.sql.functions as F
-# spark.table("telco_customer_support_dev.agent.telco_customer_support_agent_1_payload").orderBy(F.col("request_time").desc()).display()
+print("Running continuous simulation...")
+simulation_summary = run_continuous_simulation(batches=6, delay_between_batches=120)
+print(f"Simulation summary: {simulation_summary}")
