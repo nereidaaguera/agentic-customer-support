@@ -1489,8 +1489,8 @@ test_results = test_small_batch()
 
 # COMMAND ----------
 
-# print("Running batch execution...")
-# batch_summary = run_synthetic_query_batch(num_queries=QUERIES_PER_BATCH)
+print("Running batch execution...")
+batch_summary = run_synthetic_query_batch(num_queries=QUERIES_PER_BATCH)
 
 # COMMAND ----------
 
@@ -1501,9 +1501,9 @@ test_results = test_small_batch()
 
 # COMMAND ----------
 
-print("Running continuous simulation...")
-simulation_summary = run_continuous_simulation(batches=6, delay_between_batches=120)
-print(f"Simulation summary: {simulation_summary}")
+# print("Running continuous simulation...")
+# simulation_summary = run_continuous_simulation(batches=6, delay_between_batches=120)
+# print(f"Simulation summary: {simulation_summary}")
 
 # COMMAND ----------
 
