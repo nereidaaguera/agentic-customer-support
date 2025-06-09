@@ -92,6 +92,8 @@ def _create_topic_classification_prompt(
 
 Consider the following customer message and topic categories. Categorize the message into at most one of the existing topic categories based on the primary intent of the customer's inquiry.
 
+If the query spans multiple domains or involves complex interconnected issues across different service areas, use "multi_domain".
+
     <message>{message}</message>
     <topic_categories>
         {formatted_topic_categories}
