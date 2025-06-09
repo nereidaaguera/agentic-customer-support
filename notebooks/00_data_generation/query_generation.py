@@ -44,6 +44,7 @@ from telco_support_agent.data.config import CONFIG
 
 dbutils.widgets.text("env", "dev")
 dbutils.widgets.text("experiment_name", "/telco_support_agent/dev/experiments/dev_telco_support_agent")
+dbutils.widgets.dropdown("include_multi_domain", "true", ["true", "false"])
 
 # COMMAND ----------
 
@@ -52,6 +53,8 @@ AGENT_ENDPOINT_NAME = f"{env}-telco-customer-support-agent"
 LLM_ENDPOINT = "databricks-claude-sonnet-4"
 MAX_WORKERS = 5  # parallel query execution
 QUERIES_PER_BATCH = 50  # number of queries to generate per execution
+include_multi_domain_str = dbutils.widgets.get("include_multi_domain")
+INCLUDE_MULTI_DOMAIN = include_multi_domain_str.lower() == "true"
 
 # Customer ID generation based on data generation config
 CUSTOMER_ID_START = 10001
@@ -268,6 +271,54 @@ QUERY_TEMPLATES = {
             "customer is checking device trade-in values",
             "customer needs information about business plans",
             "customer wants to know about unlimited data options"
+        ]
+    },
+
+    "multi_domain": {
+        "contexts": [
+            QueryContext("multi_domain", True, True, "frustrated customer", "complex billing and service issue"),
+            QueryContext("multi_domain", True, False, "cost-conscious customer", "plan optimization with account review"),
+            QueryContext("multi_domain", True, True, "business customer", "comprehensive service analysis"),
+            QueryContext("multi_domain", True, False, "tech-savvy customer", "device and plan compatibility"),
+            QueryContext("multi_domain", True, True, "family plan customer", "usage analysis and plan adjustment"),
+            QueryContext("multi_domain", True, False, "new customer", "account setup with product questions"),
+        ],
+        "base_scenarios": [
+            # Billing + Product scenarios
+            "customer's bill is high and wants to explore plan downgrade options",
+            "customer wants to understand usage charges and see if different plan would save money", 
+            "customer is questioning overage fees and needs plan recommendations",
+            "customer wants to compare their current plan costs with available alternatives",
+            
+            # Account + Billing scenarios  
+            "customer can't access online account and needs to check payment status",
+            "customer's autopay failed and wants to verify account settings",
+            "customer moved and needs to update account info and understand billing changes",
+            
+            # Tech Support + Product scenarios
+            "customer has connectivity issues and wants to know if device upgrade would help",
+            "customer's device isn't working properly and wondering about replacement options",
+            "customer needs help setting up new device and wants to know about compatible plans",
+            
+            # Tech Support + Account scenarios
+            "customer can't receive calls and wants to verify their account is active",
+            "customer has service issues and wants to check if account suspension is the cause",
+            
+            # Billing + Tech Support scenarios
+            "customer is being charged for services that aren't working properly",
+            "customer has high data charges and needs help understanding usage patterns",
+            
+            # Account + Product scenarios
+            "customer wants to add a line and needs to understand how it affects their current plan",
+            "customer's contract is ending and wants to review upgrade options",
+            
+            # Triple domain scenarios (Billing + Account + Product)
+            "customer wants complete account review including usage, billing, and plan optimization",
+            "customer is considering canceling and wants full service and cost analysis",
+            "customer got married and needs to merge accounts, understand billing, and explore family plans",
+            
+            # All four domains
+            "customer has service issues, billing disputes, wants account changes, and device upgrades",
         ]
     }
 }
@@ -936,8 +987,9 @@ class FeedbackLogger:
 class SyntheticQueryEngine:
     """Generate and execute synthetic queries."""
     
-    def __init__(self, num_queries: int = QUERIES_PER_BATCH):
+    def __init__(self, num_queries: int = QUERIES_PER_BATCH, include_multi_domain: bool = INCLUDE_MULTI_DOMAIN):
         self.num_queries = num_queries
+        self.include_multi_domain = include_multi_domain
         self.generator = QueryGenerator()
         self.client = TelcoAgentClient()
         self.feedback_generator = FeedbackGenerator()
@@ -948,14 +1000,28 @@ class SyntheticQueryEngine:
         """Generate a batch of diverse queries."""
         queries = []
         
-        # distribute queries across categories
-        categories = list(QUERY_TEMPLATES.keys())
-        queries_per_category = self.num_queries // len(categories)
-        extra_queries = self.num_queries % len(categories)
+        all_categories = list(QUERY_TEMPLATES.keys())
         
-        for i, category in enumerate(categories):
+        if self.include_multi_domain:
+            categories = all_categories
+            # 80% single domain, 20% multi domain
+            single_domain_queries = int(self.num_queries * 0.8)
+            multi_domain_queries = self.num_queries - single_domain_queries
+            print(f"Generating {single_domain_queries} single-domain and {multi_domain_queries} multi-domain queries")
+        else:
+            categories = [cat for cat in all_categories if cat != "multi_domain"]
+            single_domain_queries = self.num_queries
+            multi_domain_queries = 0
+            print(f"Generating {single_domain_queries} single-domain queries only")
+        
+        # single domain queries
+        single_domain_categories = [cat for cat in categories if cat != "multi_domain"]
+        queries_per_single_category = single_domain_queries // len(single_domain_categories)
+        extra_queries = single_domain_queries % len(single_domain_categories)
+        
+        for i, category in enumerate(single_domain_categories):
             # calculate number of queries for category
-            category_query_count = queries_per_category
+            category_query_count = queries_per_single_category
             if i < extra_queries:
                 category_query_count += 1
                 
@@ -991,9 +1057,62 @@ class SyntheticQueryEngine:
                     print(f"Failed to generate query for {category}: {e}")
                     continue
         
+        # multi-domain queries ONLY if flag is enabled
+        if self.include_multi_domain and multi_domain_queries > 0:
+            print(f"Generating {multi_domain_queries} multi-domain queries...")
+            contexts = QUERY_TEMPLATES["multi_domain"]["contexts"]
+            scenarios = QUERY_TEMPLATES["multi_domain"]["base_scenarios"]
+            
+            for _ in range(multi_domain_queries):
+                context = random.choice(contexts)
+                scenario = random.choice(scenarios)
+                
+                try:
+                    # generate multi-domain query
+                    query = self.generator.generate_realistic_query("multi_domain", context, scenario)
+                    
+                    # add appropriate context (customer ID, dates, etc.)
+                    enhanced_query, custom_inputs = self.generator.enhance_query_with_context(query, context)
+                    
+                    # create metadata for tracking with expected domains
+                    metadata = {
+                        "category": "multi_domain",
+                        "persona": context.persona_context,
+                        "scenario": context.business_scenario,
+                        "requires_customer_id": context.requires_customer_id,
+                        "requires_dates": context.requires_dates,
+                        "customer_id": custom_inputs.get("customer"),
+                        "generated_at": datetime.now().isoformat(),
+                        "expected_domains": self._extract_expected_domains(scenario)
+                    }
+                    
+                    queries.append((enhanced_query, custom_inputs, metadata))
+                    
+                except Exception as e:
+                    print(f"Failed to generate multi-domain query: {e}")
+                    continue
+        
         random.shuffle(queries)
         return queries
-    
+
+    def _extract_expected_domains(self, scenario: str) -> List[str]:
+        """Extract which domains a multi-domain scenario should ideally involve."""
+        domain_keywords = {
+            "billing": ["bill", "payment", "charge", "cost", "usage", "overage", "fee", "billing"],
+            "account": ["account", "autopay", "subscription", "contract", "line", "profile", "login", "access"],
+            "product": ["plan", "device", "upgrade", "option", "alternative", "family", "business", "downgrade"],
+            "tech_support": ["connectivity", "working", "service", "setup", "issue", "problem", "technical", "connection"]
+        }
+        
+        expected_domains = []
+        scenario_lower = scenario.lower()
+        
+        for domain, keywords in domain_keywords.items():
+            if any(keyword in scenario_lower for keyword in keywords):
+                expected_domains.append(domain)
+        
+        return expected_domains
+
     def execute_query_batch(self, queries: List[Tuple[str, Dict[str, Any], Dict[str, Any]]],
                            max_workers: int = MAX_WORKERS) -> List[Dict[str, Any]]:
         """Execute batch of queries with parallel processing."""
