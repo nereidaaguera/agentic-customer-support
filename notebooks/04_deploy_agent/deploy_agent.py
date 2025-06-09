@@ -207,8 +207,8 @@ if monitoring_config.get("enabled", False):
     print("SETTING UP AGENT MONITORING")
     print("="*50)
     print(f"Experiment: {experiment_name}")
-    print(f"Data catalog: {uc_config.data['catalog']}")
-    print(f"Data schema: {uc_config.data['schema']}")
+    print(f"Agent catalog: {uc_config.agent['catalog']}")
+    print(f"Agent schema: {uc_config.agent['schema']}")
     print("Assessments: []")
     print()
 
