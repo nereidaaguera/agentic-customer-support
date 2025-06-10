@@ -11,25 +11,35 @@ from datetime import datetime, timedelta
 # In-memory mock data for outages and network metrics
 _OUTAGES = [
     {
-        "outage_id": "OUT-2024-001",
+        "outage_id": "OUT-2025-001",
         "region": "North Bay Area",
         "service_type": "5G",
         "status": "Active",
         "affected_customers": 15420,
-        "started_at": "2024-01-15T10:30:00Z",
-        "estimated_resolution": "2024-01-15T18:00:00Z",
+        "started_at": "2025-01-15T10:30:00Z",
+        "estimated_resolution": "2025-01-15T18:00:00Z",
         "description": "5G tower maintenance causing service disruption"
     },
     {
-        "outage_id": "OUT-2024-002",
+        "outage_id": "OUT-2025-002",
         "region": "Downtown LA",
         "service_type": "Fiber",
         "status": "Resolved",
         "affected_customers": 8750,
-        "started_at": "2024-01-14T14:15:00Z",
-        "resolved_at": "2024-01-14T22:45:00Z",
+        "started_at": "2025-01-14T14:15:00Z",
+        "resolved_at": "2025-01-14T22:45:00Z",
         "description": "Fiber cable damage due to construction work"
-    }
+    },
+    {
+        "outage_id": "OUT-2025-003",
+        "region": "San Francisco",
+        "service_type": "5G",
+        "status": "Active",
+        "affected_customers": 20050,
+        "started_at": "2025-06-11T10:30:00Z",
+        "estimated_resolution": "2025-06-12T18:00:00Z",
+        "description": "5G tower maintenance causing service disruption"
+    },
 ]
 
 _NETWORK_METRICS = {

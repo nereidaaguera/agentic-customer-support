@@ -30,10 +30,7 @@ async def mcp_session(server_url: str, workspace_client: WorkspaceClient):
             auth=DatabricksOAuthClientProvider(workspace_client)
     ) as (read_stream, write_stream, _):
         async with ClientSession(read_stream, write_stream) as session:
-            try:
-                await session.initialize()
-            except Exception:
-                pass
+            await session.initialize()
             yield session
 
 

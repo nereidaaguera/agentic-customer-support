@@ -21,8 +21,7 @@ LLM_ENDPOINT_NAME = "databricks-claude-3-7-sonnet"
 SYSTEM_PROMPT = ("You are a helpful customer support assistant for a telco company. "
                  "Focus on providing truthful answers grounded in available knowledge sources")
 MCP_SERVER_URLS = [
-    "https://db-ml-models-dev-us-west.cloud.databricks.com/api/2.0/mcp/functions/telco_customer_support_dev/silver",
-    "https://db-ml-models-dev-us-west.cloud.databricks.com/api/2.0/mcp/vector-search/telco_customer_support_dev/silver",
+    "https://db-ml-models-dev-us-west.cloud.databricks.com/api/2.0/mcp/vector-search/telco_customer_support_dev/mcp_agent",
     "https://mcp-telco-outage-server-3217006663075879.aws.databricksapps.com/mcp/"
 ]
 

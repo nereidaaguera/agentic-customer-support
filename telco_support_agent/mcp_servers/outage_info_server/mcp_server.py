@@ -18,21 +18,25 @@ mcp_app = FastMCP(name="telco-mcp-server", stateless_http=True)
 
 @mcp_app.tool()
 async def check_outage_status_tool(region: str):
-    """Handle outage status check by simulating GET /outages."""
+    """
+    Fetch outage information for the specified region via REST API.
+    Note that the region parameter does not need to match exactly; techniques like
+    semantic search are used to identify related regions and check for outages.
+
+    :param region: Required: region to use to search for outages
+    """
     params = {"region": region} if region else {}
     return await call_telco_service("GET", "/outages", params=params)
 
 @mcp_app.tool()
 async def get_network_metrics_tool(region: str):
-    """Handle network metrics request by simulating GET /metrics."""
+    """
+    Get network metrics in the specified region.
+
+    :param region: Required: region to use to search for metrics
+    """
     params = {"region": region} if region else {}
     return await call_telco_service("GET", "/metrics", params=params)
-
-@mcp_app.tool()
-async def report_network_issue_tool(issue_type: str, region: str, description: str) -> types.TextContent:
-    """Handle network issue reporting by simulating POST /report."""
-    payload = {"issue_type": issue_type, "region": region, "description": description}
-    return await call_telco_service("POST", "/report", body=payload)
 
 # --- Mounting FastMCP under /mcp ---
 starlette_app = Starlette(

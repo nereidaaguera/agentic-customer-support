@@ -34,7 +34,7 @@ if __name__ == "__main__":
     logger.setLevel(logging.WARNING)
 
     # query = "What was customer CUS-10001's average total bill per month over the last year?"
-    query = "Is there an outage in Moscone Center? I'm having trouble sending text messages"
+    query = "Get me the most recent bill for CUS-10001"
     # query = "What can I do if I have added charges on my bill?"
     query_agent(query=query)
 
