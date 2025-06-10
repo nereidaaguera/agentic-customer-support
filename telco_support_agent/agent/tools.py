@@ -39,6 +39,7 @@ def list_mcp_tools(server_url: str, workspace_client: WorkspaceClient):
     List available MCP tools synchronously using the shared mcp_session context
     """
     async def _inner():
+        print("Listing tools from MCP server:", server_url)
         async with mcp_session(server_url, workspace_client) as session:
             return await session.list_tools()
 
@@ -76,6 +77,7 @@ def get_mcp_tool_infos(workspace_client: WorkspaceClient, server_urls: list[str]
 
             # Deep‐copy t.inputSchema so we don't mutate the original MCP object
             final_schema = copy.deepcopy(t.inputSchema)
+            final_tool_name = t.name[:64]
 
             if "properties" not in final_schema:
                 final_schema["properties"] = {}
@@ -83,14 +85,14 @@ def get_mcp_tool_infos(workspace_client: WorkspaceClient, server_urls: list[str]
             spec = {
                 "type": "function",
                 "function": {
-                    "name":        t.name,
+                    "name":        final_tool_name,
                     "description": t.description,
                     "parameters":  final_schema
                 }
             }
             tool_infos.append(
                 ToolInfo(
-                    name=t.name,
+                    name=final_tool_name,
                     spec=spec,
                     exec_fn=make_mcp_exec_fn(mcp_server_url, t.name, workspace_client),
                 )

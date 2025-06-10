@@ -1,6 +1,6 @@
 import os
 from agent import LLM_ENDPOINT_NAME
-from mlflow.models.resources import DatabricksFunction, DatabricksServingEndpoint
+from mlflow.models.resources import DatabricksFunction, DatabricksServingEndpoint, DatabricksVectorSearchIndex
 from pkg_resources import get_distribution
 import mlflow
 from mlflow.models.auth_policy import SystemAuthPolicy, UserAuthPolicy, AuthPolicy
@@ -17,7 +17,9 @@ agent_script = os.path.join(here, "agent.py")
 
 resources = [
     DatabricksServingEndpoint(endpoint_name=LLM_ENDPOINT_NAME),
-    DatabricksFunction("telco_customer_support_dev.agent.get_billing_info"),
+    DatabricksFunction("telco_customer_support_dev.mcp_agent.get_billing_info"),
+    DatabricksVectorSearchIndex("telco_customer_support_dev.mcp_agent.knowledge_base_index_dev_ws"),
+    DatabricksVectorSearchIndex("telco_customer_support_dev.mcp_agent.support_tickets_index_dev_ws"),
     DatabricksFunction("system.ai.python_exec"),
 ]
 
@@ -62,7 +64,7 @@ print("---------Register the Model to UC Catalog---------")
 
 catalog = "telco_customer_support_dev"
 schema = "agent"
-model_name = "mcp_support_agent"
+model_name = "mcp_support_agent_final"
 UC_MODEL_NAME = f"{catalog}.{schema}.{model_name}"
 
 # register the model to UC

@@ -22,6 +22,7 @@ SYSTEM_PROMPT = ("You are a helpful customer support assistant for a telco compa
                  "Focus on providing truthful answers grounded in available knowledge sources")
 MCP_SERVER_URLS = [
     "https://db-ml-models-dev-us-west.cloud.databricks.com/api/2.0/mcp/vector-search/telco_customer_support_dev/mcp_agent",
+    "https://db-ml-models-dev-us-west.cloud.databricks.com/api/2.0/mcp/functions/telco_customer_support_dev/mcp_agent",
     "https://mcp-telco-outage-server-3217006663075879.aws.databricksapps.com/mcp/"
 ]
 
@@ -49,15 +50,12 @@ class ToolCallingAgent(ResponsesAgent):
 
     @mlflow.trace(span_type=SpanType.TOOL)
     def execute_tool(
-            self, tool_name: str, args: dict, workspace_client: WorkspaceClient
+            self, tool_name: str, args: dict, tool_infos,
     ) -> Any:
         """
         Execute exactly one MCP tool by name (using its exec_fn).
         We re‐fetch tool_infos each time to keep things simple (no cache).
         """
-        tool_infos = get_mcp_tool_infos(
-            workspace_client=workspace_client, server_urls=MCP_SERVER_URLS
-        )
         tools_dict = {t.name: t for t in tool_infos}
         return tools_dict[tool_name].exec_fn(**args)
 
@@ -106,7 +104,7 @@ class ToolCallingAgent(ResponsesAgent):
         return chat_msgs
 
     def chat_completion(
-            self, messages: List[dict], workspace_client: WorkspaceClient
+            self, messages: List[dict], workspace_client: WorkspaceClient, tool_infos,
     ) -> dict:
         """
         Invoke the Databricks‐hosted Chat Completions endpoint.
@@ -116,7 +114,7 @@ class ToolCallingAgent(ResponsesAgent):
         return model_serving_client.chat.completions.create(
             model=self.llm_endpoint,
             messages=self.prepare_messages_for_llm(messages),
-            tools=self.get_tool_specs(workspace_client),
+            tools=[tool_info.spec for tool_info in tool_infos],
         )
 
     def call_and_run_tools(
@@ -135,11 +133,11 @@ class ToolCallingAgent(ResponsesAgent):
         """
         # current history → always keep re‐using the evolving list
         current_history = request_messages.copy()
-
+        tool_infos = get_mcp_tool_infos(workspace_client, server_urls=MCP_SERVER_URLS)
         for iteration in range(max_iter):
             with mlflow.start_span(name=f"agent_iteration_{iteration + 1}", span_type=SpanType.AGENT):
                 # 1) Call LLM
-                llm_resp = self.chat_completion(messages=current_history, workspace_client=workspace_client)
+                llm_resp = self.chat_completion(messages=current_history, workspace_client=workspace_client, tool_infos=tool_infos)
                 # Extract the “assistant” message
                 choice = llm_resp.choices[0].message.to_dict()
                 assistant_dict = {
@@ -174,7 +172,7 @@ class ToolCallingAgent(ResponsesAgent):
                         fargs = json.loads(fc["function"]["arguments"])
                         try:
                             result = self.execute_tool(
-                                tool_name=fname, args=fargs, workspace_client=workspace_client
+                                tool_name=fname, args=fargs, tool_infos=tool_infos
                             )
                         except Exception as e:
                             result = f"Error executing tool {fname}: {e}"
