@@ -17,10 +17,6 @@ agent_script = os.path.join(here, "agent.py")
 
 resources = [
     DatabricksServingEndpoint(endpoint_name=LLM_ENDPOINT_NAME),
-    # TODO: We expect SSP auth to the MCP server to fail (current approach)
-    # if we comment out these functions. We could try OBO instead
-    # but there is no scope yet for first-party MCP with OBO
-    DatabricksFunction("telco_customer_support_dev.agent.get_average_monthly_bill"),
     DatabricksFunction("telco_customer_support_dev.agent.get_billing_info"),
     DatabricksFunction("system.ai.python_exec"),
 ]
