@@ -63,7 +63,7 @@ print("---------Register the Model to UC Catalog---------")
 
 catalog = "telco_customer_support_dev"
 schema = "mcp_agent"
-model_name = "mcp_support_agent_final"
+model_name = "mcp_support_agent"
 UC_MODEL_NAME = f"{catalog}.{schema}.{model_name}"
 
 # register the model to UC
@@ -75,8 +75,8 @@ print("---------Model Version: ", str(uc_registered_model_info.version) + "-----
 print("---------Deploying the Agent to a Serving Endpoint---------")
 
 agents.deploy(
-    "telco_customer_support_dev.mcp_agent.mcp_support_agent_final",
-    1
+    UC_MODEL_NAME,
+    uc_registered_model_info.version
 )
 
 print("---------Finished Deployment---------")
