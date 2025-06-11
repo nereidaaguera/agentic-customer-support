@@ -14,10 +14,10 @@ _OUTAGES = [
         "outage_id": "OUT-2025-001",
         "region": "North Bay Area",
         "service_type": "5G",
-        "status": "Active",
+        "status": "Resolved",
         "affected_customers": 15420,
-        "started_at": "2025-01-15T10:30:00Z",
-        "estimated_resolution": "2025-01-15T18:00:00Z",
+        "started_at": "2025-06-03T10:30:00Z",
+        "estimated_resolution": "2025-06-03T18:00:00Z",
         "description": "5G tower maintenance causing service disruption"
     },
     {
@@ -26,8 +26,8 @@ _OUTAGES = [
         "service_type": "Fiber",
         "status": "Resolved",
         "affected_customers": 8750,
-        "started_at": "2025-01-14T14:15:00Z",
-        "resolved_at": "2025-01-14T22:45:00Z",
+        "started_at": "2025-05-31T14:15:00Z",
+        "resolved_at": "2025-06-01T22:45:00Z",
         "description": "Fiber cable damage due to construction work"
     },
     {
@@ -57,13 +57,12 @@ async def _handle_get_outages(params: dict) -> str:
     region = params.get("region") if params else None
     await _simulate_delay()
     outages = _OUTAGES
-    if region:
-        outages = [o for o in _OUTAGES if region.lower() in o["region"].lower()]
+    # if region:
+    #     outages = [o for o in _OUTAGES if region.lower() in o["region"].lower()]
 
     response = {
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "region_queried": region or "All regions",
-        "outages_found": len(outages),
         "outages": outages
     }
     return json.dumps(response, indent=2)

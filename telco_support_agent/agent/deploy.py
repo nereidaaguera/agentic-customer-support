@@ -48,22 +48,22 @@ print("Successfully logged the model to MLflow to run id: ", logged_agent_info.r
 
 print()
 print("---------Testing the Logged Model---------")
-print(mlflow.models.predict(
-    model_uri=f"runs:/{logged_agent_info.run_id}/agent",
-    input_data={"input": [{"role": "user", "content": "What was customer CUS-10001's average total bill per month over the last year?"}]},
-    env_manager="uv",
-))
-
-print(mlflow.models.predict(
-    model_uri=f"runs:/{logged_agent_info.run_id}/agent",
-    input_data={"input": [{"role": "user", "content": "What is the 200th fibonacci #?"}]},
-    env_manager="uv",
-))
+# print(mlflow.models.predict(
+#     model_uri=f"runs:/{logged_agent_info.run_id}/agent",
+#     input_data={"input": [{"role": "user", "content": "What was customer CUS-10001's average total bill per month over the last year?"}]},
+#     env_manager="uv",
+# ))
+#
+# print(mlflow.models.predict(
+#     model_uri=f"runs:/{logged_agent_info.run_id}/agent",
+#     input_data={"input": [{"role": "user", "content": "What is the 200th fibonacci #?"}]},
+#     env_manager="uv",
+# ))
 
 print("---------Register the Model to UC Catalog---------")
 
 catalog = "telco_customer_support_dev"
-schema = "agent"
+schema = "mcp_agent"
 model_name = "mcp_support_agent_final"
 UC_MODEL_NAME = f"{catalog}.{schema}.{model_name}"
 
@@ -76,11 +76,8 @@ print("---------Model Version: ", str(uc_registered_model_info.version) + "-----
 print("---------Deploying the Agent to a Serving Endpoint---------")
 
 agents.deploy(
-    UC_MODEL_NAME,
-    uc_registered_model_info.version,
-    environment_vars={
-        "MLFLOW_REGISTRY_URI": "databricks-uc"
-    }
+    "telco_customer_support_dev.mcp_agent.mcp_support_agent_final",
+    1
 )
 
 print("---------Finished Deployment---------")

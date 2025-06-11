@@ -24,7 +24,7 @@ async def demo_homepage(request):
     <body>
         <div class="container">
             <div class="header">
-                <h1>🏢 Telco Operations MCP Server Updated</h1>
+                <h1>🏢 Telco Operations MCP Server</h1>
                 <p>Network Operations Team's Established Tools</p>
                 <div class="status running">✅ Server Status: RUNNING</div>
             </div>
