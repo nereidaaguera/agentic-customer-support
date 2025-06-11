@@ -37,7 +37,7 @@ _OUTAGES = [
         "status": "Active",
         "affected_customers": 20050,
         "started_at": "2025-06-11T10:30:00Z",
-        "estimated_resolution": "2025-06-12T18:00:00Z",
+        "estimated_resolution": "2025-06-11T18:00:00Z",
         "description": "5G tower maintenance causing service disruption"
     },
 ]

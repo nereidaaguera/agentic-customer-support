@@ -5,7 +5,6 @@ from pkg_resources import get_distribution
 import mlflow
 from mlflow.models.auth_policy import SystemAuthPolicy, UserAuthPolicy, AuthPolicy
 from databricks import agents
-from databricks.sdk import WorkspaceClient
 
 mlflow.set_registry_uri("databricks-uc")
 
