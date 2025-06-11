@@ -49,7 +49,7 @@ _NETWORK_METRICS = {
     "San Diego": {"uptime": 99.9, "latency_ms": 6, "packet_loss": 0.01}
 }
 
-async def _simulate_delay(min_ms: int = 200, max_ms: int = 800):
+async def _simulate_delay(min_ms: int = 200, max_ms: int = 500):
     """Simulate network latency."""
     await asyncio.sleep(random.randint(min_ms, max_ms) / 1000)
 
@@ -57,9 +57,6 @@ async def _handle_get_outages(params: dict) -> str:
     region = params.get("region") if params else None
     await _simulate_delay()
     outages = _OUTAGES
-    # if region:
-    #     outages = [o for o in _OUTAGES if region.lower() in o["region"].lower()]
-
     response = {
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "region_queried": region or "All regions",
