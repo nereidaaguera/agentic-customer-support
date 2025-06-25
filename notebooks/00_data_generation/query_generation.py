@@ -14,20 +14,21 @@
 
 # COMMAND ----------
 
-import os
-import sys
 import json
-import time
+import os
 import random
-from datetime import datetime, timedelta
-from typing import Dict, List, Any, Tuple
+import sys
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Tuple
 
 import mlflow
-from retry import retry
 from mlflow.deployments import get_deploy_client
-from mlflow.entities.assessment import AssessmentSourceType, AssessmentSource, AssessmentError
+from mlflow.entities.assessment import (AssessmentError, AssessmentSource,
+                                        AssessmentSourceType)
+from retry import retry
 
 root_path = os.path.abspath(os.path.join(os.getcwd(), "../.."))
 if root_path:
@@ -43,7 +44,7 @@ from telco_support_agent.data.config import CONFIG
 # COMMAND ----------
 
 dbutils.widgets.text("env", "dev")
-dbutils.widgets.text("experiment_name", "/telco_support_agent/dev/experiments/dev_telco_support_agent")
+dbutils.widgets.text("experiment_name", "/Shared/telco_support_agent/dev/dev_telco_support_agent")
 dbutils.widgets.text("agent_endpoint_name", "dev-telco-customer-support-agent")
 dbutils.widgets.dropdown("include_multi_domain", "false", ["true", "false"])
 
@@ -529,6 +530,7 @@ class TelcoAgentClient:
 # COMMAND ----------
 
 from mlflow.genai import judges
+
 
 class FeedbackGenerator:
     """Generate synthetic feedback for agent responses."""

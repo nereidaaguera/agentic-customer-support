@@ -15,13 +15,14 @@
 
 dbutils.widgets.text("env", "dev")
 dbutils.widgets.text("git_commit", "")
-dbutils.widgets.text("experiment_name", "/telco_support_agent/dev/experiments/dev_telco_support_agent")
+dbutils.widgets.text("experiment_name", "/Shared/telco_support_agent/dev/dev_telco_support_agent")
 dbutils.widgets.text("disable_tools", "")
 
 # COMMAND ----------
 
 import os
 import sys
+
 import mlflow
 import yaml
 from mlflow.utils.databricks_utils import dbutils
@@ -40,9 +41,9 @@ os.environ['TELCO_SUPPORT_AGENT_ENV'] = env
 # COMMAND ----------
 
 from telco_support_agent.agents.supervisor import SupervisorAgent
-from telco_support_agent.utils.config import config_manager
 from telco_support_agent.ops.logging import log_agent
 from telco_support_agent.ops.registry import register_agent_to_uc
+from telco_support_agent.utils.config import config_manager
 
 # COMMAND ----------
 

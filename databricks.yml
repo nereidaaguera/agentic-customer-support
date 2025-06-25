@@ -3,7 +3,7 @@ bundle:
 
 variables:
   experiment_name:
-    default: /telco_support_agent/dev/experiments/dev_telco_support_agent
+    default: /Shared/telco_support_agent/dev/dev_telco_support_agent
   disable_tools:
     default: ""
 
@@ -26,7 +26,7 @@ targets:
     run_as:
       service_principal_name: ${workspace.current_user.userName}
     variables:
-      experiment_name: /telco_support_agent/dev/experiments/dev_telco_support_agent
+      experiment_name: /Shared/telco_support_agent/dev/dev_telco_support_agent
       disable_tools: ""
   staging:
     default: false
@@ -44,5 +44,5 @@ targets:
     run_as:
       service_principal_name: ${workspace.current_user.userName}
     variables:
-      experiment_name: /telco_support_agent/prod/experiments/prod_telco_support_agent
+      experiment_name: /Shared/telco_support_agent/prod/prod_telco_support_agent
       disable_tools: ""
