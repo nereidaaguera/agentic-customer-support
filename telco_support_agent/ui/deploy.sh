@@ -57,15 +57,15 @@ validate_environment "$ENVIRONMENT"
 
 # Set environment-specific variables
 if [[ "$ENVIRONMENT" == "dev" ]]; then
-    APP_FOLDER_IN_WORKSPACE="/Workspace/telco_support_agent/dev/databricks_app"
+    APP_FOLDER_IN_WORKSPACE="/Workspace/Shared/telco_support_agent/dev/databricks_app"
     LAKEHOUSE_APP_NAME="telco-support-agent-dev"
     CONFIG_FILE="app_dev.yaml"
 elif [[ "$ENVIRONMENT" == "staging" ]]; then
-    APP_FOLDER_IN_WORKSPACE="/Workspace/telco_support_agent/staging/databricks_app"
+    APP_FOLDER_IN_WORKSPACE="/Workspace/Shared/telco_support_agent/staging/databricks_app"
     LAKEHOUSE_APP_NAME="telco-support-agent-staging"
     CONFIG_FILE="app_staging.yaml"
 elif [[ "$ENVIRONMENT" == "prod" ]]; then
-    APP_FOLDER_IN_WORKSPACE="/Workspace/telco_support_agent/prod/databricks_app"
+    APP_FOLDER_IN_WORKSPACE="/Workspace/Shared/telco_support_agent/prod/databricks_app"
     LAKEHOUSE_APP_NAME="telco-support-agent-prod"
     CONFIG_FILE="app_prod.yaml"
 fi

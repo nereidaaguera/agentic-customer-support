@@ -112,17 +112,17 @@ The system uses environment-specific configuration files:
 
 - **Dev Environment**: `app_dev.yaml`
   - Endpoint: `dev-telco-customer-support-agent`
-  - Workspace: `/Workspace/telco_support_agent/dev/databricks_app`
+  - Workspace: `/Workspace/Shared/telco_support_agent/dev/databricks_app`
   - App Name: `telco-support-agent-dev`
 
 - **Staging Environment**: `app_staging.yaml`
   - Endpoint: `staging-telco-customer-support-agent`
-  - Workspace: `/Workspace/telco_support_agent/staging/databricks_app`
+  - Workspace: `/Workspace/Shared/telco_support_agent/staging/databricks_app`
   - App Name: `telco-support-agent-staging`
 
 - **Prod Environment**: `app_prod.yaml`
   - Endpoint: `prod-telco-customer-support-agent`
-  - Workspace: `/Workspace/telco_support_agent/prod/databricks_app`
+  - Workspace: `/Workspace/Shared/telco_support_agent/prod/databricks_app`
   - App Name: `telco-support-agent-prod`
 
 ### Deploy Commands
