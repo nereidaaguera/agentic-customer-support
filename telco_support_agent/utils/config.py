@@ -25,9 +25,9 @@ class UCConfig(BaseModel):
 
     def get_uc_index_name(self, index_name: str) -> str:
         """Returns name of uc index based on config."""
-        data_catalog = self.data["catalog"]
-        indexes_schema = self.data["indexes_schema"]
-        return f"{data_catalog}.{indexes_schema}.{index_name}"
+        catalog = self.data["catalog"]
+        schema = self.data["schema"]
+        return f"{catalog}.{schema}.{index_name}"
 
     def get_uc_table_name(self, table_name: str) -> str:
         """Returns name of uc table based on config."""

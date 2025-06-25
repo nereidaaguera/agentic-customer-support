@@ -2,7 +2,7 @@
 
 environment:
   catalog: telco_customer_support_prod
-  source_schema: bronze
+  source_schema: gold
   agent_schema: agent
 
 # Vector search endpoint
