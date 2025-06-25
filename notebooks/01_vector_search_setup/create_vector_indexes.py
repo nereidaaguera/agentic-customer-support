@@ -156,3 +156,7 @@ print(f"Found {len(data_array)} results:")
 
 for i, result in enumerate(data_array[:3]):
     print(f"  {i+1}. {result[0]} - {result[1]} ({result[2]}, {result[3]})")
+
+# COMMAND ----------
+
+
