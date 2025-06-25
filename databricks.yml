@@ -9,9 +9,7 @@ variables:
 
 permissions:
   - level: CAN_MANAGE
-    group_name: telco-customer-support-dev
-  - level: CAN_MANAGE
-    group_name: telco-customer-support-prod
+    group_name: telco-customer-support
   - level: CAN_VIEW
     group_name: users
 
@@ -22,7 +20,7 @@ targets:
   dev:
     default: true
     workspace:
-      host: https://db-ml-models-prod-us-west.cloud.databricks.com
+      host: https://e2-demo-west.cloud.databricks.com
     run_as:
       service_principal_name: ${workspace.current_user.userName}
     variables:
@@ -31,7 +29,7 @@ targets:
   staging:
     default: false
     workspace:
-      host: https://db-ml-models-prod-us-west.cloud.databricks.com
+      host: https://e2-demo-west.cloud.databricks.com
     run_as:
       service_principal_name: ${workspace.current_user.userName}
     variables:
@@ -40,7 +38,7 @@ targets:
   prod:
     default: false
     workspace:
-      host: https://db-ml-models-prod-us-west.cloud.databricks.com
+      host: https://e2-demo-west.cloud.databricks.com
     run_as:
       service_principal_name: ${workspace.current_user.userName}
     variables:
