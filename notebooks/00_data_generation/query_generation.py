@@ -43,18 +43,16 @@ from telco_support_agent.data.config import CONFIG
 
 # COMMAND ----------
 
-dbutils.widgets.text("env", "dev")
-dbutils.widgets.text("experiment_name", "/Shared/telco_support_agent/dev/dev_telco_support_agent")
-dbutils.widgets.text("agent_endpoint_name", "dev-telco-customer-support-agent")
+dbutils.widgets.text("agent_endpoint_name", "prod-telco-customer-support-agent")
 dbutils.widgets.dropdown("include_multi_domain", "false", ["true", "false"])
 
 # COMMAND ----------
 
-env = dbutils.widgets.get("env")
+
 AGENT_ENDPOINT_NAME = dbutils.widgets.get("agent_endpoint_name")
 LLM_ENDPOINT = "databricks-claude-sonnet-4"
 MAX_WORKERS = 5  # parallel query execution
-QUERIES_PER_BATCH = 50  # number of queries to generate per execution
+QUERIES_PER_BATCH = 5  # number of queries to generate per execution
 include_multi_domain_str = dbutils.widgets.get("include_multi_domain")
 INCLUDE_MULTI_DOMAIN = include_multi_domain_str.lower() == "true"
 
@@ -1469,18 +1467,18 @@ def run_continuous_simulation(batches: int = 3, delay_between_batches: int = 300
 
 # COMMAND ----------
 
-# # print("Generating sample queries...")
-# generate_sample_queries_for_testing()
+# print("Generating sample queries...")
+generate_sample_queries_for_testing()
 
 # COMMAND ----------
 
-# # print("Running single query test...")
-# single_test_success = test_single_query()
+# print("Running single query test...")
+single_test_success = test_single_query()
 
 # COMMAND ----------
 
-# # print("Running small batch test...")
-# test_results = test_small_batch()
+# print("Running small batch test...")
+test_results = test_small_batch()
 
 # COMMAND ----------
 
@@ -1491,8 +1489,8 @@ def run_continuous_simulation(batches: int = 3, delay_between_batches: int = 300
 
 # COMMAND ----------
 
-# print("Running batch execution...")
-# batch_summary = run_synthetic_query_batch(num_queries=QUERIES_PER_BATCH)
+print("Running batch execution...")
+batch_summary = run_synthetic_query_batch(num_queries=QUERIES_PER_BATCH)
 
 # COMMAND ----------
 
