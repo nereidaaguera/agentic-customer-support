@@ -1,11 +1,11 @@
 command: ["python", "main.py"]
 
 env:
-  - name: 'ENV'
-    value: 'prod'
-  - name: 'TELCO_SUPPORT_AGENT_ENV'
-    value: 'prod'
-  - name: 'DATABRICKS_ENDPOINT_NAME'
-    value: 'prod-telco-customer-support-agent'
-  - name: 'DATABRICKS_HOST'
-    value: 'https://db-ml-models-prod-us-west.cloud.databricks.com/'
+  - name: "ENV"
+    value: "prod"
+  - name: "TELCO_SUPPORT_AGENT_ENV"
+    value: "prod"
+  - name: "DATABRICKS_ENDPOINT_NAME"
+    value: "prod-telco-customer-support-agent"
+  - name: "DATABRICKS_HOST"
+    value: "https://e2-demo-west.cloud.databricks.com/"

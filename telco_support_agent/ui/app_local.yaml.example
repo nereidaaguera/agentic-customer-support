@@ -7,7 +7,7 @@ env:
   - name: 'TELCO_SUPPORT_AGENT_ENV'
     value: 'dev'
   - name: 'DATABRICKS_HOST'
-    value: 'https://db-ml-models-prod-us-west.cloud.databricks.com/'
+    value: 'https://e2-demo-west.cloud.databricks.com/'
   - name: 'DATABRICKS_TOKEN'
     value: 'your_databricks_token_here'
   # Choose endpoint based on environment:
