@@ -12,7 +12,7 @@ endpoint:
 
 # Embedding model configuration
 embedding:
-  model_endpoint: embeddings-text-large
+  model_endpoint: databricks-bge-large-en
 
 indexes:
   knowledge_base:
