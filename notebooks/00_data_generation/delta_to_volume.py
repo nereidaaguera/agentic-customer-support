@@ -20,8 +20,9 @@
 
 import os
 import sys
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+
 from pyspark.sql.functions import col
 
 root_path = os.path.abspath(os.path.join(os.getcwd(), "../.."))
@@ -36,7 +37,7 @@ if root_path:
 env = "prod"
 
 volume_catalog = f"telco_customer_support_{env}"
-volume_schema = "bronze"
+volume_schema = "gold"
 volume_name = "tech_support"
 
 volume_path = f"/Volumes/{volume_catalog}/{volume_schema}/{volume_name}"
@@ -44,8 +45,8 @@ print(f"Target volume path: {volume_path}")
 
 # Source tables
 source_catalog = f"telco_customer_support_{env}"
-kb_table = f"{source_catalog}.bronze.knowledge_base"
-tickets_table = f"{source_catalog}.bronze.support_tickets"
+kb_table = f"{source_catalog}.gold.knowledge_base"
+tickets_table = f"{source_catalog}.gold.support_tickets"
 
 print(f"Source tables:")
 print(f"  Knowledge Base: {kb_table}")

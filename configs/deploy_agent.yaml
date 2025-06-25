@@ -41,10 +41,7 @@ instructions: |
 
 permissions:
   - users:
-      - telco-customer-support-prod
-    permission_level: CAN_MANAGE
-  - users:
-      - telco-customer-support-dev
+      - telco-customer-support
     permission_level: CAN_MANAGE
   - users:
       - users

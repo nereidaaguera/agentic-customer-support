@@ -15,14 +15,15 @@
 
 dbutils.widgets.text("env", "dev")
 dbutils.widgets.text("git_commit", "")
-dbutils.widgets.text("experiment_name", "/telco_support_agent/dev/experiments/dev_telco_support_agent")
+dbutils.widgets.text("experiment_name", "/Shared/telco_support_agent/dev/dev_telco_support_agent")
 
 # COMMAND ----------
 
 import os
 import sys
-import yaml
+
 import mlflow
+import yaml
 
 project_root = os.path.abspath(os.path.join(os.getcwd(), "../.."))
 sys.path.append(project_root)
@@ -35,9 +36,11 @@ os.environ['TELCO_SUPPORT_AGENT_ENV'] = env
 
 # COMMAND ----------
 
-from telco_support_agent.ops.deployment import deploy_agent, cleanup_old_deployments, AgentDeploymentError
-from telco_support_agent.utils.config import config_manager
+from telco_support_agent.ops.deployment import (AgentDeploymentError,
+                                                cleanup_old_deployments,
+                                                deploy_agent)
 from telco_support_agent.ops.registry import get_latest_model_version
+from telco_support_agent.utils.config import config_manager
 
 # COMMAND ----------
 
@@ -195,10 +198,8 @@ print("="*50)
 
 # COMMAND ----------
 
-from telco_support_agent.ops.monitoring import (
-    create_agent_monitor,
-    AgentMonitoringError
-)
+from telco_support_agent.ops.monitoring import (AgentMonitoringError,
+                                                create_agent_monitor)
 
 monitoring_config = deploy_agent_config.get("monitoring", {})
 
