@@ -2,7 +2,7 @@ name: Tech Support Agent
 description: Handles technical support queries using knowledge base articles and historical support tickets
 
 llm:
-   endpoint: dbdemos-openai-gpt4
+   endpoint: gpt_4_1_gateway
    params:
       temperature: 0.01
       max_tokens: 1024
