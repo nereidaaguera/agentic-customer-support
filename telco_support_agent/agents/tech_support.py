@@ -2,8 +2,9 @@
 
 import asyncio
 import copy
+from collections.abc import Callable
 from contextlib import asynccontextmanager
-from typing import Any, Callable, Optional
+from typing import Any, Optional
 
 from databricks.sdk import WorkspaceClient
 from databricks_mcp import DatabricksOAuthClientProvider
@@ -21,6 +22,7 @@ logger = get_logger(__name__)
 
 class ToolInfo(BaseModel):
     """Information about an MCP tool."""
+
     name: str
     spec: dict
     exec_fn: Callable
@@ -30,8 +32,7 @@ class ToolInfo(BaseModel):
 async def mcp_session(server_url: str, workspace_client: WorkspaceClient):
     """Async context manager that yields an initialized MCP ClientSession."""
     async with streamablehttp_client(
-        url=server_url,
-        auth=DatabricksOAuthClientProvider(workspace_client)
+        url=server_url, auth=DatabricksOAuthClientProvider(workspace_client)
     ) as (read_stream, write_stream, _):
         async with ClientSession(read_stream, write_stream) as session:
             await session.initialize()
@@ -40,6 +41,7 @@ async def mcp_session(server_url: str, workspace_client: WorkspaceClient):
 
 def list_mcp_tools(server_url: str, workspace_client: WorkspaceClient):
     """List available MCP tools synchronously."""
+
     async def _inner():
         logger.debug(f"Listing tools from MCP server: {server_url}")
         async with mcp_session(server_url, workspace_client) as session:
@@ -49,16 +51,19 @@ def list_mcp_tools(server_url: str, workspace_client: WorkspaceClient):
 
 
 def make_mcp_exec_fn(
-    mcp_server_url: str,
-    tool_name: str,
-    workspace_client: WorkspaceClient
+    mcp_server_url: str, tool_name: str, workspace_client: WorkspaceClient
 ):
     """Return a synchronous exec_fn that calls the named MCP tool."""
+
     def exec_fn(**kwargs):
         async def _call():
             async with mcp_session(mcp_server_url, workspace_client) as session:
-                tool_call_res = await session.call_tool(name=tool_name, arguments=kwargs)
-                return "".join([content_obj.text for content_obj in tool_call_res.content])
+                tool_call_res = await session.call_tool(
+                    name=tool_name, arguments=kwargs
+                )
+                return "".join(
+                    [content_obj.text for content_obj in tool_call_res.content]
+                )
 
         return asyncio.run(_call())
 
@@ -87,14 +92,16 @@ def get_mcp_tool_infos(workspace_client: WorkspaceClient, server_urls: list[str]
                     "function": {
                         "name": final_tool_name,
                         "description": t.description,
-                        "parameters": final_schema
-                    }
+                        "parameters": final_schema,
+                    },
                 }
                 tool_infos.append(
                     ToolInfo(
                         name=final_tool_name,
                         spec=spec,
-                        exec_fn=make_mcp_exec_fn(mcp_server_url, t.name, workspace_client),
+                        exec_fn=make_mcp_exec_fn(
+                            mcp_server_url, t.name, workspace_client
+                        ),
                     )
                 )
         except Exception as e:
@@ -146,19 +153,22 @@ class TechSupportAgent(BaseAgent):
         self.mcp_server_urls = mcp_server_urls or [
             "https://db-ml-models-dev-us-west.cloud.databricks.com/api/2.0/mcp/vector-search/telco_customer_support_dev/mcp_agent",
             "https://db-ml-models-dev-us-west.cloud.databricks.com/api/2.0/mcp/functions/telco_customer_support_dev/mcp_agent",
-            "https://mcp-telco-outage-server-3217006663075879.aws.databricksapps.com/mcp/"
+            "https://mcp-telco-outage-server-3217006663075879.aws.databricksapps.com/mcp/",
         ]
-        
+
         # Discover and setup MCP tools
         mcp_tools = []
         self.mcp_tool_infos = []
         if self.mcp_server_urls:
             from databricks.sdk import WorkspaceClient
+
             workspace_client = WorkspaceClient()
-            
-            self.mcp_tool_infos = get_mcp_tool_infos(workspace_client, self.mcp_server_urls)
+
+            self.mcp_tool_infos = get_mcp_tool_infos(
+                workspace_client, self.mcp_server_urls
+            )
             mcp_tools = [tool_info.spec for tool_info in self.mcp_tool_infos]
-            
+
             # Add MCP tools to vector_search_tools mapping for execution
             for tool_info in self.mcp_tool_infos:
                 vector_search_tools[tool_info.name] = tool_info
@@ -185,7 +195,7 @@ class TechSupportAgent(BaseAgent):
         if tool_name in [tool_info.name for tool_info in self.mcp_tool_infos]:
             tool_info = next(t for t in self.mcp_tool_infos if t.name == tool_name)
             return tool_info.exec_fn(**args)
-        
+
         # Fall back to parent implementation for UC functions and vector search
         return super().execute_tool(tool_name, args)
 

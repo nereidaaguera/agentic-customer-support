@@ -108,7 +108,9 @@ If the query spans multiple domains or involves complex interconnected issues ac
 
 
 def topic_classification(
-    content: str, topic_categories: list[TopicCategory], model: str = "dbdemos-openai-gpt4"
+    content: str,
+    topic_categories: list[TopicCategory],
+    model: str = "dbdemos-openai-gpt4",
 ) -> dict[str, str]:
     """Classify content into topics using an LLM.
 
