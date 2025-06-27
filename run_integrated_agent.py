@@ -127,7 +127,7 @@ def demo_agent_functionality():
         print(f"\n🧪 Demo queries (would execute with proper auth):")
         for i, query in enumerate(demo_queries, 1):
             print(f"{i}. {query}")
-            # In real environment: query_agent(agent, query)
+            query_agent(agent, query)
         
         return True
         
