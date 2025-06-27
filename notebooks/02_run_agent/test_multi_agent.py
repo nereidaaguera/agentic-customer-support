@@ -17,7 +17,6 @@ import os
 import sys
 
 root_path = os.path.abspath(os.path.join(os.getcwd(), "../.."))
-print(f"Root path: {root_path}")
 
 if root_path:
     sys.path.append(root_path)
@@ -28,10 +27,10 @@ import itertools
 
 from mlflow.types.responses import ResponsesAgentRequest
 
-from telco_support_agent.agent.config import config_manager
-from telco_support_agent.agent.supervisor import SupervisorAgent
+from telco_support_agent.utils.config import config_manager
+from telco_support_agent.agents.supervisor import SupervisorAgent
 from telco_support_agent.tools import initialize_tools
-from telco_support_agent.agent.types import AgentType
+from telco_support_agent.agents.types import AgentType
 
 # COMMAND ----------
 
@@ -138,10 +137,28 @@ routing_test_queries = [
     "Do you have any promotions for existing customers?",
     "Is my phone 5G compatible?",
 ]
-
+routing_expected_results = [
+    "account",
+    "account",
+    "billing",
+    "billing",
+    "billing",
+    "tech_support",
+    "tech_support",
+    "tech_support",
+    "product",
+    "product",
+    "product",
+]
 routing_results = {}
 for query in routing_test_queries:
     routing_results[query] = test_routing(query)
+
+for query, expected_result in zip(routing_test_queries, routing_expected_results):
+    print(f"Query: '{query}'")
+    print(f"Expected: {expected_result}")
+    print(f"Actual: {routing_results[query].value}")
+    assert routing_results[query].value == expected_result, f"Expected {expected_result} but got {routing_results[query].value}"
 
 # COMMAND ----------
 
@@ -200,7 +217,7 @@ def test_end_to_end_query(query, custom_inputs, description=""):
 # mixed set of customer IDs for testing
 test_customers = [
     "CUS-10001",  # Family  customer
-    "CUS-10002",  # Individual customer 
+    "CUS-10002",  # Individual customer
     "CUS-10006",  # Student customer
     "CUS-10023",  # Premium customer
     "CUS-10048",  # Business customer
@@ -244,17 +261,17 @@ for query, description in account_quality_queries:
 # COMMAND ----------
 
 billing_quality_queries = [
-    ("Why is my bill higher this month?", "Bill Change Inquiry"),
-    ("When is my payment due?", "Payment Due Date"),
-    ("Show me my billing details for March 2025", "Specific Month Billing"),
-    ("What are the charges on my bill from 2025-04-01 to 2025-04-30?", "Date Range Billing"),
-    ("How much data, voice minutes, and SMS did I use in the current billing cycle?", "Current Usage Query"),
-    ("What's my usage breakdown for the past 3 months?", "Historical Usage Query"),
-    ("Why is my total amount different from my base amount this month?", "Billing Breakdown Query"),
+    ("What are the charges on my bill from 2025-04-01 to 2025-04-30?", "CUS-10001", "Date Range Billing"),
+    ("When is my June payment due", "CUS-10001", "Payment Due Date"),
+    ("I see an additional charge for $39 in my May bill that I don't recognize. show me my bill", "CUS-11094", "Unrecognized Charge"), ## validated customer ID and additional charge
+    ("How much data did I use from 2025-04-01 to 2025-04-30?", "CUS-10001", "Current Usage Query"),
+    ("Is there an unpaid amount from 2025-04-01 to 2025-04-30?", "CUS-10001", "Payment Status"),
+    ("Show me my billing history for the last 3 months", "CUS-10002", "Historical Billing Query"),
+    ("When will my current payment be due", "CUS-10002", "Payment Due Date"), ## test query for the current month
+    ("Break down the total amount of my latest billing Statement", "CUS-10002", "Bill breakdown"),  ## test temporal interpretation of queries
+    ("How much SMS did I use in the last 3 months", "CUS-10002", "Historical Usage Query"),  ## test temporal interpretation of queries
 ]
-
-for query, description in billing_quality_queries:
-    customer_id = get_next_customer()
+for query, customer_id, description in billing_quality_queries:
     custom_inputs = {"customer": customer_id}
     print(f"\n[Using Customer ID: {customer_id}]")
     test_end_to_end_query(query, custom_inputs, description)
@@ -352,15 +369,15 @@ streaming_test_queries = [
     # Account queries
     (ResponsesAgentRequest(input=[{"role": "user", "content": "What are the details of my account?"}], custom_inputs={"customer": get_next_customer()}), "Account Query Streaming"),
     (ResponsesAgentRequest(input=[{"role": "user", "content": "Show me all my active subscriptions"}], custom_inputs={"customer": get_next_customer()}), "Subscriptions Streaming"),
-    
+
     # Product queries
     (ResponsesAgentRequest(input=[{"role": "user", "content": "What's the difference between the Standard and Premium plans?"}], custom_inputs={"customer": get_next_customer()}), "Plan Comparison Streaming"),
     (ResponsesAgentRequest(input=[{"role": "user", "content": "What devices do I have on my account?"}], custom_inputs={"customer": get_next_customer()}), "Customer Devices Streaming"),
-    
+
     # Billing queries
     (ResponsesAgentRequest(input=[{"role": "user", "content": "What are my billing charges for April 2025?"}], custom_inputs={"customer": get_next_customer()}), "Billing Query Streaming"),
     (ResponsesAgentRequest(input=[{"role": "user", "content": "How much data did I use last month?"}], custom_inputs={"customer": get_next_customer()}), "Usage Query Streaming"),
-    
+
     # Tech support (no customer ID needed)
     (ResponsesAgentRequest(input=[{"role": "user", "content": "My phone won't connect to WiFi. How do I fix this?"}]), "Tech Support Streaming"),
 ]

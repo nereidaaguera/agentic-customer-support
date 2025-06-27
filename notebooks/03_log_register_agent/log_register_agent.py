@@ -13,20 +13,41 @@
 
 # COMMAND ----------
 
-import os
-import sys
-import mlflow
-import yaml
-
-project_root = os.path.abspath(os.path.join(os.getcwd(), "../.."))
-sys.path.append(project_root)
-print(f"Added {project_root} to Python path")
+dbutils.widgets.text("env", "dev")
+dbutils.widgets.text("git_commit", "")
+dbutils.widgets.text("experiment_name", "/Shared/telco_support_agent/dev/dev_telco_support_agent")
+dbutils.widgets.text("disable_tools", "")
 
 # COMMAND ----------
 
-from telco_support_agent.agent.supervisor import SupervisorAgent
+import os
+import sys
+
+import mlflow
+import yaml
+from mlflow.utils.databricks_utils import dbutils
+
+project_root = os.path.abspath(os.path.join(os.getcwd(), "../.."))
+sys.path.append(project_root)
+
+env = dbutils.widgets.get("env")
+git_commit = dbutils.widgets.get("git_commit")
+experiment_name = dbutils.widgets.get("experiment_name")
+disable_tools_str = dbutils.widgets.get("disable_tools")
+disable_tools = [tool.strip() for tool in disable_tools_str.split(",") if tool.strip()] if disable_tools_str else []
+
+os.environ['TELCO_SUPPORT_AGENT_ENV'] = env
+
+# COMMAND ----------
+
+from telco_support_agent.agents.supervisor import SupervisorAgent
 from telco_support_agent.ops.logging import log_agent
 from telco_support_agent.ops.registry import register_agent_to_uc
+from telco_support_agent.utils.config import config_manager
+
+# COMMAND ----------
+
+mlflow.set_experiment(experiment_name)
 
 # COMMAND ----------
 
@@ -40,11 +61,17 @@ CONFIG_PATH = "../../configs/log_register_agent.yaml"
 with open(CONFIG_PATH) as f:
     config = yaml.safe_load(f)
 
+uc_config = config_manager.get_uc_config()
+uc_model_name = uc_config.get_uc_model_name()
+
 print("Configuration:")
 print(f"  Name: {config['name']}")
 print(f"  Description: {config['description']}")
-print(f"  UC Model: {config['uc_registration']['catalog']}.{config['uc_registration']['schema']}.{config['uc_registration']['model_name']}")
+print(f"  UC Model: {uc_model_name}")
 print(f"  Input Example: {config['input_example']}")
+print(f"  Environment: {env}")
+print(f"  Git Commit: {git_commit}")
+print(f"  Experiment Name: {experiment_name}")
 
 # COMMAND ----------
 
@@ -54,7 +81,6 @@ print(f"  Input Example: {config['input_example']}")
 # COMMAND ----------
 
 from telco_support_agent.tools import initialize_tools
-from telco_support_agent.agent.config import config_manager
 
 print("Initializing required UC functions...")
 
@@ -81,13 +107,13 @@ print(f"\nInitialized {success_count}/{total_count} UC functions")
 
 print("Testing supervisor agent...")
 
-supervisor = SupervisorAgent()
+supervisor = SupervisorAgent(disable_tools=disable_tools)
 print(f"Created supervisor agent (LLM: {supervisor.llm_endpoint})")
 
 from mlflow.types.responses import ResponsesAgentRequest
 
 test_request = ResponsesAgentRequest(
-    input=[{"role": "user", "content": "What plan am I currently on?"}],
+    input=[{"role": "user", "content": "how much data did the customer use in May?"}],
     custom_inputs={"customer": "CUS-10001"}
 )
 
@@ -107,7 +133,8 @@ logged_model_info = log_agent(
     agent_class=SupervisorAgent,
     name=config["name"],
     input_example=config["input_example"],
-    environment="prod",
+    environment=env,
+    disable_tools=disable_tools,
 )
 
 print(f"Logged agent: {logged_model_info.model_uri}")
@@ -139,12 +166,20 @@ print("✅ Logged model works correctly")
 
 print("Registering to Unity Catalog...")
 
-uc_config = config["uc_registration"]
-uc_model_name = f"{uc_config['catalog']}.{uc_config['schema']}.{uc_config['model_name']}"
-
 model_version = register_agent_to_uc(
     model_uri=logged_model_info.model_uri,
     uc_model_name=uc_model_name,
 )
+
+# tag model with the commit hash
+if git_commit:
+    print(f"Tagging model with git_commit: {git_commit}")
+    client = mlflow.MlflowClient()
+    client.set_model_version_tag(
+        name=model_version.name,
+        version=model_version.version,
+        key="git_commit",
+        value=git_commit
+    )
 
 print(f"✅ Registered: {uc_model_name} version {model_version.version}")

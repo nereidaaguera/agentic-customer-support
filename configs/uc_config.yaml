@@ -1,0 +1,41 @@
+dev:
+  data:
+    catalog: telco_customer_support_prod
+    schema: gold
+  agent:
+    catalog: telco_customer_support_dev
+    schema: agent
+    model_name: telco_customer_support_agent
+    # permissions for UC functions
+    permissions:
+      groups:
+        - telco-customer-support
+      privileges:
+        - EXECUTE
+staging:
+  data:
+    catalog: telco_customer_support_prod
+    schema: gold
+  agent:
+    catalog: telco_customer_support_staging
+    schema: agent
+    model_name: telco_customer_support_agent
+    # permissions for UC functions
+    permissions:
+      groups:
+        - telco-customer-support
+      privileges:
+        - EXECUTE
+prod:
+  data:
+    catalog: telco_customer_support_prod
+    schema: gold
+  agent:
+    catalog: telco_customer_support_prod
+    schema: agent
+    model_name: telco_customer_support_agent
+    permissions:
+      groups:
+        - telco-customer-support
+      privileges:
+        - EXECUTE

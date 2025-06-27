@@ -1,0 +1,55 @@
+topics:
+  # Single-domain topics
+  
+  # Account-related queries
+  - name: account_information
+    description: Questions about customer account details, profile information, registration date, customer status, loyalty tier, and account metrics
+  
+  - name: plan_inquiry
+    description: Questions about current plans, subscription details, contract information, plan features, and subscription status
+  
+  - name: subscription_management
+    description: Questions about autopay settings, subscription preferences, multiple lines, and subscription modifications
+  
+  # Billing-related queries
+  - name: billing_inquiry
+    description: Questions about bill amounts, charges breakdown, billing statements, billing cycles, and billing history
+  
+  - name: payment_status
+    description: Questions about payment due dates, payment methods, payment history, unpaid amounts, and payment processing
+  
+  - name: usage_inquiry
+    description: Questions about data usage, voice minutes, SMS usage, usage patterns, and usage tracking
+  
+  - name: billing_dispute
+    description: Issues with unrecognized charges, billing discrepancies, incorrect amounts, and charge disputes
+  
+  # Technical Support queries
+  - name: connectivity_issues
+    description: Problems with network connection, WiFi connectivity, signal strength, data connectivity, and network coverage
+  
+  - name: device_problems
+    description: Issues with device activation, device troubleshooting, hardware malfunctions, device errors, and device setup
+  
+  - name: service_setup
+    description: Questions about setting up services like international roaming, voicemail, WiFi calling, and service configuration
+  
+  - name: call_issues
+    description: Problems with making or receiving calls, call quality, dropped calls, and voice service issues
+  
+  # Product-related queries
+  - name: plan_comparison
+    description: Questions comparing different plans, plan features, pricing differences, and plan recommendations
+  
+  - name: device_inquiry
+    description: Questions about available devices, device specifications, device compatibility, and device features
+  
+  - name: promotions_inquiry
+    description: Questions about current promotions, discounts, upgrade offers, and special deals
+  
+  - name: device_management
+    description: Questions about customer's current devices, device upgrades, trade-in options, and device account management
+
+  # Multi-domain topic
+  - name: multi_domain
+    description: Complex queries that span multiple service domains, such as billing issues combined with plan changes, account problems with technical support needs, or comprehensive service reviews involving billing, account, product, and technical aspects. These queries require coordination across multiple agent specializations to fully resolve.

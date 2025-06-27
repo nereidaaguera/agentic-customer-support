@@ -1,21 +1,46 @@
-#bundle:
-#  name: telco-support-agent
-#
-#permissions:
-#  - level: CAN_MANAGE
-#    group_name: telco-customer-support-dev
-#  - level: CAN_VIEW
-#    group_name: users
-#
-#include:
-#  - ./resources/*.yml
-#
-#targets:
-#  dev:
-#    default: true
-#    workspace:
-#      host: https://db-ml-models-dev-us-west.cloud.databricks.com
-#  # prod:
-#  #   default: false
-#  #   workspace:
-#  #     host: https://db-ml-models-prod-us-west.cloud.databricks.com
+bundle:
+  name: telco-support-agent
+
+variables:
+  experiment_name:
+    default: /Shared/telco_support_agent/dev/dev_telco_support_agent
+  disable_tools:
+    default: ""
+
+permissions:
+  - level: CAN_MANAGE
+    group_name: telco-customer-support
+  - level: CAN_VIEW
+    group_name: users
+
+include:
+  - ./resources/*.yml
+
+targets:
+  dev:
+    default: true
+    workspace:
+      host: https://e2-demo-west.cloud.databricks.com
+    run_as:
+      service_principal_name: ${workspace.current_user.userName}
+    variables:
+      experiment_name: /Shared/telco_support_agent/dev/dev_telco_support_agent
+      disable_tools: ""
+  staging:
+    default: false
+    workspace:
+      host: https://e2-demo-west.cloud.databricks.com
+    run_as:
+      service_principal_name: ${workspace.current_user.userName}
+    variables:
+      experiment_name: /telco_support_agent/staging/experiments/staging_telco_support_agent
+      disable_tools: get_usage_info
+  prod:
+    default: false
+    workspace:
+      host: https://e2-demo-west.cloud.databricks.com
+    run_as:
+      service_principal_name: ${workspace.current_user.userName}
+    variables:
+      experiment_name: /Shared/telco_support_agent/prod/prod_telco_support_agent
+      disable_tools: ""

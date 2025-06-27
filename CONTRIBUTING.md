@@ -2,7 +2,6 @@
 
 ## Development Workflow
 
-
 1. **Create a new branch** for your feature or bugfix, prepending with `<your-name>/` (e.g., `niall/add-customer-data-generation`)
 2. **Install dependencies** using Poetry: `poetry install` (requires `poetry>=2.1.2`)
 3. **Make changes**, following coding standards
@@ -24,7 +23,7 @@ pre-commit hooks will automatically enforce these standards when you commit.
 ## Setting Up Pre-commit Hooks
 
 ```bash
-# unt core.hookSPath globally
+# Unset core.hooksPath globally if needed
 git config --global --unset-all core.hooksPath
 # install pre-commit hooks
 # may hit issues with this if Databricks pre-commit git hooks installed. Can skip
@@ -37,8 +36,8 @@ TODO
 
 ## Adding New Dependencies
 
-1. Add the dependency using Poetry: `poetry add package-name`
-2. Regenerate `requirements.txt`: `poetry export -f requirements.txt --output requirements.txt --without-dev`
+1. **Add the dependency using Poetry**: `poetry add package-name`
+2. **Regenerate requirements.txt**: `./scripts/generate-requirements.sh`
 
 ## Pull Request Process
 

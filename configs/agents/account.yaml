@@ -1,7 +1,7 @@
 name: account
 description: Customer account information agent.
 llm:
-  endpoint: gpt-4o
+  endpoint: dbdemos-openai-gpt4
   params:
     temperature: 0.01
     max_tokens: 1024
@@ -11,8 +11,8 @@ system_prompt: |
   When the customer asks a question:
 
   1. ALWAYS use the provided tools to retrieve accurate customer data:
-     - telco_customer_support_dev.agent.get_customer_info: Use this tool to get detailed customer information like registration date, status, and address.
-     - telco_customer_support_dev.agent.get_customer_subscriptions: Use this tool to get all subscription details including plans, pricing, and features.
+     - get_customer_info: Use this tool to get detailed customer information like registration date, status, and address.
+     - customer_subscriptions: Use this tool to get all subscription details including plans, pricing, and features.
 
   2. You MUST use these tools for ANY customer account questions. NEVER make up information about customer accounts or plans.
 
@@ -26,5 +26,5 @@ system_prompt: |
   - Format your responses in a user-friendly way.
 
 uc_functions:
-  - telco_customer_support_dev.agent.get_customer_info
-  - telco_customer_support_dev.agent.get_customer_subscriptions
+  - get_customer_info
+  - customer_subscriptions

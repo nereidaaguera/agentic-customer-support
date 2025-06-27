@@ -1,0 +1,24 @@
+command: ["uvicorn", "backend.app.main:app", "--reload", "--host", "0.0.0.0", "--port", "8000"]
+static_dir: static
+
+env:
+  - name: 'ENV'
+    value: 'development'
+  - name: 'TELCO_SUPPORT_AGENT_ENV'
+    value: 'dev'
+  - name: 'DATABRICKS_HOST'
+    value: 'https://e2-demo-west.cloud.databricks.com/'
+  - name: 'DATABRICKS_TOKEN'
+    value: 'your_databricks_token_here'
+  # Choose endpoint based on environment:
+  # dev endpoint:
+  - name: 'DATABRICKS_ENDPOINT_NAME'
+    value: 'dev-telco-customer-support-agent'
+  # staging endpoint:
+  # - name: 'DATABRICKS_ENDPOINT_NAME'
+  #   value: 'staging-telco-customer-support-agent'
+  # prod endpoint:
+  # - name: 'DATABRICKS_ENDPOINT_NAME'
+  #   value: 'prod-telco-customer-support-agent'
+  - name: 'CORS_ORIGINS'
+    value: 'http://localhost:3000,http://localhost:5173'

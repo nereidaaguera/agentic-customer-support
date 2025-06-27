@@ -1,48 +1,48 @@
 # Config to deploy Agent
 
-# UC model info
-uc_model:
-  catalog: telco_customer_support_dev
-  schema: agent
-  model_name: telco_customer_support_agent
-  # version: 1  # Optional: specify version, otherwise uses latest
-
 # Deployment parameters
 deployment:
   endpoint_name: telco-customer-support-agent
-  scale_to_zero_enabled: true
+  scale_to_zero_enabled: false
   workload_size: Small  # Small, Medium, Large
   wait_for_ready: true
-  
+
   # Optional: Budget policy ID
   # budget_policy_id: budget-policy-id
-  
+
   # Optional: Additional deployment tags beyond defaults
   tags:
     project: telco_support_agent
     team: databricks-agents
     environment: dev
 
-# Environment variables for the deployed agent
-environment_vars:
-  # any environment variables the agent might need
-  # Example:
-  # API_KEY: {{secrets/telco-support/api-key}}
-  # DEBUG_MODE: false
+# Cleanup old deployment versions
+cleanup_old_versions: true
+cleanup:
+  keep_previous_count: 1  # Number of previous versions to keep (in addition to current)
+
+# Monitoring config
+monitoring:
+  enabled: true
+  replace_existing: false  # whether to replace existing monitors
+  fail_on_error: false  # continue deployment if monitoring setup fails  
 
 # Agent Instructions - will be visible in the Review App
 instructions: |
   Telco Customer Support Agent
-  
+
   This agent helps with telecom customer support queries including:
   - Account information and subscription details
-  - Billing inquiries and payment information  
+  - Billing inquiries and payment information
   - Technical support and troubleshooting
   - Product information and plan comparisons
-  
+
   Please test various query types and provide feedback on response quality.
 
 permissions:
-  users:
-    - telco-customer-support-dev
-  permission_level: CAN_MANAGE  # CAN_VIEW, CAN_RUN, CAN_MANAGE
+  - users:
+      - telco-customer-support
+    permission_level: CAN_MANAGE
+  - users:
+      - users
+    permission_level: CAN_QUERY
