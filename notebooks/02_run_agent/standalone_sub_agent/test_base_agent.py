@@ -25,7 +25,7 @@ if root_path:
 
 from mlflow.types.responses import ResponsesAgentRequest
 
-from telco_support_agent.agent.base_agent import BaseAgent, ToolInfo
+from telco_support_agent.agents.base_agent import BaseAgent, ToolInfo
 
 # COMMAND ----------
 
