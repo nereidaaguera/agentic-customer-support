@@ -27,7 +27,7 @@ if root_path:
 
 from mlflow.types.responses import ResponsesAgentRequest
 
-from telco_support_agent.agent.tech_support import TechSupportAgent
+from telco_support_agent.agents.tech_support import TechSupportAgent
 from telco_support_agent.utils.logging_utils import setup_logging
 
 setup_logging()
