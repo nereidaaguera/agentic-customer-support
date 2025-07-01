@@ -44,6 +44,11 @@ class Settings(BaseSettings):
             "DATABRICKS_ENDPOINT_NAME", "telco-customer-support-agent"
         )
     )
+    
+    # MLflow settings
+    mlflow_experiment_path_override: str = Field(
+        default_factory=lambda: os.getenv("MLFLOW_EXPERIMENT_PATH", "")
+    )
 
     # Request settings
     request_timeout: int = Field(default=300)
@@ -70,6 +75,7 @@ class Settings(BaseSettings):
         logger.info(f"  Endpoint Name: {self.databricks_endpoint_name}")
         logger.info(f"  Full Endpoint URL: {self.databricks_endpoint}")
         logger.info(f"  Auth Method: {self.auth_method}")
+        logger.info(f"  MLflow Experiment Path: {self.mlflow_experiment_path}")
 
         if self.auth_method == "none":
             logger.warning(
@@ -138,6 +144,27 @@ class Settings(BaseSettings):
             pass
 
         return headers
+
+    @property
+    def mlflow_experiment_path(self) -> str:
+        """Get the MLflow experiment path based on environment and endpoint."""
+        if self.mlflow_experiment_path_override:
+            return self.mlflow_experiment_path_override
+        
+        # get environment and base name from endpoint name
+        if self.databricks_endpoint_name.startswith("dev-"):
+            env = "dev"
+        elif self.databricks_endpoint_name.startswith("prod-"):
+            env = "prod"
+        else:
+            if self.environment == "production":
+                env = "prod"
+            else:
+                env = "dev"
+        
+        experiment_path = f"/Shared/telco_support_agent/{env}/{env}_telco_support_agent"
+        
+        return experiment_path
 
 
 @lru_cache

@@ -245,8 +245,9 @@ async def submit_feedback(
             f"{'positive' if request.is_positive else 'negative'} from agent {request.agent_id}"
         )
         
-        # Set the MLflow experiment to the production path
-        experiment_path = "/Shared/telco_support_agent/prod/prod_telco_support_agent"
+        # Set MLflow experiment path based on environment
+        experiment_path = settings.mlflow_experiment_path
+        logger.info(f"Using MLflow experiment path: {experiment_path}")
         mlflow.set_experiment(experiment_path)
         
         # Log the feedback to MLflow
