@@ -27,6 +27,7 @@ class AgentResponse(BaseModel):
     agent_type: Optional[str] = None
     custom_outputs: Optional[dict] = None
     tools_used: Optional[list[dict]] = None
+    trace_id: Optional[str] = None
 
 
 class TelcoAgentService:
@@ -142,7 +143,11 @@ class TelcoAgentService:
         # Add current user message
         input_messages.append({"role": "user", "content": message})
 
-        payload = {"input": input_messages, "custom_inputs": {"customer": customer_id}}
+        payload = {
+            "input": input_messages, 
+            "custom_inputs": {"customer": customer_id},
+            "databricks_options": {"return_trace": True}
+        }
 
         if stream:
             payload["stream"] = True
@@ -159,6 +164,23 @@ class TelcoAgentService:
             agent_type = None
             tools_used = []
             execution_steps = []
+            trace_id = None
+            
+            # Extract trace_id from the response
+            databricks_output = databricks_response.get('databricks_output', {})
+            if isinstance(databricks_output, dict):
+                trace_info = databricks_output.get('trace', {})
+                if isinstance(trace_info, dict):
+                    info = trace_info.get('info', {})
+                    if isinstance(info, dict):
+                        trace_id = info.get('trace_id')
+                
+                if not trace_id and isinstance(databricks_output, dict):
+                    trace_id = (databricks_output.get('trace_id') or
+                              databricks_output.get('request_id'))
+                
+            if not trace_id:
+                trace_id = databricks_response.get('trace_id')
 
             # parse output array to get execution details
             output = databricks_response.get("output", [])
@@ -252,6 +274,7 @@ class TelcoAgentService:
                 agent_type=agent_type,
                 custom_outputs={**custom_outputs, "execution_steps": execution_steps},
                 tools_used=tools_used,
+                trace_id=trace_id,
             )
 
         except Exception as e:
@@ -261,6 +284,7 @@ class TelcoAgentService:
                 agent_type=None,
                 custom_outputs=None,
                 tools_used=None,
+                trace_id=None,
             )
 
     def _parse_sse_line(self, line: str) -> Optional[dict]:
@@ -306,6 +330,7 @@ class TelcoAgentService:
                 agent_type="error",
                 custom_outputs={"error": "no_authentication"},
                 tools_used=None,
+                trace_id=None,
             )
 
         try:
@@ -358,6 +383,7 @@ class TelcoAgentService:
                     "status_code": e.response.status_code,
                 },
                 tools_used=None,
+                trace_id=None,
             )
 
         except httpx.RequestError as e:
@@ -367,6 +393,7 @@ class TelcoAgentService:
                 agent_type="error",
                 custom_outputs={"error": "connection_error"},
                 tools_used=None,
+                trace_id=None,
             )
 
         except Exception as e:
@@ -376,6 +403,7 @@ class TelcoAgentService:
                 agent_type="error",
                 custom_outputs={"error": "unexpected_error"},
                 tools_used=None,
+                trace_id=None,
             )
 
     async def send_message_stream(
@@ -425,6 +453,13 @@ class TelcoAgentService:
                 current_response_text = ""
                 agent_type = None
                 routing_info = None
+                trace_id = None
+                
+                # Try to extract trace_id from response headers
+                if hasattr(response, 'headers'):
+                    trace_id = (response.headers.get('x-databricks-trace-id') or 
+                              response.headers.get('trace-id') or
+                              response.headers.get('request-id'))
 
                 async for chunk in response.aiter_text():
                     lines = chunk.split("\n")
@@ -526,6 +561,7 @@ class TelcoAgentService:
                     "routing_decision": routing_info,
                     "tools_used": collected_tools,
                     "final_response": current_response_text,
+                    "trace_id": trace_id,
                     "done": True,
                 }
                 yield f"data: {json.dumps(completion_event)}\n\n"

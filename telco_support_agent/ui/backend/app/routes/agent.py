@@ -5,8 +5,10 @@ import logging
 import traceback
 from typing import Optional
 
+import mlflow
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
+from mlflow.entities import AssessmentSource, AssessmentSourceType
 from pydantic import BaseModel, Field
 
 from ..config import Settings, get_settings
@@ -46,6 +48,7 @@ class AgentResponse(BaseModel):
     tools_used: Optional[list[dict]] = Field(
         None, description="Tools/functions called by agent"
     )
+    trace_id: Optional[str] = Field(None, description="MLflow trace ID for feedback")
 
 
 class CustomerInfo(BaseModel):
@@ -53,6 +56,22 @@ class CustomerInfo(BaseModel):
 
     customer_id: str
     display_name: str
+
+
+class FeedbackRequest(BaseModel):
+    """Feedback request model."""
+
+    trace_id: str = Field(..., description="MLflow trace ID")
+    is_positive: bool = Field(..., description="True for thumbs up, False for thumbs down")
+    comment: Optional[str] = Field(None, description="Optional feedback comment")
+    agent_id: str = Field(..., description="Human customer service agent ID who provided feedback")
+
+
+class FeedbackResponse(BaseModel):
+    """Feedback response model."""
+
+    status: str = Field(..., description="Status of feedback submission")
+    trace_id: str = Field(..., description="MLflow trace ID that feedback was logged to")
 
 
 def get_agent_service(settings: Settings = Depends(get_settings)) -> TelcoAgentService:
@@ -213,3 +232,45 @@ async def debug_info(settings: Settings = Depends(get_settings)):
     except Exception as e:
         logger.error(f"Debug info error: {str(e)}")
         return {"error": str(e)}
+
+
+@router.post("/feedback", response_model=FeedbackResponse)
+async def submit_feedback(
+    request: FeedbackRequest, settings: Settings = Depends(get_settings)
+):
+    """Submit customer service agent feedback for a specific trace."""
+    try:
+        logger.info(
+            f"Received feedback for trace {request.trace_id}: "
+            f"{'positive' if request.is_positive else 'negative'} from agent {request.agent_id}"
+        )
+        
+        # Set the MLflow experiment to the production path
+        experiment_path = "/Shared/telco_support_agent/prod/prod_telco_support_agent"
+        mlflow.set_experiment(experiment_path)
+        
+        # Log the feedback to MLflow
+        mlflow.log_feedback(
+            trace_id=request.trace_id,
+            name="agent_feedback",
+            value=request.is_positive,
+            source=AssessmentSource(
+                source_type=AssessmentSourceType.HUMAN,
+                source_id=request.agent_id,
+            ),
+            rationale=request.comment,
+        )
+        
+        logger.info(f"Successfully logged feedback to MLflow for trace {request.trace_id}")
+        
+        return FeedbackResponse(
+            status="success",
+            trace_id=request.trace_id,
+        )
+        
+    except Exception as e:
+        logger.error(f"Error submitting feedback: {str(e)}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(
+            status_code=500, detail=f"Error submitting feedback: {str(e)}"
+        ) from e
