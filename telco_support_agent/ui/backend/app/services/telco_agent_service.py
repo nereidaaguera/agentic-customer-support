@@ -455,11 +455,9 @@ class TelcoAgentService:
                 routing_info = None
                 trace_id = None
                 
-                # Try to extract trace_id from response headers
-                if hasattr(response, 'headers'):
-                    trace_id = (response.headers.get('x-databricks-trace-id') or 
-                              response.headers.get('trace-id') or
-                              response.headers.get('request-id'))
+                # Note: trace_id is not available in streaming responses
+                # from Databricks - it's only available in the final non-streaming response
+                # that includes databricks_output.trace.info.trace_id
 
                 async for chunk in response.aiter_text():
                     lines = chunk.split("\n")
@@ -550,6 +548,17 @@ class TelcoAgentService:
                                     "text": current_response_text,
                                 }
                                 yield f"data: {json.dumps(response_event)}\n\n"
+                                
+                                # Extract trace_id from databricks_output if present
+                                databricks_output = event_data.get("databricks_output", {})
+                                if isinstance(databricks_output, dict):
+                                    trace_info = databricks_output.get("trace", {})
+                                    if isinstance(trace_info, dict):
+                                        info = trace_info.get("info", {})
+                                        if isinstance(info, dict):
+                                            extracted_trace_id = info.get("trace_id")
+                                            if extracted_trace_id:
+                                                trace_id = extracted_trace_id
 
                         elif event_type == "done":
                             # stream completed
