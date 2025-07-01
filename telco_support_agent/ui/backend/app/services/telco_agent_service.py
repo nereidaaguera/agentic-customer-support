@@ -549,8 +549,8 @@ class TelcoAgentService:
                                 }
                                 yield f"data: {json.dumps(response_event)}\n\n"
                                 
-                                # Extract trace_id from databricks_output if present
-                                databricks_output = event_data.get("databricks_output", {})
+                                # Extract trace_id from databricks_output if present in the item
+                                databricks_output = item.get("databricks_output", {})
                                 if isinstance(databricks_output, dict):
                                     trace_info = databricks_output.get("trace", {})
                                     if isinstance(trace_info, dict):
