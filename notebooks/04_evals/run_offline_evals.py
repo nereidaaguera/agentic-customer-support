@@ -1,8 +1,8 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Run Offline Evaluations
+# MAGIC # Run Offline Evals
 # MAGIC
-# MAGIC Simple offline evaluation using custom telco scorers
+# MAGIC offline evals using custom scorers
 
 # COMMAND ----------
 
