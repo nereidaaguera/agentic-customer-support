@@ -63,17 +63,25 @@ class FeedbackRequest(BaseModel):
     """Feedback request model."""
 
     trace_id: str = Field(..., description="MLflow trace ID")
-    is_positive: bool = Field(..., description="True for thumbs up, False for thumbs down")
+    is_positive: bool = Field(
+        ..., description="True for thumbs up, False for thumbs down"
+    )
     comment: Optional[str] = Field(None, description="Optional feedback comment")
-    agent_id: str = Field(..., description="Human customer service agent ID who provided feedback")
+    agent_id: str = Field(
+        ..., description="Human customer service agent ID who provided feedback"
+    )
 
 
 class FeedbackResponse(BaseModel):
     """Feedback response model."""
 
     status: str = Field(..., description="Status of feedback submission")
-    trace_id: str = Field(..., description="MLflow trace ID that feedback was logged to")
-    experiment_url: Optional[str] = Field(None, description="URL to MLflow experiment for viewing evaluations")
+    trace_id: str = Field(
+        ..., description="MLflow trace ID that feedback was logged to"
+    )
+    experiment_url: Optional[str] = Field(
+        None, description="URL to MLflow experiment for viewing evaluations"
+    )
 
 
 def get_agent_service(settings: Settings = Depends(get_settings)) -> TelcoAgentService:
@@ -240,10 +248,7 @@ async def debug_info(settings: Settings = Depends(get_settings)):
 async def get_mlflow_experiment_info(settings: Settings = Depends(get_settings)):
     """Get MLflow experiment information including URL."""
     try:
-        experiment_id_map = {
-            "dev": "2827072201880641",
-            "prod": "2827072201880761"
-        }
+        experiment_id_map = {"dev": "2827072201880641", "prod": "2827072201880761"}
 
         env = "dev"
         if settings.databricks_endpoint_name.startswith("prod-"):
@@ -262,7 +267,7 @@ async def get_mlflow_experiment_info(settings: Settings = Depends(get_settings))
             "experiment_id": experiment_id,
             "experiment_path": settings.mlflow_experiment_path,
             "mlflow_url": mlflow_url,
-            "environment": env
+            "environment": env,
         }
 
     except Exception as e:
@@ -271,7 +276,7 @@ async def get_mlflow_experiment_info(settings: Settings = Depends(get_settings))
         return {
             "error": str(e),
             "experiment_path": settings.mlflow_experiment_path,
-            "mlflow_url": None
+            "mlflow_url": None,
         }
 
 
@@ -322,7 +327,9 @@ async def submit_feedback(
             rationale=request.comment,
         )
 
-        logger.info(f"Successfully logged feedback to MLflow for trace {request.trace_id}")
+        logger.info(
+            f"Successfully logged feedback to MLflow for trace {request.trace_id}"
+        )
 
         return FeedbackResponse(
             status="success",
