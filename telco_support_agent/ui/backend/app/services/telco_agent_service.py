@@ -316,33 +316,86 @@ class TelcoAgentService:
             try:
                 return json.loads(data_content)
             except json.JSONDecodeError as e:
-                # For large chunks that likely contain trace data, try to extract essential info
-                if len(data_content) > 1000:
-                    logger.debug(f"Attempting to extract data from large unparseable SSE chunk: {len(data_content)} chars")
-
-                    # Try to extract response text from unparseable chunk as fallback
-                    if '"role":"assistant"' in data_content and '"output_text"' in data_content:
-                        text_match = re.search(r'"output_text"[^}]*"text":\s*"([^"]*(?:\\.[^"]*)*)"', data_content)
-                        if text_match:
-                            raw_text = text_match.group(1)
-                            # Properly decode escaped characters including Unicode
-                            extracted_text = decode_unicode_escapes(raw_text.replace('\\"', '"'))
-                            logger.debug(f"Extracted text from unparseable chunk: {len(extracted_text)} chars")
-
-                            # Return a simplified parseable event structure
+                # For large chunks that likely contain trace data, try harder to parse
+                if 'databricks_output' in data_content and 'trace' in data_content:
+                    logger.debug(f"Found large SSE chunk with databricks_output: {len(data_content)} chars")
+                    
+                    # This is likely the final event with complete response
+                    # Extract just the content we need
+                    if '"type":"response.output_item.done"' in data_content and '"role":"assistant"' in data_content:
+                        # Try to extract the item object which contains the full response
+                        item_match = re.search(r'"item"\s*:\s*({[^}]*"role"\s*:\s*"assistant"[^}]*})', data_content)
+                        if item_match:
+                            try:
+                                item_str = item_match.group(1)
+                                # Find the content array within the item
+                                content_start = item_str.find('"content":')
+                                if content_start != -1:
+                                    # Extract content array carefully
+                                    content_start = item_str.find('[', content_start)
+                                    if content_start != -1:
+                                        bracket_count = 0
+                                        content_end = content_start
+                                        for i in range(content_start, len(item_str)):
+                                            if item_str[i] == '[':
+                                                bracket_count += 1
+                                            elif item_str[i] == ']':
+                                                bracket_count -= 1
+                                                if bracket_count == 0:
+                                                    content_end = i + 1
+                                                    break
+                                        
+                                        content_str = item_str[content_start:content_end]
+                                        # Now parse the content array
+                                        content_array = json.loads(content_str)
+                                        
+                                        for content_item in content_array:
+                                            if content_item.get("type") == "output_text":
+                                                text = content_item.get("text", "")
+                                                if text:
+                                                    logger.info(f"Extracted full text from databricks_output event: {len(text)} chars")
+                                                    return {
+                                                        "type": "response.output_item.done",
+                                                        "item": {
+                                                            "type": "message",
+                                                            "role": "assistant",
+                                                            "content": [{"type": "output_text", "text": text}]
+                                                        }
+                                                    }
+                            except Exception as extract_error:
+                                logger.debug(f"Failed to extract from item match: {extract_error}")
+                    
+                    # Fallback: Try to extract any text field in the response
+                    # Look for the longest text field (likely the complete response)
+                    all_text_matches = re.findall(r'"text"\s*:\s*"((?:[^"\\]|\\.)*)"', data_content)
+                    if all_text_matches:
+                        # Find the longest match
+                        longest_text = ""
+                        for raw_text in all_text_matches:
+                            try:
+                                decoded_text = json.loads('"' + raw_text + '"')
+                                if len(decoded_text) > len(longest_text):
+                                    longest_text = decoded_text
+                            except:
+                                pass
+                        
+                        if longest_text and len(longest_text) > 100:  # Sanity check
+                            logger.info(f"Extracted longest text from unparseable chunk: {len(longest_text)} chars")
                             return {
                                 "type": "response.output_item.done",
                                 "item": {
                                     "type": "message",
                                     "role": "assistant",
-                                    "content": [{"type": "output_text", "text": extracted_text}]
+                                    "content": [{"type": "output_text", "text": longest_text}]
                                 }
                             }
-
+                    
                     # If we can't extract anything useful, skip silently
                     return None
                 else:
-                    logger.warning(f"Failed to parse SSE data: {data_content}, error: {e}")
+                    # For non-trace chunks, log warning if they're large
+                    if len(data_content) > 100:
+                        logger.warning(f"Failed to parse SSE data: {data_content[:100]}..., error: {e}")
                     return None
 
         return None
@@ -506,23 +559,8 @@ class TelcoAgentService:
                             logger.info(f"Extracted trace_id from raw chunk: {extracted_trace_id}")
                             trace_id = extracted_trace_id
 
-                    # Check for response text in raw chunks and extract it
-                    if "output_text" in chunk and not current_response_text:
-                        # Look for response text in the format: "output_text":{"text":"..."}
-                        text_match = re.search(r'"output_text"[^}]*"text":\s*"([^"]*(?:\\.[^"]*)*)"', chunk)
-                        if text_match:
-                            raw_text = text_match.group(1)
-                            # Properly decode escaped characters including Unicode
-                            extracted_text = decode_unicode_escapes(raw_text.replace('\\"', '"'))
-                            current_response_text = extracted_text
-                            logger.debug(f"Extracted response text from raw chunk: {len(extracted_text)} chars")
-
-                            # Emit response_text event immediately
-                            response_event = {
-                                "type": "response_text",
-                                "text": extracted_text,
-                            }
-                            yield f"data: {json.dumps(response_event)}\n\n"
+                    # Skip text extraction from raw chunks - rely on parsed SSE events instead
+                    # This avoids issues with regex-based extraction truncating text
 
                     lines = chunk.split("\n")
 
@@ -533,6 +571,7 @@ class TelcoAgentService:
                             continue
 
                         event_type = event_data.get("type")
+                        logger.debug(f"Processing streaming event: {event_type}")
 
                         if event_type == "response.debug":
                             # Routing decision
@@ -563,6 +602,7 @@ class TelcoAgentService:
                         elif event_type == "response.output_item.done":
                             item = event_data.get("item", {})
                             item_type = item.get("type")
+                            logger.debug(f"Processing output_item.done with item_type: {item_type}")
 
                             if item_type == "function_call":
                                 # Tool call started
@@ -603,15 +643,22 @@ class TelcoAgentService:
                                 content = item.get("content", [])
                                 for content_item in content:
                                     if content_item.get("type") == "output_text":
-                                        current_response_text += content_item.get(
-                                            "text", ""
-                                        )
+                                        # Update with the text from the message event
+                                        extracted_text = content_item.get("text", "")
+                                        if extracted_text:
+                                            # Always use the complete text from the message event
+                                            current_response_text = extracted_text
+                                            logger.info(f"Set response text from message event: {len(extracted_text)} chars")
+                                            
+                                            # Log first 200 chars for debugging
+                                            logger.debug(f"Response text preview: {extracted_text[:200]}...")
 
-                                response_event = {
-                                    "type": "response_text",
-                                    "text": current_response_text,
-                                }
-                                yield f"data: {json.dumps(response_event)}\n\n"
+                                            # Emit the complete response text
+                                            response_event = {
+                                                "type": "response_text",
+                                                "text": current_response_text,
+                                            }
+                                            yield f"data: {json.dumps(response_event)}\n\n"
 
                                 # Extract trace_id from databricks_output if present in the item
                                 databricks_output = item.get("databricks_output", {})
@@ -629,6 +676,11 @@ class TelcoAgentService:
                             break
 
 
+                # Log final response length for debugging
+                logger.info(f"Sending completion event with response text of {len(current_response_text)} chars")
+                if len(current_response_text) < 500:
+                    logger.warning(f"Response text seems truncated: {current_response_text}")
+                
                 completion_event = {
                     "type": "completion",
                     "agent_type": agent_type,
