@@ -62,8 +62,9 @@
                     color="primary"
                     variant="text"
                     class="see-evaluations-btn"
-                    href="https://app.getreprise.com/launch/dnbxeoy/"
+                    :href="message.feedbackState.experimentUrl || '#'"
                     target="_blank"
+                    :disabled="!message.feedbackState.experimentUrl"
                   >
                     <v-icon icon="mdi-chart-box" class="mr-1" size="small" />
                     See Evaluations
@@ -215,6 +216,7 @@ interface Message {
     showInput: boolean;
     text: string;
     submitted?: boolean;
+    experimentUrl?: string;
   };
 }
 
@@ -567,21 +569,22 @@ const submitFeedback = async (message: Message) => {
   
   try {
     // Submit feedback to the backend using the trace_id
-    const success = await apiSubmitFeedback(
+    const result = await apiSubmitFeedback(
       message.trace_id,
       message.feedbackState.type === 'positive',
       message.feedbackState.text || null,
       agentId
     );
     
-    if (success) {
+    if (result.success) {
       console.log('Feedback submitted successfully');
       // Update the feedback state to show the evaluations button
       message.feedbackState = {
         ...message.feedbackState,
         showInput: false,
         submitted: true,
-        text: ''
+        text: '',
+        experimentUrl: result.experimentUrl
       };
     } else {
       console.error('Failed to submit feedback');

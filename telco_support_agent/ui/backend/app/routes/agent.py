@@ -9,6 +9,7 @@ import mlflow
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from mlflow.entities import AssessmentSource, AssessmentSourceType
+from mlflow.client import MlflowClient
 from pydantic import BaseModel, Field
 
 from ..config import Settings, get_settings
@@ -72,6 +73,7 @@ class FeedbackResponse(BaseModel):
 
     status: str = Field(..., description="Status of feedback submission")
     trace_id: str = Field(..., description="MLflow trace ID that feedback was logged to")
+    experiment_url: Optional[str] = Field(None, description="URL to MLflow experiment for viewing evaluations")
 
 
 def get_agent_service(settings: Settings = Depends(get_settings)) -> TelcoAgentService:
@@ -253,6 +255,22 @@ async def submit_feedback(
         logger.info(f"Using MLflow experiment path: {experiment_path}")
         mlflow.set_experiment(experiment_path)
 
+        # Get trace info to extract experiment_id
+        client = MlflowClient()
+        experiment_url = None
+        
+        try:
+            # Get trace information
+            trace = client.get_trace(request.trace_id)
+            experiment_id = trace.info.experiment_id
+            
+            # Construct MLflow experiment URL
+            experiment_url = f"{settings.databricks_host}/ml/experiments/{experiment_id}"
+            logger.info(f"Constructed experiment URL: {experiment_url}")
+            
+        except Exception as e:
+            logger.warning(f"Could not get experiment URL from trace: {e}")
+
         # Log the feedback to MLflow
         mlflow.log_feedback(
             trace_id=request.trace_id,
@@ -270,6 +288,7 @@ async def submit_feedback(
         return FeedbackResponse(
             status="success",
             trace_id=request.trace_id,
+            experiment_url=experiment_url,
         )
 
     except Exception as e:

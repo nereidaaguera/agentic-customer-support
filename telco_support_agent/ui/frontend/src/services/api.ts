@@ -859,7 +859,7 @@ export const submitFeedback = async (
   isPositive: boolean,
   comment: string | null,
   agentId: string
-): Promise<boolean> => {
+): Promise<{ success: boolean; experimentUrl?: string }> => {
   try {
     const response = await fetch('/api/feedback', {
       method: 'POST',
@@ -880,10 +880,13 @@ export const submitFeedback = async (
 
     const result = await response.json();
     console.log('Feedback submitted successfully:', result);
-    return true;
+    return { 
+      success: true, 
+      experimentUrl: result.experiment_url 
+    };
   } catch (error) {
     console.error('Error submitting feedback:', error);
-    return false;
+    return { success: false };
   }
 };
 
