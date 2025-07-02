@@ -51,6 +51,7 @@ interface StreamingEvent {
   final_response?: string;
   error?: string;
   done?: boolean;
+  trace_id?: string;
 }
 
 // =============================================================================
@@ -549,6 +550,7 @@ export const sendMessageToAgent = async (
     let toolsUsed: ToolCall[] = [];
     let currentToolCalls = new Map<string, any>();
     let finalResponse = '';
+    let traceId: string | null = null;
 
     try {
       while (true) {
@@ -673,6 +675,7 @@ export const sendMessageToAgent = async (
                   // Final completion event
                   agentType = event.agent_type || agentType;
                   finalResponse = event.final_response || finalResponse;
+                  traceId = event.trace_id || traceId;
                   
                   // Build final informations
                   const finalInformations: string[] = [];
@@ -701,7 +704,8 @@ export const sendMessageToAgent = async (
                     type: 'final-answer',
                     data: {
                       final_answer: finalResponse || "I apologize, but I couldn't generate a proper response. Please try again.",
-                      final_informations: finalInformations
+                      final_informations: finalInformations,
+                      trace_id: traceId
                     }
                   });
                   return; // Exit the function
@@ -798,6 +802,9 @@ export const sendMessageToAgentNonStreaming = async (
     // Convert backend response to frontend format
     const agentResponse = convertBackendToAgentResponse(backendResponse);
     agentResponse.question = lastUserMessage.content;
+    
+    // Extract trace_id from backend response
+    const traceId = backendResponse.trace_id;
 
     // If intelligence is enabled, emit tool events
     if (intelligenceEnabled && agentResponse.tools.length > 0) {
@@ -823,7 +830,8 @@ export const sendMessageToAgentNonStreaming = async (
       type: 'final-answer',
       data: {
         final_answer: agentResponse.final_answer,
-        final_informations: agentResponse.final_informations
+        final_informations: agentResponse.final_informations,
+        trace_id: traceId
       }
     });
 
@@ -840,6 +848,45 @@ export const sendMessageToAgentNonStreaming = async (
     });
     
     throw error;
+  }
+};
+
+/**
+ * Submit customer service agent feedback for a specific trace
+ */
+export const submitFeedback = async (
+  traceId: string,
+  isPositive: boolean,
+  comment: string | null,
+  agentId: string
+): Promise<{ success: boolean; experimentUrl?: string }> => {
+  try {
+    const response = await fetch('/api/feedback', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        trace_id: traceId,
+        is_positive: isPositive,
+        comment: comment,
+        agent_id: agentId,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    console.log('Feedback submitted successfully:', result);
+    return { 
+      success: true, 
+      experimentUrl: result.experiment_url 
+    };
+  } catch (error) {
+    console.error('Error submitting feedback:', error);
+    return { success: false };
   }
 };
 
