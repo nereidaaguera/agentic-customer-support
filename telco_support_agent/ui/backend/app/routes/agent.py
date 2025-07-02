@@ -265,7 +265,7 @@ async def submit_feedback(
             experiment_id = trace.info.experiment_id
             
             # Construct MLflow experiment URL
-            experiment_url = f"{settings.databricks_host}/ml/experiments/{experiment_id}"
+            experiment_url = f"{settings.databricks_host}ml/experiments/{experiment_id}"
             logger.info(f"Constructed experiment URL: {experiment_url}")
             
         except Exception as e:
