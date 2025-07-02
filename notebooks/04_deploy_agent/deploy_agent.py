@@ -200,6 +200,7 @@ print("="*50)
 
 from telco_support_agent.ops.monitoring import (AgentMonitoringError,
                                                 create_agent_monitor)
+from telco_support_agent.evaluation import ONLINE_METRICS
 
 monitoring_config = deploy_agent_config.get("monitoring", {})
 
@@ -210,15 +211,22 @@ if monitoring_config.get("enabled", False):
     print(f"Experiment: {experiment_name}")
     print(f"Agent catalog: {uc_config.agent['catalog']}")
     print(f"Agent schema: {uc_config.agent['schema']}")
-    print("Assessments: []")
+    
+    # display custom metrics
+    print("Custom Telco Assessments:")
+    for metric in ONLINE_METRICS:
+        metric_name = getattr(metric, '__name__', 'unknown_metric')
+        print(f"  - {metric_name}")
     print()
 
     try:
-        # create external monitor with empty assessments
+        # create external monitor with custom metrics
         monitor = create_agent_monitor(
             uc_config=uc_config,
             experiment_name=experiment_name,
             replace_existing=monitoring_config.get("replace_existing", False),
+            sample=monitoring_config.get("sample_rate", 0.1),
+            custom_metrics=ONLINE_METRICS,
         )
         
         print("✅ External monitor created successfully!")
@@ -229,7 +237,7 @@ if monitoring_config.get("enabled", False):
         if hasattr(monitor, 'monitoring_page_url'):
             print(f"Monitoring page: {monitor.monitoring_page_url}")
         
-        print("\nNote: Monitor created with empty assessments.")
+        print(f"\nNote: Monitor created with {len(ONLINE_METRICS)} custom scorer assessments.")
         
     except AgentMonitoringError as e:
         print(f"❌ Failed to create monitor: {str(e)}")

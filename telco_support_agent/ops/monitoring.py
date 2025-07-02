@@ -1,7 +1,10 @@
 """Monitoring utils for deployed agents."""
 
+from typing import Optional
+
 from databricks.agents.monitoring import (
     AssessmentsSuiteConfig,
+    CustomMetric,
     create_external_monitor,
     delete_external_monitor,
     get_external_monitor,
@@ -24,14 +27,16 @@ def create_agent_monitor(
     experiment_name: str,
     replace_existing: bool = True,
     sample: float = None,
+    custom_metrics: Optional[list] = None,
 ) -> any:
-    """Create an external monitor for the deployed agent with minimal configuration.
+    """Create an external monitor for the deployed agent with custom metrics.
 
     Args:
         uc_config: Unity Catalog configuration
         experiment_name: MLflow experiment name
         replace_existing: Whether to replace existing monitor
         sample: Sampling rate for traces (0.0 < rate <= 1.0)
+        custom_metrics: List of custom metric functions to use
 
     Returns:
         Created external monitor
@@ -51,15 +56,25 @@ def create_agent_monitor(
                     f"No existing monitor found for experiment: {experiment_name}"
                 )
 
-        # create monitor with empty assessments
+        # create monitor with custom metrics
         logger.info(f"Creating external monitor for experiment: {experiment_name}")
         logger.info(f"Using agent catalog: {uc_config.agent['catalog']}")
         logger.info(f"Using agent schema: {uc_config.agent['schema']}")
 
+        # prepare assessments list
+        assessments = []
+        if custom_metrics:
+            for metric_func in custom_metrics:
+                metric_name = getattr(metric_func, "__name__", "unknown_metric")
+                logger.info(f"Adding custom metric: {metric_name}")
+                assessments.append(CustomMetric(metric_func))
+
+        logger.info(f"Monitor will use {len(assessments)} custom assessments")
+
         assessments_config = AssessmentsSuiteConfig(
             sample=sample,
             paused=False,
-            assessments=[],
+            assessments=assessments,
         )
 
         monitor = create_external_monitor(
@@ -69,7 +84,9 @@ def create_agent_monitor(
             experiment_name=experiment_name,
         )
 
-        logger.info("Successfully created external monitor with empty assessments")
+        logger.info(
+            "Successfully created external monitor with custom telco assessments"
+        )
         logger.info(
             f"Monitor will create tables in: {uc_config.agent['catalog']}.{uc_config.agent['schema']}"
         )
