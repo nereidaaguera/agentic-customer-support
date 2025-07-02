@@ -26,34 +26,50 @@
                   </div>
                 </div>
                 
-                <div class="intelligence-toggle">
-                  <v-tooltip
-                    location="bottom"
-                    text="Toggle AI intelligence visualization"
+                <div class="header-controls">
+                  <!-- MLflow Experiment Link -->
+                  <v-btn
+                    v-if="mlflowUrl"
+                    :href="mlflowUrl"
+                    target="_blank"
+                    variant="text"
+                    size="small"
+                    class="mlflow-link"
                   >
-                    <template v-slot:activator="{ props }">
-                      <div class="d-flex align-center">
-                        <span class="mr-2">Intelligence:</span>
-                        <v-switch
-                          v-bind="props"
-                          v-model="intelligenceEnabled"
-                          color="success"
-                          hide-details
-                          density="compact"
-                          inset
-                        ></v-switch>
-                        <span 
-                          class="ml-1 text-caption" 
-                          :style="{ 
-                            color: intelligenceEnabled ? '#2e7d32' : '#757575', 
-                            fontWeight: 500
-                          }"
-                        >
-                          {{ intelligenceEnabled ? 'On' : 'Off' }}
-                        </span>
-                      </div>
-                    </template>
-                  </v-tooltip>
+                    <v-icon icon="mdi-chart-box" size="small" class="mr-1" />
+                    MLflow Experiment
+                  </v-btn>
+                  
+                  <!-- Intelligence Toggle -->
+                  <div class="intelligence-toggle">
+                    <v-tooltip
+                      location="bottom"
+                      text="Toggle AI intelligence visualization"
+                    >
+                      <template v-slot:activator="{ props }">
+                        <div class="d-flex align-center">
+                          <span class="mr-2">Intelligence:</span>
+                          <v-switch
+                            v-bind="props"
+                            v-model="intelligenceEnabled"
+                            color="success"
+                            hide-details
+                            density="compact"
+                            inset
+                          ></v-switch>
+                          <span 
+                            class="ml-1 text-caption" 
+                            :style="{ 
+                              color: intelligenceEnabled ? '#2e7d32' : '#757575', 
+                              fontWeight: 500
+                            }"
+                          >
+                            {{ intelligenceEnabled ? 'On' : 'Off' }}
+                          </span>
+                        </div>
+                      </template>
+                    </v-tooltip>
+                  </div>
                 </div>
               </v-card-title>
               
@@ -91,7 +107,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import Header from '@/components/Header.vue'
 import ChatBot from '@/components/ChatBot.vue'
 import IntelligentPanel from '@/components/IntelligentPanel.vue'
@@ -108,6 +124,9 @@ const intelligenceEnabled = ref(true) // Default state for the toggle
 
 // Customer management
 const selectedCustomerId = ref('CUS-10001') // Default customer
+
+// MLflow experiment URL
+const mlflowUrl = ref<string | null>(null)
 
 // Handle refresh
 const handleRefresh = () => {
@@ -176,6 +195,19 @@ const handleFinalAnswerUpdate = (answer: string) => {
 const handleFinalInformationsUpdate = (informations: string[]) => {
   finalInformations.value = informations
 }
+
+// Fetch MLflow experiment URL on mount
+onMounted(async () => {
+  try {
+    const response = await fetch('/api/mlflow-experiment')
+    if (response.ok) {
+      const data = await response.json()
+      mlflowUrl.value = data.mlflow_url
+    }
+  } catch (error) {
+    console.error('Failed to fetch MLflow experiment URL:', error)
+  }
+})
 </script>
 
 <style>
@@ -200,9 +232,34 @@ html, body {
   min-width: 0; /* Allow content to shrink */
 }
 
-.intelligence-toggle {
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
   flex-shrink: 0;
   margin-left: 16px;
+}
+
+.mlflow-link {
+  text-transform: none !important;
+  font-weight: 500;
+  letter-spacing: normal;
+  font-style: italic;
+  color: #43ADE8 !important;
+  font-size: 0.95rem !important;
+}
+
+.mlflow-link:hover {
+  background-color: rgba(67, 173, 232, 0.08);
+  color: #2196F3 !important;
+}
+
+.mlflow-link .v-icon {
+  color: #43ADE8 !important;
+}
+
+.intelligence-toggle {
+  flex-shrink: 0;
   border-radius: 8px;
 }
 
@@ -217,10 +274,21 @@ html, body {
     align-items: flex-start;
   }
   
-  .intelligence-toggle {
+  .header-controls {
     margin-left: 0;
     margin-top: 12px;
     align-self: flex-end;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  
+  .mlflow-link {
+    padding: 4px 8px;
+    font-size: 0.875rem;
+  }
+  
+  .intelligence-toggle {
+    margin-left: 0;
   }
   
   .customer-selector-container {
@@ -284,7 +352,7 @@ html, body {
     align-items: flex-start;
   }
   
-  .intelligence-toggle {
+  .header-controls {
     margin-top: 0;
   }
 }
@@ -319,8 +387,14 @@ html, body {
     margin-bottom: 12px;
   }
   
-  .intelligence-toggle {
+  .header-controls {
     margin-top: 8px;
+    gap: 8px;
+  }
+  
+  .mlflow-link {
+    padding: 2px 6px;
+    font-size: 0.75rem;
   }
   
   .intelligence-toggle .d-flex {

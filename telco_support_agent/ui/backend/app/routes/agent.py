@@ -236,6 +236,45 @@ async def debug_info(settings: Settings = Depends(get_settings)):
         return {"error": str(e)}
 
 
+@router.get("/mlflow-experiment")
+async def get_mlflow_experiment_info(settings: Settings = Depends(get_settings)):
+    """Get MLflow experiment information including URL."""
+    try:
+        experiment_id_map = {
+            "dev": "2827072201880641",
+            "prod": "2827072201880761"
+        }
+
+        env = "dev"
+        if settings.databricks_endpoint_name.startswith("prod-"):
+            env = "prod"
+        elif settings.databricks_endpoint_name.startswith("dev-"):
+            env = "dev"
+        elif settings.environment == "production":
+            env = "prod"
+
+        experiment_id = experiment_id_map.get(env, experiment_id_map["dev"])
+
+        mlflow_host = "https://e2-demo-west.cloud.databricks.com"
+        mlflow_url = f"{mlflow_host}/ml/experiments/{experiment_id}"
+
+        return {
+            "experiment_id": experiment_id,
+            "experiment_path": settings.mlflow_experiment_path,
+            "mlflow_url": mlflow_url,
+            "environment": env
+        }
+
+    except Exception as e:
+        logger.error(f"Error getting MLflow experiment info: {str(e)}")
+        logger.error(traceback.format_exc())
+        return {
+            "error": str(e),
+            "experiment_path": settings.mlflow_experiment_path,
+            "mlflow_url": None
+        }
+
+
 @router.post("/feedback", response_model=FeedbackResponse)
 async def submit_feedback(
     request: FeedbackRequest, settings: Settings = Depends(get_settings)
