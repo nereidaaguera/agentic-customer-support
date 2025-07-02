@@ -320,18 +320,20 @@ class TelcoAgentService:
                 if 'databricks_output' in data_content and 'trace' in data_content:
                     logger.debug(f"Found large SSE chunk with databricks_output: {len(data_content)} chars")
 
+                    # TODO: This is a hack to extract the full response from the SSE chunk.
+                    # TODO: It's not a good solution and should be replaced with a better one.
+                    # TODO: this should be simplified once it beomes possible to get only the trace ID and not have to yield the full trace.
+
                     # This is likely the final event with complete response
                     # Extract just the content we need
                     if '"type":"response.output_item.done"' in data_content and '"role":"assistant"' in data_content:
-                        # Try to extract the item object which contains the full response
+                        # extract the item object which contains the full response
                         item_match = re.search(r'"item"\s*:\s*({[^}]*"role"\s*:\s*"assistant"[^}]*})', data_content)
                         if item_match:
                             try:
                                 item_str = item_match.group(1)
-                                # Find the content array within the item
                                 content_start = item_str.find('"content":')
                                 if content_start != -1:
-                                    # Extract content array carefully
                                     content_start = item_str.find('[', content_start)
                                     if content_start != -1:
                                         bracket_count = 0
@@ -346,7 +348,7 @@ class TelcoAgentService:
                                                     break
 
                                         content_str = item_str[content_start:content_end]
-                                        # Now parse the content array
+                                        # parse the content array
                                         content_array = json.loads(content_str)
 
                                         for content_item in content_array:
@@ -369,7 +371,6 @@ class TelcoAgentService:
                     # Look for the longest text field (likely the complete response)
                     all_text_matches = re.findall(r'"text"\s*:\s*"((?:[^"\\]|\\.)*)"', data_content)
                     if all_text_matches:
-                        # Find the longest match
                         longest_text = ""
                         for raw_text in all_text_matches:
                             try:
@@ -377,10 +378,10 @@ class TelcoAgentService:
                                 if len(decoded_text) > len(longest_text):
                                     longest_text = decoded_text
                             except json.JSONDecodeError:
-                                # Skip malformed JSON strings
+                                # skip malformed JSON strings
                                 continue
 
-                        if longest_text and len(longest_text) > 100:  # Sanity check
+                        if longest_text and len(longest_text) > 100:  # sanity check
                             logger.info(f"Extracted longest text from unparseable chunk: {len(longest_text)} chars")
                             return {
                                 "type": "response.output_item.done",
@@ -391,10 +392,8 @@ class TelcoAgentService:
                                 }
                             }
 
-                    # If we can't extract anything useful, skip silently
                     return None
                 else:
-                    # For non-trace chunks, log warning if they're large
                     if len(data_content) > 100:
                         logger.warning(f"Failed to parse SSE data: {data_content[:100]}..., error: {e}")
                     return None
