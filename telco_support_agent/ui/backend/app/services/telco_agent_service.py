@@ -605,22 +605,16 @@ class TelcoAgentService:
                             logger.debug(f"Processing output_item.done with item_type: {item_type}")
 
                             if item_type == "function_call":
-                                # Tool call started
                                 tool_info = {
                                     "type": "tool_call",
                                     "tool_name": item.get("name", "unknown"),
                                     "call_id": item.get("call_id"),
                                     "arguments": item.get("arguments", "{}"),
                                 }
-
-                                # add to collected tools
                                 collected_tools.append(tool_info)
-
-                                # send tool call event
                                 yield f"data: {json.dumps(tool_info)}\n\n"
 
                             elif item_type == "function_call_output":
-                                # tool execution result
                                 call_id = item.get("call_id")
                                 output = item.get("output", "")
 
