@@ -14,6 +14,16 @@ from ..config import Settings
 logger = logging.getLogger(__name__)
 
 
+def decode_unicode_escapes(text: str) -> str:
+    r"""Decode Unicode escape sequences in text (e.g., \\u2019 -> ')."""
+    try:
+        # Use codecs to decode Unicode escapes
+        return text.encode().decode('unicode_escape')
+    except (UnicodeDecodeError, UnicodeEncodeError):
+        # If decoding fails, return original text
+        return text
+
+
 class ChatMessage(BaseModel):
     """Chat message model."""
 
@@ -309,14 +319,16 @@ class TelcoAgentService:
                 # For large chunks that likely contain trace data, try to extract essential info
                 if len(data_content) > 1000:
                     logger.debug(f"Attempting to extract data from large unparseable SSE chunk: {len(data_content)} chars")
-                    
+
                     # Try to extract response text from unparseable chunk as fallback
                     if '"role":"assistant"' in data_content and '"output_text"' in data_content:
                         text_match = re.search(r'"output_text"[^}]*"text":\s*"([^"]*(?:\\.[^"]*)*)"', data_content)
                         if text_match:
-                            extracted_text = text_match.group(1).replace('\\"', '"').replace('\\n', '\n').replace('\\t', '\t')
+                            raw_text = text_match.group(1)
+                            # Properly decode escaped characters including Unicode
+                            extracted_text = decode_unicode_escapes(raw_text.replace('\\"', '"'))
                             logger.debug(f"Extracted text from unparseable chunk: {len(extracted_text)} chars")
-                            
+
                             # Return a simplified parseable event structure
                             return {
                                 "type": "response.output_item.done",
@@ -326,7 +338,7 @@ class TelcoAgentService:
                                     "content": [{"type": "output_text", "text": extracted_text}]
                                 }
                             }
-                    
+
                     # If we can't extract anything useful, skip silently
                     return None
                 else:
@@ -493,16 +505,18 @@ class TelcoAgentService:
                             extracted_trace_id = trace_id_match.group(1)
                             logger.info(f"Extracted trace_id from raw chunk: {extracted_trace_id}")
                             trace_id = extracted_trace_id
-                    
+
                     # Check for response text in raw chunks and extract it
                     if "output_text" in chunk and not current_response_text:
                         # Look for response text in the format: "output_text":{"text":"..."}
                         text_match = re.search(r'"output_text"[^}]*"text":\s*"([^"]*(?:\\.[^"]*)*)"', chunk)
                         if text_match:
-                            extracted_text = text_match.group(1).replace('\\"', '"').replace('\\n', '\n').replace('\\t', '\t')
+                            raw_text = text_match.group(1)
+                            # Properly decode escaped characters including Unicode
+                            extracted_text = decode_unicode_escapes(raw_text.replace('\\"', '"'))
                             current_response_text = extracted_text
                             logger.debug(f"Extracted response text from raw chunk: {len(extracted_text)} chars")
-                            
+
                             # Emit response_text event immediately
                             response_event = {
                                 "type": "response_text",

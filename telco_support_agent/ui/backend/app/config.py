@@ -58,7 +58,6 @@ class Settings(BaseSettings):
         """Initialize settings with logging."""
         super().__init__(**kwargs)
 
-        # Ensure databricks_host has proper protocol
         if self.databricks_host and not self.databricks_host.startswith(
             ("http://", "https://")
         ):
@@ -67,7 +66,13 @@ class Settings(BaseSettings):
                 f"Added https:// protocol to Databricks host: {self.databricks_host}"
             )
 
-        # Log configuration (but not sensitive data)
+        # Configure MLflow environment variables
+        if self.has_auth:
+            os.environ["DATABRICKS_HOST"] = self.databricks_host
+            if self.databricks_token:
+                os.environ["DATABRICKS_TOKEN"] = self.databricks_token
+            # Note: OAuth credentials are handled by the service layer
+
         logger.info("Initialized settings:")
         logger.info(f"  Environment: {self.environment}")
         logger.info(f"  Port: {self.port}")

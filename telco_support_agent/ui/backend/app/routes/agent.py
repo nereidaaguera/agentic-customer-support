@@ -245,6 +245,9 @@ async def submit_feedback(
             f"{'positive' if request.is_positive else 'negative'} from agent {request.agent_id}"
         )
 
+        # Configure MLflow to connect to Databricks
+        mlflow.set_tracking_uri("databricks")
+
         # Set MLflow experiment path based on environment
         experiment_path = settings.mlflow_experiment_path
         logger.info(f"Using MLflow experiment path: {experiment_path}")
@@ -253,7 +256,7 @@ async def submit_feedback(
         # Log the feedback to MLflow
         mlflow.log_feedback(
             trace_id=request.trace_id,
-            name="agent_feedback",
+            name="user_feedback",
             value=request.is_positive,
             source=AssessmentSource(
                 source_type=AssessmentSourceType.HUMAN,
