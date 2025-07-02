@@ -319,7 +319,7 @@ class TelcoAgentService:
                 # For large chunks that likely contain trace data, try harder to parse
                 if 'databricks_output' in data_content and 'trace' in data_content:
                     logger.debug(f"Found large SSE chunk with databricks_output: {len(data_content)} chars")
-                    
+
                     # This is likely the final event with complete response
                     # Extract just the content we need
                     if '"type":"response.output_item.done"' in data_content and '"role":"assistant"' in data_content:
@@ -344,11 +344,11 @@ class TelcoAgentService:
                                                 if bracket_count == 0:
                                                     content_end = i + 1
                                                     break
-                                        
+
                                         content_str = item_str[content_start:content_end]
                                         # Now parse the content array
                                         content_array = json.loads(content_str)
-                                        
+
                                         for content_item in content_array:
                                             if content_item.get("type") == "output_text":
                                                 text = content_item.get("text", "")
@@ -364,7 +364,7 @@ class TelcoAgentService:
                                                     }
                             except Exception as extract_error:
                                 logger.debug(f"Failed to extract from item match: {extract_error}")
-                    
+
                     # Fallback: Try to extract any text field in the response
                     # Look for the longest text field (likely the complete response)
                     all_text_matches = re.findall(r'"text"\s*:\s*"((?:[^"\\]|\\.)*)"', data_content)
@@ -376,9 +376,10 @@ class TelcoAgentService:
                                 decoded_text = json.loads('"' + raw_text + '"')
                                 if len(decoded_text) > len(longest_text):
                                     longest_text = decoded_text
-                            except:
-                                pass
-                        
+                            except json.JSONDecodeError:
+                                # Skip malformed JSON strings
+                                continue
+
                         if longest_text and len(longest_text) > 100:  # Sanity check
                             logger.info(f"Extracted longest text from unparseable chunk: {len(longest_text)} chars")
                             return {
@@ -389,7 +390,7 @@ class TelcoAgentService:
                                     "content": [{"type": "output_text", "text": longest_text}]
                                 }
                             }
-                    
+
                     # If we can't extract anything useful, skip silently
                     return None
                 else:
@@ -643,7 +644,7 @@ class TelcoAgentService:
                                             # Always use the complete text from the message event
                                             current_response_text = extracted_text
                                             logger.info(f"Set response text from message event: {len(extracted_text)} chars")
-                                            
+
                                             # Log first 200 chars for debugging
                                             logger.debug(f"Response text preview: {extracted_text[:200]}...")
 
@@ -674,7 +675,7 @@ class TelcoAgentService:
                 logger.info(f"Sending completion event with response text of {len(current_response_text)} chars")
                 if len(current_response_text) < 500:
                     logger.warning(f"Response text seems truncated: {current_response_text}")
-                
+
                 completion_event = {
                     "type": "completion",
                     "agent_type": agent_type,

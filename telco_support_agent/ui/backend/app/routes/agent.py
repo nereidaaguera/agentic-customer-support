@@ -8,8 +8,8 @@ from typing import Optional
 import mlflow
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from mlflow.entities import AssessmentSource, AssessmentSourceType
 from mlflow.client import MlflowClient
+from mlflow.entities import AssessmentSource, AssessmentSourceType
 from pydantic import BaseModel, Field
 
 from ..config import Settings, get_settings
@@ -258,16 +258,16 @@ async def submit_feedback(
         # Get trace info to extract experiment_id
         client = MlflowClient()
         experiment_url = None
-        
+
         try:
             # Get trace information
             trace = client.get_trace(request.trace_id)
             experiment_id = trace.info.experiment_id
-            
+
             # Construct MLflow experiment URL
             experiment_url = f"{settings.databricks_host}ml/experiments/{experiment_id}"
             logger.info(f"Constructed experiment URL: {experiment_url}")
-            
+
         except Exception as e:
             logger.warning(f"Could not get experiment URL from trace: {e}")
 
