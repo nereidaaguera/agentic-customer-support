@@ -16,7 +16,7 @@ resources:
           depends_on:
             - task_key: log_register_agent
           notebook_task:
-            notebook_path: ../notebooks/04_deploy_agent/deploy_agent.py
+            notebook_path: ../notebooks/05_deploy_agent/deploy_agent.py
             base_parameters:
               env: ${bundle.target}
               git_commit: ${bundle.git.commit}
