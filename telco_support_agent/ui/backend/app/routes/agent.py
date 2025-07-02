@@ -244,12 +244,12 @@ async def submit_feedback(
             f"Received feedback for trace {request.trace_id}: "
             f"{'positive' if request.is_positive else 'negative'} from agent {request.agent_id}"
         )
-        
+
         # Set MLflow experiment path based on environment
         experiment_path = settings.mlflow_experiment_path
         logger.info(f"Using MLflow experiment path: {experiment_path}")
         mlflow.set_experiment(experiment_path)
-        
+
         # Log the feedback to MLflow
         mlflow.log_feedback(
             trace_id=request.trace_id,
@@ -261,14 +261,14 @@ async def submit_feedback(
             ),
             rationale=request.comment,
         )
-        
+
         logger.info(f"Successfully logged feedback to MLflow for trace {request.trace_id}")
-        
+
         return FeedbackResponse(
             status="success",
             trace_id=request.trace_id,
         )
-        
+
     except Exception as e:
         logger.error(f"Error submitting feedback: {str(e)}")
         logger.error(traceback.format_exc())

@@ -44,7 +44,7 @@ class Settings(BaseSettings):
             "DATABRICKS_ENDPOINT_NAME", "telco-customer-support-agent"
         )
     )
-    
+
     # MLflow settings
     mlflow_experiment_path_override: str = Field(
         default_factory=lambda: os.getenv("MLFLOW_EXPERIMENT_PATH", "")
@@ -150,7 +150,7 @@ class Settings(BaseSettings):
         """Get the MLflow experiment path based on environment and endpoint."""
         if self.mlflow_experiment_path_override:
             return self.mlflow_experiment_path_override
-        
+
         # get environment and base name from endpoint name
         if self.databricks_endpoint_name.startswith("dev-"):
             env = "dev"
@@ -161,9 +161,9 @@ class Settings(BaseSettings):
                 env = "prod"
             else:
                 env = "dev"
-        
+
         experiment_path = f"/Shared/telco_support_agent/{env}/{env}_telco_support_agent"
-        
+
         return experiment_path
 
 

@@ -2,6 +2,7 @@
 
 import json
 import logging
+import re
 from collections.abc import AsyncGenerator
 from typing import Any, Optional
 
@@ -144,7 +145,7 @@ class TelcoAgentService:
         input_messages.append({"role": "user", "content": message})
 
         payload = {
-            "input": input_messages, 
+            "input": input_messages,
             "custom_inputs": {"customer": customer_id},
             "databricks_options": {"return_trace": True}
         }
@@ -165,7 +166,7 @@ class TelcoAgentService:
             tools_used = []
             execution_steps = []
             trace_id = None
-            
+
             # Extract trace_id from the response
             databricks_output = databricks_response.get('databricks_output', {})
             if isinstance(databricks_output, dict):
@@ -174,11 +175,11 @@ class TelcoAgentService:
                     info = trace_info.get('info', {})
                     if isinstance(info, dict):
                         trace_id = info.get('trace_id')
-                
+
                 if not trace_id and isinstance(databricks_output, dict):
                     trace_id = (databricks_output.get('trace_id') or
                               databricks_output.get('request_id'))
-                
+
             if not trace_id:
                 trace_id = databricks_response.get('trace_id')
 
@@ -305,8 +306,32 @@ class TelcoAgentService:
             try:
                 return json.loads(data_content)
             except json.JSONDecodeError as e:
-                logger.warning(f"Failed to parse SSE data: {data_content}, error: {e}")
-                return None
+                # For large chunks that likely contain trace data, try to extract essential info
+                if len(data_content) > 1000:
+                    logger.debug(f"Attempting to extract data from large unparseable SSE chunk: {len(data_content)} chars")
+                    
+                    # Try to extract response text from unparseable chunk as fallback
+                    if '"role":"assistant"' in data_content and '"output_text"' in data_content:
+                        text_match = re.search(r'"output_text"[^}]*"text":\s*"([^"]*(?:\\.[^"]*)*)"', data_content)
+                        if text_match:
+                            extracted_text = text_match.group(1).replace('\\"', '"').replace('\\n', '\n').replace('\\t', '\t')
+                            logger.debug(f"Extracted text from unparseable chunk: {len(extracted_text)} chars")
+                            
+                            # Return a simplified parseable event structure
+                            return {
+                                "type": "response.output_item.done",
+                                "item": {
+                                    "type": "message",
+                                    "role": "assistant",
+                                    "content": [{"type": "output_text", "text": extracted_text}]
+                                }
+                            }
+                    
+                    # If we can't extract anything useful, skip silently
+                    return None
+                else:
+                    logger.warning(f"Failed to parse SSE data: {data_content}, error: {e}")
+                    return None
 
         return None
 
@@ -454,12 +479,37 @@ class TelcoAgentService:
                 agent_type = None
                 routing_info = None
                 trace_id = None
-                
+
                 # Note: trace_id is not available in streaming responses
                 # from Databricks - it's only available in the final non-streaming response
                 # that includes databricks_output.trace.info.trace_id
 
                 async for chunk in response.aiter_text():
+                    # Check for trace_id in raw chunks and extract it
+                    if "trace_id" in chunk and not trace_id:
+                        # Look for trace_id in the format: "trace_id": "tr-xxxxx"
+                        trace_id_match = re.search(r'"trace_id":\s*"(tr-[^"]+)"', chunk)
+                        if trace_id_match:
+                            extracted_trace_id = trace_id_match.group(1)
+                            logger.info(f"Extracted trace_id from raw chunk: {extracted_trace_id}")
+                            trace_id = extracted_trace_id
+                    
+                    # Check for response text in raw chunks and extract it
+                    if "output_text" in chunk and not current_response_text:
+                        # Look for response text in the format: "output_text":{"text":"..."}
+                        text_match = re.search(r'"output_text"[^}]*"text":\s*"([^"]*(?:\\.[^"]*)*)"', chunk)
+                        if text_match:
+                            extracted_text = text_match.group(1).replace('\\"', '"').replace('\\n', '\n').replace('\\t', '\t')
+                            current_response_text = extracted_text
+                            logger.debug(f"Extracted response text from raw chunk: {len(extracted_text)} chars")
+                            
+                            # Emit response_text event immediately
+                            response_event = {
+                                "type": "response_text",
+                                "text": extracted_text,
+                            }
+                            yield f"data: {json.dumps(response_event)}\n\n"
+
                     lines = chunk.split("\n")
 
                     for line in lines:
@@ -548,7 +598,7 @@ class TelcoAgentService:
                                     "text": current_response_text,
                                 }
                                 yield f"data: {json.dumps(response_event)}\n\n"
-                                
+
                                 # Extract trace_id from databricks_output if present in the item
                                 databricks_output = item.get("databricks_output", {})
                                 if isinstance(databricks_output, dict):
@@ -563,6 +613,7 @@ class TelcoAgentService:
                         elif event_type == "done":
                             # stream completed
                             break
+
 
                 completion_event = {
                     "type": "completion",
