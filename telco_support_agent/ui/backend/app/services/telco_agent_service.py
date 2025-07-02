@@ -337,7 +337,6 @@ class TelcoAgentService:
                         if item_match:
                             try:
                                 item_str = item_match.group(1)
-                                # Find the content array within the item
                                 content_start = item_str.find('"content":')
                                 if content_start != -1:
                                     # Extract content array carefully
@@ -394,7 +393,6 @@ class TelcoAgentService:
                         r'"text"\s*:\s*"((?:[^"\\]|\\.)*)"', data_content
                     )
                     if all_text_matches:
-                        # Find the longest match
                         longest_text = ""
                         for raw_text in all_text_matches:
                             try:
@@ -402,7 +400,7 @@ class TelcoAgentService:
                                 if len(decoded_text) > len(longest_text):
                                     longest_text = decoded_text
                             except json.JSONDecodeError:
-                                # Skip malformed JSON strings
+                                # skip malformed JSON strings
                                 continue
 
                         if longest_text and len(longest_text) > 100:  # Sanity check
@@ -423,7 +421,6 @@ class TelcoAgentService:
                     # If we can't extract anything useful, skip silently
                     return None
                 else:
-                    # For non-trace chunks, log warning if they're large
                     if len(data_content) > 100:
                         logger.warning(
                             f"Failed to parse SSE data: {data_content[:100]}..., error: {e}"
