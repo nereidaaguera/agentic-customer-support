@@ -176,7 +176,9 @@ The project uses Databricks Asset Bundles (DAB) for deployment:
 ```bash
 # deploy to dev env
 databricks bundle deploy -t dev
+databricks bundle run outage-info-server -t dev
 
 # deploy to prod env
 databricks bundle deploy -t prod
+databricks bundle run outage-info-server -t prod
 ```

@@ -1,14 +1,4 @@
 # yaml-language-server: $schema=../bundle_config_schema.json
-artifacts:
-  default:
-    type: whl
-    path: ../telco_support_agent/mcp_servers/outage_info_server
-    build: uv build --wheel
-
-sync:
-  include:
-    - ../telco_support_agent/mcp_servers/outage_info_server/build
-
 resources:
   jobs:
     telco_log_register_deploy_agent:
@@ -36,4 +26,4 @@ resources:
     mcp-outage-info-server:
       name: "mcp-telco-outage-info-server"
       description: "Server containing telco outage info"
-      source_code_path: ../telco_support_agent/mcp_servers/outage_info_server/build
+      source_code_path: ../telco_support_agent/mcp_servers/outage_info_server
