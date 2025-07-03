@@ -151,8 +151,8 @@ class TechSupportAgent(BaseAgent):
 
         # Initialize MCP tools if server URLs are provided
         self.mcp_server_urls = mcp_server_urls or [
-            "https://e2-demo-west.cloud.databricks.com/api/2.0/mcp/vector-search/telco_customer_support_dev/mcp_agent",
-            "https://e2-demo-west.cloud.databricks.com/api/2.0/mcp/functions/telco_customer_support_dev/mcp_agent",
+            "https://e2-demo-west.cloud.databricks.com/api/2.0/mcp/vector-search/telco_customer_support_dev/agent",
+            "https://e2-demo-west.cloud.databricks.com/api/2.0/mcp/functions/telco_customer_support_dev/agent",
             "https://mcp-telco-outage-info-server-2556758628403379.aws.databricksapps.com/mcp/",
         ]
 
