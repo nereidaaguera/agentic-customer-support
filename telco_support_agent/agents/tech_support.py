@@ -104,8 +104,8 @@ def get_mcp_tool_infos(workspace_client: WorkspaceClient, server_urls: list[str]
                         ),
                     )
                 )
-        except Exception as e:
-            logger.error(f"Failed to load MCP tools from {mcp_server_url}: {e}")
+        except Exception:
+            logger.exception(f"Failed to load MCP tools from {mcp_server_url}")
 
     return tool_infos
 
@@ -150,11 +150,7 @@ class TechSupportAgent(BaseAgent):
         }
 
         # Initialize MCP tools if server URLs are provided
-        self.mcp_server_urls = mcp_server_urls or [
-            "https://e2-demo-west.cloud.databricks.com/api/2.0/mcp/vector-search/telco_customer_support_dev/agent",
-            "https://e2-demo-west.cloud.databricks.com/api/2.0/mcp/functions/telco_customer_support_dev/agent",
-            "https://mcp-telco-outage-info-server-2556758628403379.aws.databricksapps.com/mcp/",
-        ]
+        self.mcp_server_urls = mcp_server_urls
 
         # Discover and setup MCP tools
         mcp_tools = []

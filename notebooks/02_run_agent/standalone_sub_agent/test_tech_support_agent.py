@@ -43,7 +43,10 @@ nest_asyncio.apply()
 
 # COMMAND ----------
 
-tech_agent = TechSupportAgent(environment="prod")
+tech_agent = TechSupportAgent(environment="prod", mcp_server_urls=[
+    # Add code execution capabilities to the tech support agent
+    "https://e2-demo-west.cloud.databricks.com/api/2.0/mcp/functions/system/ai",
+])
 
 print(f"\nAgent initialized successfully!")
 print(f"   Agent type: {tech_agent.agent_type}")
@@ -194,3 +197,11 @@ complex_queries = [
 
 for i, query in enumerate(complex_queries, 1):
     test_query(query, f"_complex_{i}")
+
+# COMMAND ----------
+
+mcp_queries = [
+    "Can you estimate how much data I’ll use if I watch Netflix in HD for 3 hours every night for a month?",
+]
+for i, query in enumerate(mcp_queries):
+    test_query(query, f"_mcp_{i}")
