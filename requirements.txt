@@ -22,7 +22,7 @@ cloudpickle==3.1.1
 contourpy==1.3.2
 cryptography==45.0.3
 cycler==0.12.1
-databricks-agents==1.0.0rc2
+databricks-agents==1.1.0
 databricks-ai-bridge==0.5.1
 databricks-mcp
 databricks-openai==0.4.1
