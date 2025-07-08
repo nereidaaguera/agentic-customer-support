@@ -6,7 +6,7 @@ Internally routes calls to in-memory handlers based on method and path.
 
 import asyncio
 import json
-import random
+import secrets
 from datetime import datetime, timedelta
 
 # In-memory mock data for outages and network metrics
@@ -53,7 +53,7 @@ _NETWORK_METRICS = {
 
 async def _simulate_delay(min_ms: int = 200, max_ms: int = 500):
     """Simulate network latency."""
-    await asyncio.sleep(random.randint(min_ms, max_ms) / 1000)
+    await asyncio.sleep((secrets.randbelow(max_ms - min_ms + 1) + min_ms) / 1000)
 
 
 async def _handle_get_outages(params: dict) -> str:
@@ -90,7 +90,7 @@ async def _handle_post_report(payload: dict) -> str:
     description = payload.get("description")
     await _simulate_delay(min_ms=500, max_ms=500)
     ticket_id = (
-        f"TKT-{datetime.utcnow().strftime('%Y%m%d')}-{random.randint(1000, 9999)}"
+        f"TKT-{datetime.utcnow().strftime('%Y%m%d')}-{secrets.randbelow(9000) + 1000}"
     )
     response = {
         "ticket_id": ticket_id,

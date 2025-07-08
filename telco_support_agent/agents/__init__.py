@@ -4,7 +4,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from telco_support_agent.utils.config import UCConfig, MCPServer
+from telco_support_agent.utils.config import MCPServer, UCConfig
 
 
 class LLMConfig(BaseModel):
