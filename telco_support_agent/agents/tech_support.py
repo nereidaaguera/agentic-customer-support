@@ -127,6 +127,7 @@ class TechSupportAgent(BaseAgent):
         llm_endpoint: Optional[str] = None,
         config_dir: Optional[str] = None,
         environment: str = "prod",
+        override_mcp_server_urls: Optional[list[str]] = None,
         disable_tools: Optional[list[str]] = None,
     ) -> None:
         """Init agent.
@@ -136,7 +137,8 @@ class TechSupportAgent(BaseAgent):
             config_dir: Optional directory for config files
             environment: Environment to use for retrievers (dev, prod)
             disable_tools: Optional list of tool names to disable
-            mcp_server_urls: Optional list of MCP server URLs to discover tools from
+            override_mcp_server_urls: Optional list of MCP server URLs to discover tools from. If specified,
+            takes precedence over MCP servers specified in the config
         """
         # Initialize traditional retrieval tools
         self.retriever = TechSupportRetriever(environment=environment)
@@ -152,20 +154,16 @@ class TechSupportAgent(BaseAgent):
         mcp_tools = []
         self.mcp_tool_infos = []
         self.config = BaseAgent.load_config(agent_type="tech_support", config_dir=config_dir)
-        if self.config.mcp_servers:
+        mcp_server_urls = override_mcp_server_urls or [
+            server_spec.server_url for server_spec in self.config.mcp_servers
+        ]
+        if mcp_server_urls:
             from databricks.sdk import WorkspaceClient
             workspace_client = WorkspaceClient()
-            mcp_server_urls = [
-                server_spec.server_url for server_spec in self.config.mcp_servers
-            ]
             self.mcp_tool_infos = get_mcp_tool_infos(
                 workspace_client, mcp_server_urls
             )
-            mcp_tools = [tool_info.spec for tool_info in self.mcp_tool_infos]
-
-            # Add MCP tools to vector_search_tools mapping for execution
-            for tool_info in self.mcp_tool_infos:
-                vector_search_tools[tool_info.name] = tool_info
+            mcp_tools.extend([tool_info.spec for tool_info in self.mcp_tool_infos])
 
         # Combine traditional retrieval tools with MCP tools
         all_tools = retriever_tools + mcp_tools
