@@ -7,41 +7,48 @@ Internally routes calls to in-memory handlers based on method and path.
 import asyncio
 import json
 import secrets
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
-# In-memory mock data for outages and network metrics
-_OUTAGES = [
-    {
-        "outage_id": "OUT-2025-001",
-        "region": "North Bay Area",
-        "service_type": "5G",
-        "status": "Resolved",
-        "affected_customers": 15420,
-        "started_at": "2025-06-03T10:30:00Z",
-        "estimated_resolution": "2025-06-03T18:00:00Z",
-        "description": "5G tower maintenance causing service disruption",
-    },
-    {
-        "outage_id": "OUT-2025-002",
-        "region": "Downtown LA",
-        "service_type": "Fiber",
-        "status": "Resolved",
-        "affected_customers": 8750,
-        "started_at": "2025-05-31T14:15:00Z",
-        "resolved_at": "2025-06-01T22:45:00Z",
-        "description": "Fiber cable damage due to construction work",
-    },
-    {
-        "outage_id": "OUT-2025-003",
-        "region": "San Francisco",
-        "service_type": "5G",
-        "status": "Active",
-        "affected_customers": 20050,
-        "started_at": "2025-06-11T10:30:00Z",
-        "estimated_resolution": "2025-06-11T18:00:00Z",
-        "description": "5G tower maintenance causing service disruption",
-    },
-]
+
+# Mock data for outages and network metrics
+def _get_outages():
+    now = datetime.now(UTC)
+    # Round "now" to the nearest hour so it stays the same within each hour
+    nearest_hour = (now + timedelta(minutes=30)).replace(minute=0, second=0, microsecond=0)
+
+    return [
+        {
+            "outage_id": "OUT-2025-001",
+            "region": "North Bay Area",
+            "service_type": "5G",
+            "status": "Resolved",
+            "affected_customers": 15420,
+            "started_at": (nearest_hour - timedelta(days=15)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "resolved_at": (nearest_hour - timedelta(days=14)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "description": "5G tower maintenance causing service disruption",
+        },
+        {
+            "outage_id": "OUT-2025-002",
+            "region": "Downtown LA",
+            "service_type": "Fiber",
+            "status": "Resolved",
+            "affected_customers": 8750,
+            "started_at": (nearest_hour - timedelta(days=8)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "resolved_at": (nearest_hour - timedelta(days=7)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "description": "Fiber cable damage due to construction work",
+        },
+        {
+            "outage_id": "OUT-2025-003",
+            "region": "San Francisco",  # Moscone Center
+            "service_type": "5G",
+            "status": "Active",
+            "affected_customers": 20050,
+            "started_at": nearest_hour.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "estimated_resolution": (nearest_hour + timedelta(hours=6)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "description": "Moscone Center service disruption",
+        },
+    ]
+
 
 _NETWORK_METRICS = {
     "North Bay Area": {"uptime": 98.2, "latency_ms": 12, "packet_loss": 0.1},
@@ -59,7 +66,7 @@ async def _simulate_delay(min_ms: int = 200, max_ms: int = 500):
 async def _handle_get_outages(params: dict) -> str:
     region = params.get("region") if params else None
     await _simulate_delay()
-    outages = _OUTAGES
+    outages = _get_outages()
     response = {
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "region_queried": region or "All regions",
