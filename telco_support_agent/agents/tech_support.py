@@ -202,12 +202,14 @@ class TechSupportAgent(BaseAgent):
 if __name__ == "__main__":
     import logging
     import os
+    logger = logging.getLogger("mlflow")
+    logger.setLevel(logging.WARNING)
     AGENT = TechSupportAgent(
-        llm_endpoint="databricks-claude-3-7-sonnet",
+        llm_endpoint="dbdemos-openai-gpt4",
         config_dir=os.path.expanduser("~/genai-customer-support-demo/configs")
     )
 
-    def query_agent(query):
+    def _query_agent(query):
         for event in AGENT.predict_stream({"input": [{"role": "user", "content": query}]}):
             if item:= getattr(event, "item", None):
                 item_type = item.get("type")
@@ -234,8 +236,6 @@ if __name__ == "__main__":
                 else:
                     print(f"Unexpected agent output item, displaying it anyways: {item}")
 
-    logger = logging.getLogger("mlflow")
-    logger.setLevel(logging.WARNING)
     query = "Is there an outage in Moscone center?"
-    query_agent(query=query)
+    _query_agent(query=query)
 
