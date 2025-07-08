@@ -12,6 +12,12 @@ from telco_support_agent.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 
+class MCPServer(BaseModel):
+    """Model for MCP server configuration."""
+
+    server_url: str
+    app_name: Optional[str]
+
 
 class UCConfig(BaseModel):
     data: dict[str, Any]

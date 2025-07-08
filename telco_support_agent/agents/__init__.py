@@ -4,7 +4,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from telco_support_agent.utils.config import UCConfig
+from telco_support_agent.utils.config import UCConfig, MCPServer
 
 
 class LLMConfig(BaseModel):
@@ -22,4 +22,5 @@ class AgentConfig(BaseModel):
     llm: LLMConfig
     system_prompt: str
     uc_functions: list[str] = Field(default_factory=list)
+    mcp_servers: list[MCPServer] = Field(default_factory=list)
     uc_config: UCConfig

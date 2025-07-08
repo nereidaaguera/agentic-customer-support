@@ -74,7 +74,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         """
         # load config file
         self.agent_type = agent_type
-        self.config = self._load_config(agent_type, config_dir)
+        self.config = self.load_config(agent_type, config_dir)
         if disable_tools is None:
             disable_tools = self._load_disable_tools_from_artifact()
         self.disable_tools = disable_tools or []
@@ -110,7 +110,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             logger.info(f"Disabled tools: {self.disable_tools}")
 
     @classmethod
-    def _load_config(
+    def load_config(
         cls, agent_type: str, config_dir: Optional[Union[str, Path]] = None
     ) -> AgentConfig:
         """Load agent configuration from YAML file.

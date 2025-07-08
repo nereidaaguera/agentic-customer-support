@@ -128,7 +128,6 @@ class TechSupportAgent(BaseAgent):
         config_dir: Optional[str] = None,
         environment: str = "prod",
         disable_tools: Optional[list[str]] = None,
-        mcp_server_urls: Optional[list[str]] = None,
     ) -> None:
         """Init agent.
 
@@ -149,19 +148,18 @@ class TechSupportAgent(BaseAgent):
             "support_tickets_vector_search": self.retriever.tickets_retriever.retriever,
         }
 
-        # Initialize MCP tools if server URLs are provided
-        self.mcp_server_urls = mcp_server_urls
-
         # Discover and setup MCP tools
         mcp_tools = []
         self.mcp_tool_infos = []
-        if self.mcp_server_urls:
+        self.config = BaseAgent.load_config(agent_type="tech_support", config_dir=config_dir)
+        if self.config.mcp_servers:
             from databricks.sdk import WorkspaceClient
-
             workspace_client = WorkspaceClient()
-
+            mcp_server_urls = [
+                server_spec.server_url for server_spec in self.config.mcp_servers
+            ]
             self.mcp_tool_infos = get_mcp_tool_infos(
-                workspace_client, self.mcp_server_urls
+                workspace_client, mcp_server_urls
             )
             mcp_tools = [tool_info.spec for tool_info in self.mcp_tool_infos]
 

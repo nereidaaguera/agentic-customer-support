@@ -43,10 +43,7 @@ nest_asyncio.apply()
 
 # COMMAND ----------
 
-tech_agent = TechSupportAgent(environment="prod", mcp_server_urls=[
-    # Add code execution capabilities to the tech support agent
-    "https://e2-demo-west.cloud.databricks.com/api/2.0/mcp/functions/system/ai",
-])
+tech_agent = TechSupportAgent(environment="prod")
 
 print(f"\nAgent initialized successfully!")
 print(f"   Agent type: {tech_agent.agent_type}")

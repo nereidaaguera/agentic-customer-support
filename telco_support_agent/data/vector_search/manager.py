@@ -29,13 +29,13 @@ class VectorSearchManager:
             config_path: Optional path to vector search config file
         """
         self.client = VectorSearchClient()
-        self.config = self._load_config(config_path)
+        self.config = self.load_config(config_path)
 
         self._setup_names()
 
         logger.info("Vector search manager initialized")
 
-    def _load_config(self, config_path: Optional[str] = None) -> dict[str, Any]:
+    def load_config(self, config_path: Optional[str] = None) -> dict[str, Any]:
         """Load vector search configuration.
 
         Args:
