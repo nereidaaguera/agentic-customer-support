@@ -6,12 +6,15 @@ from telco_support_agent.agents.tech_support import TechSupportAgent
 logger = logging.getLogger("mlflow")
 logger.setLevel(logging.WARNING)
 AGENT = TechSupportAgent(
-    config_dir=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "configs")
+    config_dir=os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "configs"
+    )
 )
+
 
 def _query_agent(query):
     for event in AGENT.predict_stream({"input": [{"role": "user", "content": query}]}):
-        if item:= getattr(event, "item", None):
+        if item := getattr(event, "item", None):
             item_type = item.get("type")
 
             # When the model requests a function/tool call:
@@ -35,6 +38,7 @@ def _query_agent(query):
                 print("")
             else:
                 print(f"Unexpected agent output item, displaying it anyways: {item}")
+
 
 query = "Is there an outage in Moscone center?"
 _query_agent(query=query)

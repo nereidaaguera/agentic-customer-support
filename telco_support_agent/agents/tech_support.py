@@ -153,16 +153,17 @@ class TechSupportAgent(BaseAgent):
         # Discover and setup MCP tools
         mcp_tools = []
         self.mcp_tool_infos = []
-        self.config = BaseAgent.load_config(agent_type="tech_support", config_dir=config_dir)
+        self.config = BaseAgent.load_config(
+            agent_type="tech_support", config_dir=config_dir
+        )
         mcp_server_urls = override_mcp_server_urls or [
             server_spec.server_url for server_spec in self.config.mcp_servers
         ]
         if mcp_server_urls:
             from databricks.sdk import WorkspaceClient
+
             workspace_client = WorkspaceClient()
-            self.mcp_tool_infos = get_mcp_tool_infos(
-                workspace_client, mcp_server_urls
-            )
+            self.mcp_tool_infos = get_mcp_tool_infos(workspace_client, mcp_server_urls)
             mcp_tools.extend([tool_info.spec for tool_info in self.mcp_tool_infos])
 
         # Combine traditional retrieval tools with MCP tools

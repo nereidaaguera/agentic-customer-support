@@ -14,7 +14,9 @@ from datetime import UTC, datetime, timedelta
 def _get_outages():
     now = datetime.now(UTC)
     # Round "now" to the nearest hour so it stays the same within each hour
-    nearest_hour = (now + timedelta(minutes=30)).replace(minute=0, second=0, microsecond=0)
+    nearest_hour = (now + timedelta(minutes=30)).replace(
+        minute=0, second=0, microsecond=0
+    )
 
     return [
         {
@@ -23,8 +25,12 @@ def _get_outages():
             "service_type": "5G",
             "status": "Resolved",
             "affected_customers": 15420,
-            "started_at": (nearest_hour - timedelta(days=15)).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "resolved_at": (nearest_hour - timedelta(days=14)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "started_at": (nearest_hour - timedelta(days=15)).strftime(
+                "%Y-%m-%dT%H:%M:%SZ"
+            ),
+            "resolved_at": (nearest_hour - timedelta(days=14)).strftime(
+                "%Y-%m-%dT%H:%M:%SZ"
+            ),
             "description": "5G tower maintenance causing service disruption",
         },
         {
@@ -33,8 +39,12 @@ def _get_outages():
             "service_type": "Fiber",
             "status": "Resolved",
             "affected_customers": 8750,
-            "started_at": (nearest_hour - timedelta(days=8)).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "resolved_at": (nearest_hour - timedelta(days=7)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "started_at": (nearest_hour - timedelta(days=8)).strftime(
+                "%Y-%m-%dT%H:%M:%SZ"
+            ),
+            "resolved_at": (nearest_hour - timedelta(days=7)).strftime(
+                "%Y-%m-%dT%H:%M:%SZ"
+            ),
             "description": "Fiber cable damage due to construction work",
         },
         {
@@ -44,7 +54,9 @@ def _get_outages():
             "status": "Active",
             "affected_customers": 20050,
             "started_at": nearest_hour.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "estimated_resolution": (nearest_hour + timedelta(hours=6)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "estimated_resolution": (nearest_hour + timedelta(hours=6)).strftime(
+                "%Y-%m-%dT%H:%M:%SZ"
+            ),
             "description": "Moscone Center service disruption",
         },
     ]
