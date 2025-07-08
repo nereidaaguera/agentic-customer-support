@@ -113,10 +113,10 @@ def get_mcp_tool_infos(workspace_client: WorkspaceClient, server_urls: list[str]
 class TechSupportAgent(BaseAgent):
     """Tech support agent to handle technical support queries.
 
-    This agent answers technical questions by searching both:
+    This agent answers technical questions using the following knowledge sources and tools:
     - Knowledge base articles (official documentation, FAQs, guides)
     - Historical support tickets (similar issues and resolutions)
-    - MCP servers for dynamic tool discovery and execution (outage info, network metrics, etc.)
+    - Additional dynamic tools from MCP servers, e.g. tools for retrieving outage info, network metrics, etc.
 
     The agent combines information from both sources to provide technical support
     responses including troubleshooting steps, known issues, and proven resolution approaches.
