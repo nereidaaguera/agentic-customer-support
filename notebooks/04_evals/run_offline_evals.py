@@ -130,14 +130,35 @@ print("Evaluation complete!")
 
 # COMMAND ----------
 
-# Display evaluation metrics
+# evaluation metrics
 print("Evaluation Metrics:")
 for metric_name, metric_value in eval_results.metrics.items():
     print(f"  {metric_name}: {metric_value:.3f}")
 
 # COMMAND ----------
 
-# Display detailed results table
-results_df = eval_results.tables['eval_results_table']
-print(f"Detailed results: {results_df.shape[0]} rows x {results_df.shape[1]} columns")
-display(results_df)
+# detailed results - get traces with assessments
+eval_traces = mlflow.search_traces(run_id=eval_results.run_id)
+print(f"Detailed results: {eval_traces.shape[0]} traces x {eval_traces.shape[1]} columns")
+
+print("\nTrace columns:")
+for col in eval_traces.columns:
+    print(f"  - {col}")
+
+# COMMAND ----------
+
+# display traces
+display(eval_traces)
+
+# COMMAND ----------
+
+# Show sample assessments
+if len(eval_traces) > 0:
+    print("Sample assessments from first trace:")
+    sample_assessments = eval_traces.iloc[0]['assessments']
+    for assessment in sample_assessments:
+        print(f"  - {assessment.name}: {assessment.feedback.value}")
+        # Check for rationale in feedback object
+        if hasattr(assessment.feedback, 'rationale') and assessment.feedback.rationale:
+            print(f"    Rationale: {assessment.feedback.rationale[:100]}...")
+        print()
