@@ -2,8 +2,10 @@
 
 from typing import Any, Optional
 
-from databricks.agents.evaluation import Assessment, Feedback, metric, scorer
+from databricks.agents.evals import Assessment, metric
+from mlflow.entities import Feedback
 from mlflow.genai.judges import meets_guidelines
+from mlflow.genai.scorers import scorer
 
 from ..utils import (
     extract_request_text,
