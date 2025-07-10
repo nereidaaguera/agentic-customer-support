@@ -1,12 +1,11 @@
 #!/bin/bash
 set -e
 
-# Generate requirements.txt
-poetry export \
-  --format=requirements.txt \
-  --output=requirements.txt \
-  --without-hashes \
-  --only main
+# Generate requirements.txt using poetry show
+echo "Generating requirements.txt from Poetry dependencies..."
+
+# Get all main dependencies with their versions
+poetry show --only main --no-ansi | awk '{print $1"=="$2}' > requirements.txt
 
 # Clean markers, deduplicate, and filter platform-specific packages
 python3 << 'EOF'
