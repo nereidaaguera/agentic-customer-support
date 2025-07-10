@@ -30,20 +30,20 @@ def _get_telco_brand_guidelines() -> list[str]:
 
 
 @metric
-def brand_compliance_metric(*, request: str, response: str, **kwargs) -> Assessment:
+def brand_compliance_metric(*, inputs: str, outputs: str, **kwargs) -> Assessment:
     """Evaluate brand compliance for telco customer service.
 
     Args:
-        request: The customer's original query
-        response: The agent's response
+        inputs: The customer's original query
+        outputs: The agent's response
         **kwargs: Additional parameters (ignored)
 
     Returns:
         Assessment object with binary score and rationale
     """
     try:
-        request_text = extract_request_text(request)
-        response_text = extract_response_text(response)
+        request_text = extract_request_text(inputs)
+        response_text = extract_response_text(outputs)
 
         brand_guidelines = _get_telco_brand_guidelines()
 
@@ -67,22 +67,22 @@ def brand_compliance_metric(*, request: str, response: str, **kwargs) -> Assessm
 
 @scorer
 def brand_compliance_scorer(
-    *, request: str, response: str, trace: Optional[dict[str, Any]] = None, **kwargs
+    *, inputs: str, outputs: str, traces: Optional[dict[str, Any]] = None, **kwargs
 ) -> Feedback:
     """Evaluate brand compliance for telco customer service.
 
     Args:
-        request: The customer's original query
-        response: The agent's response
-        trace: Optional trace information for additional context
+        inputs: The customer's original query
+        outputs: The agent's response
+        traces: Optional trace information for additional context
         **kwargs: Additional parameters (ignored)
 
     Returns:
         Feedback object with binary score and rationale
     """
     try:
-        request_text = extract_request_text(request)
-        response_text = extract_response_text(response)
+        request_text = extract_request_text(inputs)
+        response_text = extract_response_text(outputs)
 
         brand_guidelines = _get_telco_brand_guidelines()
 

@@ -33,13 +33,13 @@ def _get_tool_accuracy_guidelines() -> list[str]:
 
 @metric
 def tool_accuracy_metric(
-    *, request: str, response: str, tools_used: Optional[list] = None, **kwargs
+    *, inputs: str, outputs: str, tools_used: Optional[list] = None, **kwargs
 ) -> Assessment:
     """Evaluate tool usage accuracy.
 
     Args:
-        request: The customer's original query
-        response: The agent's response
+        inputs: The customer's original query
+        outputs: The agent's response
         tools_used: List of tools that were called
         **kwargs: Additional parameters (ignored)
 
@@ -47,8 +47,8 @@ def tool_accuracy_metric(
         Assessment object with binary score and rationale
     """
     try:
-        request_text = extract_request_text(request)
-        response_text = extract_response_text(response)
+        request_text = extract_request_text(inputs)
+        response_text = extract_response_text(outputs)
 
         # format tools used for evaluation
         tools_list = tools_used or []
@@ -78,25 +78,25 @@ def tool_accuracy_metric(
 
 @scorer
 def tool_accuracy_scorer(
-    *, request: str, response: str, trace: Optional[dict[str, Any]] = None, **kwargs
+    *, inputs: str, outputs: str, traces: Optional[dict[str, Any]] = None, **kwargs
 ) -> Feedback:
     """Evaluate tool usage accuracy.
 
     Args:
-        request: The customer's original query
-        response: The agent's response
-        trace: Trace information containing tool usage details
+        inputs: The customer's original query
+        outputs: The agent's response
+        traces: Trace information containing tool usage details
         **kwargs: Additional parameters (ignored)
 
     Returns:
         Feedback object with binary score and rationale
     """
     try:
-        request_text = extract_request_text(request)
-        response_text = extract_response_text(response)
+        request_text = extract_request_text(inputs)
+        response_text = extract_response_text(outputs)
 
         # get tool information from trace
-        routing_info = extract_trace_routing_info(trace)
+        routing_info = extract_trace_routing_info(traces)
         tools_used = routing_info.get("tools_used", [])
         tools_str = ", ".join(tools_used) if tools_used else "none"
 

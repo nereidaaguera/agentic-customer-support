@@ -48,20 +48,20 @@ _clarity_judge = _get_clarity_judge()
 
 
 @metric
-def response_clarity_metric(*, request: str, response: str, **kwargs) -> Assessment:
+def response_clarity_metric(*, inputs: str, outputs: str, **kwargs) -> Assessment:
     """Evaluate the clarity of the response.
 
     Args:
-        request: The customer's original query
-        response: The agent's response
+        inputs: The customer's original query
+        outputs: The agent's response
         **kwargs: Additional parameters (ignored)
 
     Returns:
         Assessment object with numeric score and rationale
     """
     try:
-        request_text = extract_request_text(request)
-        response_text = extract_response_text(response)
+        request_text = extract_request_text(inputs)
+        response_text = extract_response_text(outputs)
 
         # prompt-based judge to evaluate clarity
         feedback = _clarity_judge(request=request_text, response=response_text)
@@ -79,22 +79,22 @@ def response_clarity_metric(*, request: str, response: str, **kwargs) -> Assessm
 
 @scorer
 def response_clarity_scorer(
-    *, request: str, response: str, trace: Optional[dict[str, Any]] = None, **kwargs
+    *, inputs: str, outputs: str, traces: Optional[dict[str, Any]] = None, **kwargs
 ) -> Feedback:
     """Evaluate the clarity of the response.
 
     Args:
-        request: The customer's original query
-        response: The agent's response
-        trace: Optional trace information for additional context
+        inputs: The customer's original query
+        outputs: The agent's response
+        traces: Optional trace information for additional context
         **kwargs: Additional parameters (ignored)
 
     Returns:
         Feedback object with numeric score and rationale
     """
     try:
-        request_text = extract_request_text(request)
-        response_text = extract_response_text(response)
+        request_text = extract_request_text(inputs)
+        response_text = extract_response_text(outputs)
 
         # prompt-based judge to evaluate clarity
         feedback = _clarity_judge(request=request_text, response=response_text)

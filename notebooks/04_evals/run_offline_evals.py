@@ -102,9 +102,19 @@ for scorer in OFFLINE_SCORERS:
 
 # COMMAND ----------
 
+# Load the model for evaluation
+model = mlflow.pyfunc.load_model(model_uri)
+
+# Define predict function for evaluation
+def predict_fn(inputs):
+    """Predict function for agent evaluation."""
+    return model.predict(inputs)
+
+# COMMAND ----------
+
 eval_results = mlflow.genai.evaluate(
-    model=model_uri,
     data=eval_data,
+    predict_fn=predict_fn,
     scorers=OFFLINE_SCORERS
 )
 

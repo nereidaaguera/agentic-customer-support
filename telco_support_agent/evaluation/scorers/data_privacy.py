@@ -29,20 +29,20 @@ def _get_data_privacy_guidelines() -> list[str]:
 
 
 @metric
-def data_privacy_metric(*, request: str, response: str, **kwargs) -> Assessment:
+def data_privacy_metric(*, inputs: str, outputs: str, **kwargs) -> Assessment:
     """Evaluate data privacy compliance (production monitoring).
 
     Args:
-        request: The customer's original query
-        response: The agent's response
+        inputs: The customer's original query
+        outputs: The agent's response
         **kwargs: Additional parameters (ignored)
 
     Returns:
         Assessment object with binary score and rationale
     """
     try:
-        request_text = extract_request_text(request)
-        response_text = extract_response_text(response)
+        request_text = extract_request_text(inputs)
+        response_text = extract_response_text(outputs)
 
         # guidelines judge to evaluate data privacy
         feedback = meets_guidelines(
@@ -64,22 +64,22 @@ def data_privacy_metric(*, request: str, response: str, **kwargs) -> Assessment:
 
 @scorer
 def data_privacy_scorer(
-    *, request: str, response: str, trace: Optional[dict[str, Any]] = None, **kwargs
+    *, inputs: str, outputs: str, traces: Optional[dict[str, Any]] = None, **kwargs
 ) -> Feedback:
     """Evaluate data privacy compliance.
 
     Args:
-        request: The customer's original query
-        response: The agent's response
-        trace: Optional trace information for additional context
+        inputs: The customer's original query
+        outputs: The agent's response
+        traces: Optional trace information for additional context
         **kwargs: Additional parameters (ignored)
 
     Returns:
         Feedback object with binary score and rationale
     """
     try:
-        request_text = extract_request_text(request)
-        response_text = extract_response_text(response)
+        request_text = extract_request_text(inputs)
+        response_text = extract_response_text(outputs)
 
         # context with trace info
         context = {"request": request_text, "response": response_text}

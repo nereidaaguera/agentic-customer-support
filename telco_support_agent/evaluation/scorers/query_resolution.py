@@ -29,20 +29,20 @@ def _get_query_resolution_guidelines() -> list[str]:
 
 
 @metric
-def query_resolution_metric(*, request: str, response: str, **kwargs) -> Assessment:
+def query_resolution_metric(*, inputs: str, outputs: str, **kwargs) -> Assessment:
     """Evaluate if the response resolves the customer's query.
 
     Args:
-        request: The customer's original query
-        response: The agent's response
+        inputs: The customer's original query
+        outputs: The agent's response
         **kwargs: Additional parameters (ignored)
 
     Returns:
         Assessment object with binary score and rationale
     """
     try:
-        request_text = extract_request_text(request)
-        response_text = extract_response_text(response)
+        request_text = extract_request_text(inputs)
+        response_text = extract_response_text(outputs)
 
         # guidelines judge to evaluate resolution
         feedback = meets_guidelines(
@@ -64,22 +64,22 @@ def query_resolution_metric(*, request: str, response: str, **kwargs) -> Assessm
 
 @scorer
 def query_resolution_scorer(
-    *, request: str, response: str, trace: Optional[dict[str, Any]] = None, **kwargs
+    *, inputs: str, outputs: str, traces: Optional[dict[str, Any]] = None, **kwargs
 ) -> Feedback:
     """Evaluate whether the response resolves the customer's query.
 
     Args:
-        request: The customer's original query
-        response: The agent's response
-        trace: Optional trace information for additional context
+        inputs: The customer's original query
+        outputs: The agent's response
+        traces: Optional trace information for additional context
         **kwargs: Additional parameters (ignored)
 
     Returns:
         Feedback object with binary score and rationale
     """
     try:
-        request_text = extract_request_text(request)
-        response_text = extract_response_text(response)
+        request_text = extract_request_text(inputs)
+        response_text = extract_response_text(outputs)
 
         # context with trace info
         context = {"request": request_text, "response": response_text}

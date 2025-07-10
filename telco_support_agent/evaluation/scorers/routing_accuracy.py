@@ -28,8 +28,8 @@ def _get_routing_accuracy_guidelines() -> list[str]:
 @metric
 def routing_accuracy_metric(
     *,
-    request: str,
-    response: str,
+    inputs: str,
+    outputs: str,
     routed_agent: Optional[str] = None,
     topic: Optional[str] = None,
     **kwargs,
@@ -37,8 +37,8 @@ def routing_accuracy_metric(
     """Evaluate routing accuracy.
 
     Args:
-        request: The customer's original query
-        response: The agent's response (not directly used but required for compatibility)
+        inputs: The customer's original query
+        outputs: The agent's response (not directly used but required for compatibility)
         routed_agent: The agent type the query was routed to
         topic: The detected topic/category
         **kwargs: Additional parameters (ignored)
@@ -47,7 +47,7 @@ def routing_accuracy_metric(
         Assessment object with binary score and rationale
     """
     try:
-        query_text = extract_request_text(request)
+        query_text = extract_request_text(inputs)
 
         if not routed_agent:
             return Assessment(
@@ -78,24 +78,24 @@ def routing_accuracy_metric(
 
 @scorer
 def routing_accuracy_scorer(
-    *, request: str, response: str, trace: Optional[dict[str, Any]] = None, **kwargs
+    *, inputs: str, outputs: str, traces: Optional[dict[str, Any]] = None, **kwargs
 ) -> Feedback:
     """Evaluate routing accuracy.
 
     Args:
-        request: The customer's original query
-        response: The agent's response (not directly used but required for compatibility)
-        trace: Trace containing routing details
+        inputs: The customer's original query
+        outputs: The agent's response (not directly used but required for compatibility)
+        traces: Trace containing routing details
         **kwargs: Additional parameters (ignored)
 
     Returns:
         Feedback object with binary score and rationale
     """
     try:
-        query_text = extract_request_text(request)
+        query_text = extract_request_text(inputs)
 
         # get routing information from trace
-        routing_info = extract_trace_routing_info(trace)
+        routing_info = extract_trace_routing_info(traces)
         routed_agent = routing_info.get("agent_type", "unknown")
         topic = routing_info.get("topic", "not detected")
 
