@@ -102,11 +102,10 @@ for scorer in OFFLINE_SCORERS:
 
 # COMMAND ----------
 
-eval_results = mlflow.evaluate(
+eval_results = mlflow.genai.evaluate(
     model=model_uri,
     data=eval_data,
-    scorers=OFFLINE_SCORERS,
-    model_type="databricks-agent"
+    scorers=OFFLINE_SCORERS
 )
 
 print("Evaluation complete!")
