@@ -66,23 +66,24 @@ print(f"Model: {model_uri}")
 
 # COMMAND ----------
 
+# Evaluation data with inputs matching the predict_fn parameters
 eval_data = [
     {
         "inputs": {
-            "input": [{"role": "user", "content": "What plan am I currently on?"}],
-            "custom_inputs": {"customer": "CUS-10001"}
+            "messages": [{"role": "user", "content": "What plan am I currently on?"}],
+            "customer_id": "CUS-10001"
         }
     },
     {
         "inputs": {
-            "input": [{"role": "user", "content": "My internet is very slow today"}],
-            "custom_inputs": {"customer": "CUS-10002"}
+            "messages": [{"role": "user", "content": "My internet is very slow today"}],
+            "customer_id": "CUS-10002"
         }
     },
     {
         "inputs": {
-            "input": [{"role": "user", "content": "Can you show me my last bill?"}],
-            "custom_inputs": {"customer": "CUS-10003"}
+            "messages": [{"role": "user", "content": "Can you show me my last bill?"}],
+            "customer_id": "CUS-10003"
         }
     }
 ]
@@ -102,13 +103,15 @@ for scorer in OFFLINE_SCORERS:
 
 # COMMAND ----------
 
-# Load the model for evaluation
 model = mlflow.pyfunc.load_model(model_uri)
 
-# Define predict function for evaluation
-def predict_fn(inputs):
-    """Predict function for agent evaluation."""
-    return model.predict(inputs)
+def predict_fn(messages: list, customer_id: str) -> dict:
+    """Wrapper to translate eval parameters to model input format."""
+    model_input = {
+        "input": messages,
+        "custom_inputs": {"customer": customer_id}
+    }
+    return model.predict(model_input)
 
 # COMMAND ----------
 
@@ -127,12 +130,14 @@ print("Evaluation complete!")
 
 # COMMAND ----------
 
-if hasattr(eval_results, 'metrics'):
-    print("Metrics:")
-    for name, value in eval_results.metrics.items():
-        print(f"  {name}: {value}")
+# Display evaluation metrics
+print("Evaluation Metrics:")
+for metric_name, metric_value in eval_results.metrics.items():
+    print(f"  {metric_name}: {metric_value:.3f}")
 
-if hasattr(eval_results, 'tables'):
-    results_df = eval_results.tables['eval_results_table']
-    print(f"\nResults shape: {results_df.shape}")
-    display(results_df)
+# COMMAND ----------
+
+# Display detailed results table
+results_df = eval_results.tables['eval_results_table']
+print(f"Detailed results: {results_df.shape[0]} rows x {results_df.shape[1]} columns")
+display(results_df)
