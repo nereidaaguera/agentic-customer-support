@@ -4,7 +4,6 @@ from typing import Optional
 
 from databricks.agents.monitoring import (
     AssessmentsSuiteConfig,
-    CustomMetric,
     create_external_monitor,
     delete_external_monitor,
     get_external_monitor,
@@ -61,13 +60,14 @@ def create_agent_monitor(
         logger.info(f"Using agent catalog: {uc_config.agent['catalog']}")
         logger.info(f"Using agent schema: {uc_config.agent['schema']}")
 
-        # prepare assessments list
+        # prepare assessments list - pass custom metrics directly
         assessments = []
         if custom_metrics:
             for metric_func in custom_metrics:
                 metric_name = getattr(metric_func, "__name__", "unknown_metric")
                 logger.info(f"Adding custom metric: {metric_name}")
-                assessments.append(CustomMetric(metric_func))
+                # Pass the metric function directly as an assessment
+                assessments.append(metric_func)
 
         logger.info(f"Monitor will use {len(assessments)} custom assessments")
 
