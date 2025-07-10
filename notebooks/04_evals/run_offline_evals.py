@@ -97,9 +97,19 @@ print(f"Evaluation dataset: {len(eval_data)} samples")
 
 # COMMAND ----------
 
+scorer_names = [
+    "brand_compliance_scorer",
+    "data_privacy_scorer", 
+    "query_resolution_scorer",
+    "response_clarity_scorer",
+    "routing_accuracy_scorer",
+    "tool_accuracy_scorer"
+]
+
 print(f"Available scorers: {len(OFFLINE_SCORERS)}")
-for scorer in OFFLINE_SCORERS:
-    print(f"  - {getattr(scorer, '__name__', 'unknown')}")
+for i, scorer in enumerate(OFFLINE_SCORERS):
+    name = scorer_names[i] if i < len(scorer_names) else f"scorer_{i}"
+    print(f"  - {name}")
 
 # COMMAND ----------
 
