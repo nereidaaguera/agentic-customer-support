@@ -60,16 +60,18 @@ def create_agent_monitor(
         logger.info(f"Using agent catalog: {uc_config.agent['catalog']}")
         logger.info(f"Using agent schema: {uc_config.agent['schema']}")
 
-        # prepare assessments list - pass custom metrics directly
         assessments = []
+        
         if custom_metrics:
+            logger.info("Adding custom telco metrics to monitoring")
             for metric_func in custom_metrics:
                 metric_name = getattr(metric_func, "__name__", "unknown_metric")
-                logger.info(f"Adding custom metric: {metric_name}")
-                # Pass the metric function directly as an assessment
+                logger.info(f"  - Adding custom metric: {metric_name}")
                 assessments.append(metric_func)
+        else:
+            logger.warning("No custom metrics provided - monitor will have no assessments")
 
-        logger.info(f"Monitor will use {len(assessments)} custom assessments")
+        logger.info(f"Monitor configured with {len(assessments)} custom telco assessments")
 
         assessments_config = AssessmentsSuiteConfig(
             sample=sample,
