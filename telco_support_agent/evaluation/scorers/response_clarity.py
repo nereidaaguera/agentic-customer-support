@@ -2,8 +2,8 @@
 
 from typing import Any, Optional
 
-from databricks.agents.evals import Assessment, metric
-from mlflow.entities import Feedback
+from databricks.agents.evals import metric
+from mlflow.entities import Assessment, Feedback
 from mlflow.genai.scorers import scorer
 from mlflow.genai.judges import custom_prompt_judge
 
