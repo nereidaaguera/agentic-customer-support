@@ -48,21 +48,21 @@ class WidgetConfigLoader:
         if get_origin(annotation) is Optional:
             annotation = get_args(annotation)[0]
 
-        if annotation == bool:
+        if annotation is bool:
             return value.lower() in ("true", "1", "yes", "on")
-        elif annotation == int:
+        elif annotation is int:
             return int(value)
-        elif annotation == float:
+        elif annotation is float:
             return float(value)
-        elif annotation == str:
+        elif annotation is str:
             return value
         elif get_origin(annotation) is list:
             list_type = get_args(annotation)[0] if get_args(annotation) else str
 
-            if list_type == str:
+            if list_type is str:
                 # comma-separated string lists
                 return [v.strip() for v in value.split(",") if v.strip()]
-            elif list_type == dict:
+            elif list_type is dict:
                 # JSON list of dicts
                 return json.loads(value) if value else []
             else:

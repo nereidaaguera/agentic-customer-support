@@ -1,8 +1,11 @@
 """Configuration models for each notebook - clear and direct."""
 
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from pydantic import BaseModel, Field
+
+if TYPE_CHECKING:
+    from telco_support_agent.agents import UCConfig
 
 
 class LogRegisterConfig(BaseModel):
