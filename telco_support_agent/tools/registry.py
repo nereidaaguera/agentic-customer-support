@@ -2,8 +2,8 @@
 
 from unitycatalog.ai.openai.toolkit import UCFunctionToolkit
 
-from telco_support_agent.agents.types import AgentType
 from telco_support_agent.agents import UCConfig
+from telco_support_agent.agents.types import AgentType
 from telco_support_agent.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)

@@ -1,48 +1,57 @@
 """Configuration models for each notebook - clear and direct."""
 
+from typing import Any, Optional
+
 from pydantic import BaseModel, Field
-from typing import Dict, List, Optional, Any
 
 
 class LogRegisterConfig(BaseModel):
     """Configuration for log_register_agent notebook."""
-    
+
     # Environment
     env: str
-    
+
     # Unity Catalog
     uc_catalog: str
     agent_schema: str  # UC schema for agent models/functions
-    data_schema: str   # UC schema for data tables
+    data_schema: str  # UC schema for data tables
     model_name: str
-    
+
     # MLflow
     experiment_name: str
-    
+
     # Model metadata
     agent_name: str = "telco_customer_support_agent"
     agent_description: str = "Multi-agent system for telco customer support"
-    
+
     # Model signature example
-    input_example: Dict[str, Any] = Field(default_factory=lambda: {
-        "input": [{"role": "user", "content": "What was the customer's data usage last month?"}],
-        "custom_inputs": {"customer": "CUS-10001"}
-    })
-    
+    input_example: dict[str, Any] = Field(
+        default_factory=lambda: {
+            "input": [
+                {
+                    "role": "user",
+                    "content": "What was the customer's data usage last month?",
+                }
+            ],
+            "custom_inputs": {"customer": "CUS-10001"},
+        }
+    )
+
     # Feature flags
-    disable_tools: List[str] = Field(default_factory=list)
+    disable_tools: list[str] = Field(default_factory=list)
     git_commit: Optional[str] = None
-    
-    def to_uc_config(self) -> 'UCConfig':
+
+    def to_uc_config(self) -> "UCConfig":
         """Convert to UCConfig for Unity Catalog operations."""
         from telco_support_agent.agents import UCConfig
+
         return UCConfig(
             catalog=self.uc_catalog,
             agent_schema=self.agent_schema,
             data_schema=self.data_schema,
-            model_name=self.model_name
+            model_name=self.model_name,
         )
-    
+
     @property
     def full_model_name(self) -> str:
         """Get the full Unity Catalog model name."""
@@ -51,37 +60,39 @@ class LogRegisterConfig(BaseModel):
 
 class DeployAgentConfig(BaseModel):
     """Configuration for deploy_agent notebook."""
-    
+
     # Environment
     env: str
-    
+
     # Unity Catalog
     uc_catalog: str
     agent_schema: str
     model_name: str
     model_version: Optional[int] = None  # if not set, use latest
-    
+
     # Model Serving
     endpoint_name: str
     scale_to_zero_enabled: bool = False
     workload_size: str = "Small"
     wait_for_ready: bool = True
-    
+
     # Cleanup settings
     cleanup_old_versions: bool = True
     keep_previous_count: int = 1
-    
+
     # Monitoring
     monitoring_enabled: bool = True
     monitoring_replace_existing: bool = False
     monitoring_fail_on_error: bool = False
-    
+
     # Permissions
-    permissions: List[Dict[str, Any]] = Field(default_factory=lambda: [
-        {"users": ["telco-customer-support"], "permission_level": "CAN_MANAGE"},
-        {"users": ["users"], "permission_level": "CAN_QUERY"}
-    ])
-    
+    permissions: list[dict[str, Any]] = Field(
+        default_factory=lambda: [
+            {"users": ["telco-customer-support"], "permission_level": "CAN_MANAGE"},
+            {"users": ["users"], "permission_level": "CAN_QUERY"},
+        ]
+    )
+
     # Instructions for review app
     instructions: str = """Telco Customer Support Agent
 
@@ -92,17 +103,18 @@ This agent helps with telecom customer support queries including:
 - Product information and plan comparisons
 
 Please test various query types and provide feedback on response quality."""
-    
-    def to_uc_config(self) -> 'UCConfig':
+
+    def to_uc_config(self) -> "UCConfig":
         """Convert to UCConfig for Unity Catalog operations."""
         from telco_support_agent.agents import UCConfig
+
         return UCConfig(
             catalog=self.uc_catalog,
             agent_schema=self.agent_schema,
             data_schema="gold",  # Default data schema for deployment
-            model_name=self.model_name
+            model_name=self.model_name,
         )
-    
+
     @property
     def full_model_name(self) -> str:
         """Get the full Unity Catalog model name."""

@@ -1,4 +1,4 @@
-"""Log Agent models to MLflow using Models from Code approach - updated for custom inputs."""
+"""Log Agent models to MLflow."""
 
 import inspect
 from typing import Optional
@@ -56,7 +56,7 @@ def log_agent(
     # config artifacts
     artifacts = _collect_config_artifacts()
 
-    # auto-detect resources if not provided  
+    # auto-detect resources if not provided
     if resources is None:
         # Use provided UC config or defaults
         catalog = uc_catalog or f"telco_customer_support_{environment}"
@@ -159,9 +159,12 @@ def _collect_config_artifacts() -> dict[str, str]:
     return artifacts
 
 
-def _get_supervisor_resources(uc_catalog: str, agent_schema: str, data_schema: str) -> list[Resource]:
+def _get_supervisor_resources(
+    uc_catalog: str, agent_schema: str, data_schema: str
+) -> list[Resource]:
     """Get all resources needed by the supervisor agent."""
     import yaml
+
     from telco_support_agent.tools.registry import DOMAIN_FUNCTION_MAP
 
     resources = []
@@ -169,7 +172,7 @@ def _get_supervisor_resources(uc_catalog: str, agent_schema: str, data_schema: s
     # Get configs for all available agent types by scanning files
     agent_configs = {}
     config_dir = PROJECT_ROOT / "configs" / "agents"
-    
+
     if config_dir.exists():
         for config_file in config_dir.glob("*.yaml"):
             agent_type = config_file.stem

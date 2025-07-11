@@ -113,7 +113,10 @@ class BaseAgent(ResponsesAgent, abc.ABC):
 
     @classmethod
     def _load_config(
-        cls, agent_type: str, config_dir: Optional[Union[str, Path]] = None, uc_config: Optional[UCConfig] = None
+        cls,
+        agent_type: str,
+        config_dir: Optional[Union[str, Path]] = None,
+        uc_config: Optional[UCConfig] = None,
     ) -> AgentConfig:
         """Load agent configuration from YAML file.
 
@@ -135,9 +138,9 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             if not uc_config:
                 uc_config = UCConfig(
                     catalog="telco_customer_support_dev",
-                    agent_schema="agent", 
+                    agent_schema="agent",
                     data_schema="gold",
-                    model_name="telco_customer_support_agent"
+                    model_name="telco_customer_support_agent",
                 )
 
             config = AgentConfig.load_from_file(agent_type, uc_config)

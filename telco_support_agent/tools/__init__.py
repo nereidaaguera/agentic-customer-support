@@ -13,9 +13,9 @@ logger = get_logger(__name__)
 
 
 def initialize_tools(
-    domains: Optional[list[str]] = None, 
+    domains: Optional[list[str]] = None,
     agent_config: Optional[dict] = None,
-    uc_config: Optional[UCConfig] = None
+    uc_config: Optional[UCConfig] = None,
 ) -> dict[str, dict[str, bool]]:
     """Initialize UC functions and tools.
 
@@ -39,8 +39,8 @@ def initialize_tools(
         uc_config = UCConfig(
             catalog="telco_customer_support_dev",
             agent_schema="agent",
-            data_schema="gold", 
-            model_name="telco_customer_support_agent"
+            data_schema="gold",
+            model_name="telco_customer_support_agent",
         )
 
     results = {}
