@@ -2,6 +2,7 @@
 
 from typing import Optional
 
+from telco_support_agent.agents import UCConfig
 from telco_support_agent.agents.base_agent import BaseAgent
 from telco_support_agent.tools.tech_support import TechSupportRetriever
 from telco_support_agent.utils.logging_utils import get_logger, setup_logging
@@ -25,18 +26,18 @@ class TechSupportAgent(BaseAgent):
         self,
         llm_endpoint: Optional[str] = None,
         config_dir: Optional[str] = None,
-        environment: str = "prod",
         disable_tools: Optional[list[str]] = None,
+        uc_config: Optional[UCConfig] = None,
     ) -> None:
         """Init agent.
 
         Args:
             llm_endpoint: Optional LLM endpoint override
             config_dir: Optional directory for config files
-            environment: Environment to use for retrievers (dev, prod)
             disable_tools: Optional list of tool names to disable
+            uc_config: Optional UC configuration for Unity Catalog resources
         """
-        self.retriever = TechSupportRetriever(environment=environment)
+        self.retriever = TechSupportRetriever(uc_config=uc_config)
         retriever_tools = self.retriever.get_tools()
 
         # mapping of tool names to their executable objects
@@ -56,6 +57,7 @@ class TechSupportAgent(BaseAgent):
             tools=retriever_tools,  # tool specs for LLM
             vector_search_tools=vector_search_tools,  # executable objects
             disable_tools=disable_tools,
+            uc_config=uc_config,
         )
 
     def get_description(self) -> str:

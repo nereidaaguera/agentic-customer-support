@@ -40,6 +40,7 @@ os.environ['TELCO_SUPPORT_AGENT_ENV'] = env
 # COMMAND ----------
 
 from telco_support_agent.data.vector_search import VectorSearchManager
+from telco_support_agent.agents import UCConfig
 from telco_support_agent.utils.logging_utils import setup_logging
 
 setup_logging()
@@ -54,7 +55,15 @@ setup_logging()
 config_path = str(Path(root_path) / "configs" / "vector_search.yaml")
 print(f"Config path: {config_path}")
 
-vs_manager = VectorSearchManager(config_path=config_path)
+# Create UC config based on environment
+uc_config = UCConfig(
+    catalog=f"telco_customer_support_{env}",
+    agent_schema="agent",
+    data_schema="gold",
+    model_name="telco_customer_support_agent"
+)
+
+vs_manager = VectorSearchManager(config_path=config_path, uc_config=uc_config)
 
 print("✅ Vector Search Manager initialized successfully")
 print(f"   Endpoint: {vs_manager.endpoint_name}")

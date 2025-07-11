@@ -123,7 +123,9 @@ class SupervisorAgent(BaseAgent):
         if agent_type_enum in agents_classes:
             try:
                 agent = agents_classes[agent_type_enum](
-                    llm_endpoint=self.llm_endpoint, disable_tools=self.disable_tools
+                    llm_endpoint=self.llm_endpoint,
+                    disable_tools=self.disable_tools,
+                    uc_config=self.config.uc_config,
                 )
                 self._sub_agents[agent_type_str] = agent
                 logger.info(f"Initialized {agent_type_str} agent")

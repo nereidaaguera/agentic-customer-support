@@ -218,19 +218,18 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             Path.cwd() / "configs" / "disable_tools.json",
         ]
 
-        # Add development paths if config_manager is available
+        # Add development paths using package directory
         try:
-            from telco_support_agent.utils.config import config_manager
+            from telco_support_agent import PROJECT_ROOT
 
-            project_root = config_manager._project_root
             search_paths.extend(
                 [
-                    project_root / "configs" / "disable_tools.json",
-                    project_root / "configs" / "agents" / "disable_tools.json",
+                    PROJECT_ROOT / "configs" / "disable_tools.json",
+                    PROJECT_ROOT / "configs" / "agents" / "disable_tools.json",
                 ]
             )
         except Exception as e:
-            logger.debug(f"Could not access config_manager for development paths: {e}")
+            logger.debug(f"Could not access PROJECT_ROOT for development paths: {e}")
 
         return search_paths
 
