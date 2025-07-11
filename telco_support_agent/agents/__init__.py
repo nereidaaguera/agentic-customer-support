@@ -15,24 +15,38 @@ class LLMConfig(BaseModel):
 
 
 class UCConfig(BaseModel):
-    """Unity Catalog configuration."""
+    """Unity Catalog configuration with separation of data reading vs agent artifacts."""
 
-    catalog: str
-    data_schema: str
+    # For reading data (customer info, billing, etc.) - always prod
+    data_catalog: str = "telco_customer_support_prod"
+    data_schema: str = "gold"
+
+    # For agent artifacts (functions, models) - environment specific
+    agent_catalog: str = "telco_customer_support_prod"  # Default to prod for testing
     agent_schema: str = "agent"
     model_name: str = "telco_customer_support_agent"
 
     def get_uc_function_name(self, function_name: str) -> str:
-        """Returns full UC function name."""
-        return f"{self.catalog}.{self.agent_schema}.{function_name}"
+        """Returns full UC function name (uses agent catalog)."""
+        return f"{self.agent_catalog}.{self.agent_schema}.{function_name}"
 
     def get_uc_table_name(self, table_name: str) -> str:
-        """Returns full UC table name."""
-        return f"{self.catalog}.{self.data_schema}.{table_name}"
+        """Returns full UC table name for data reading (uses data catalog)."""
+        return f"{self.data_catalog}.{self.data_schema}.{table_name}"
+
+    def get_uc_index_name(self, index_name: str) -> str:
+        """Returns full UC vector search index name (uses data catalog)."""
+        return f"{self.data_catalog}.{self.data_schema}.{index_name}"
 
     def get_uc_model_name(self) -> str:
-        """Returns full UC model name."""
-        return f"{self.catalog}.{self.agent_schema}.{self.model_name}"
+        """Returns full UC model name (uses agent catalog)."""
+        return f"{self.agent_catalog}.{self.agent_schema}.{self.model_name}"
+
+    # Backward compatibility
+    @property
+    def catalog(self) -> str:
+        """Backward compatibility - returns agent catalog."""
+        return self.agent_catalog
 
 
 class AgentConfig(BaseModel):

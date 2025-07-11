@@ -37,7 +37,9 @@ class AccountAgent(BaseAgent):
         toolkit = get_toolkit_for_domain(
             "account",
             uc_config
-            or UCConfig(catalog="telco_customer_support_prod", data_schema="gold"),
+            or UCConfig(
+                agent_catalog="telco_customer_support_prod", data_schema="gold"
+            ),
         )
 
         logger.info(f"Account agent initialized with {len(toolkit.tools)} tools")

@@ -37,7 +37,7 @@ def initialize_tools(
     # Create default UC config if not provided
     if not uc_config:
         uc_config = UCConfig(
-            catalog="telco_customer_support_dev",
+            agent_catalog="telco_customer_support_dev",
             agent_schema="agent",
             data_schema="gold",
             model_name="telco_customer_support_agent",

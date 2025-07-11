@@ -34,7 +34,7 @@ class VectorSearchManager:
         self.client = VectorSearchClient()
         self.config = self._load_config(config_path)
         self.uc_config = uc_config or UCConfig(
-            catalog="telco_customer_support_prod",
+            agent_catalog="telco_customer_support_prod",
             agent_schema="agent",
             data_schema="gold",
             model_name="telco_customer_support_agent",

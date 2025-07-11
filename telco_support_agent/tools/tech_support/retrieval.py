@@ -42,15 +42,13 @@ class KnowledgeBaseRetriever:
         if not uc_config:
             # Default UC config if not provided
             uc_config = UCConfig(
-                catalog="telco_customer_support_prod",
+                agent_catalog="telco_customer_support_prod",
                 agent_schema="agent",
                 data_schema="gold",
                 model_name="telco_customer_support_agent",
             )
 
-        self.index_name = (
-            f"{uc_config.catalog}.{uc_config.data_schema}.knowledge_base_index"
-        )
+        self.index_name = uc_config.get_uc_index_name("knowledge_base_index")
 
         self.columns = [
             "kb_id",
@@ -200,15 +198,13 @@ class SupportTicketsRetriever:
         if not uc_config:
             # Default UC config if not provided
             uc_config = UCConfig(
-                catalog="telco_customer_support_prod",
+                agent_catalog="telco_customer_support_prod",
                 agent_schema="agent",
                 data_schema="gold",
                 model_name="telco_customer_support_agent",
             )
 
-        self.index_name = (
-            f"{uc_config.catalog}.{uc_config.data_schema}.support_tickets_index"
-        )
+        self.index_name = uc_config.get_uc_index_name("support_tickets_index")
 
         self.columns = [
             "ticket_id",

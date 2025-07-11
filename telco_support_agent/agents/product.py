@@ -36,7 +36,9 @@ class ProductAgent(BaseAgent):
         toolkit = get_toolkit_for_domain(
             "product",
             uc_config
-            or UCConfig(catalog="telco_customer_support_prod", data_schema="gold"),
+            or UCConfig(
+                agent_catalog="telco_customer_support_prod", data_schema="gold"
+            ),
         )
 
         logger.info(f"Product agent initialized with {len(toolkit.tools)} tools")

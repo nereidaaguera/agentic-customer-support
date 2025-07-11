@@ -41,10 +41,9 @@ for agent_type in AgentType:
 
 # COMMAND ----------
 
-# default UC config for testing
+# UC config for testing - only need data reading capabilities
 uc_config = UCConfig(
-    catalog="telco_customer_support_dev",
-    data_schema="gold",
+    # Uses defaults: data_catalog="telco_customer_support_prod", data_schema="gold"
 )
 
 print("Unity Catalog Configuration:")

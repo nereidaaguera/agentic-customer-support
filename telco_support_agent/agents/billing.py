@@ -39,7 +39,9 @@ class BillingAgent(BaseAgent):
         billing_toolkit = get_toolkit_for_domain(
             "billing",
             uc_config
-            or UCConfig(catalog="telco_customer_support_prod", data_schema="gold"),
+            or UCConfig(
+                agent_catalog="telco_customer_support_prod", data_schema="gold"
+            ),
         )
 
         # add system.ai.python_exec for date calculations and billing analysis

@@ -127,7 +127,7 @@ if __name__ == "__main__":
     logger.info("Register account UC function")
     # Default UC config for auto-registration
     uc_config = UCConfig(
-        catalog="telco_customer_support_prod",
+        agent_catalog="telco_customer_support_prod",
         agent_schema="agent",
         data_schema="gold",
         model_name="telco_customer_support_agent",

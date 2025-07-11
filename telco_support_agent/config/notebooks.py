@@ -49,7 +49,7 @@ class LogRegisterConfig(BaseModel):
         from telco_support_agent.agents import UCConfig
 
         return UCConfig(
-            catalog=self.uc_catalog,
+            agent_catalog=self.uc_catalog,
             agent_schema=self.agent_schema,
             data_schema=self.data_schema,
             model_name=self.model_name,
@@ -112,7 +112,7 @@ Please test various query types and provide feedback on response quality."""
         from telco_support_agent.agents import UCConfig
 
         return UCConfig(
-            catalog=self.uc_catalog,
+            agent_catalog=self.uc_catalog,
             agent_schema=self.agent_schema,
             data_schema="gold",  # Default data schema for deployment
             model_name=self.model_name,
