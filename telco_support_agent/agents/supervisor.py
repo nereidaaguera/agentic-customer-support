@@ -15,6 +15,7 @@ from mlflow.types.responses import (
 
 from telco_support_agent.agents.account import AccountAgent
 from telco_support_agent.agents.base_agent import BaseAgent
+from telco_support_agent.agents import UCConfig
 from telco_support_agent.agents.billing import BillingAgent
 from telco_support_agent.agents.product import ProductAgent
 from telco_support_agent.agents.tech_support import TechSupportAgent
@@ -54,6 +55,7 @@ class SupervisorAgent(BaseAgent):
         llm_endpoint: Optional[str] = None,
         config_dir: Optional[str] = None,
         disable_tools: Optional[list[str]] = None,
+        uc_config: Optional[UCConfig] = None,
     ):
         """Initialize supervisor agent.
 
@@ -63,6 +65,7 @@ class SupervisorAgent(BaseAgent):
             disable_tools: Optional list of tool names to disable.
                 Can be either simple names (e.g., 'get_usage_info') or full UC function
                 names (e.g., 'telco_customer_support_dev.agent.get_usage_info').
+            uc_config: Optional UC configuration for Unity Catalog resources
         """
         # NOTE: don't need UC function tools for supervisor
         # the routing logic will be implemented directly in this class
@@ -71,6 +74,7 @@ class SupervisorAgent(BaseAgent):
             llm_endpoint=llm_endpoint,
             config_dir=config_dir,
             tools=[],  # no tools needed for routing
+            uc_config=uc_config,
         )
 
         self._sub_agents = {}

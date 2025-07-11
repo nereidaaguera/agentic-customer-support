@@ -8,10 +8,16 @@ resources:
           notebook_task:
             notebook_path: ../notebooks/03_log_register_agent/log_register_agent.py
             base_parameters:
+              # Pass all needed parameters
               env: ${bundle.target}
-              git_commit: ${bundle.git.commit}
+              uc_catalog: ${var.uc_catalog}
+              agent_schema: ${var.agent_schema}
+              data_schema: ${var.data_schema}
+              model_name: ${var.model_name}
               experiment_name: ${var.experiment_name}
               disable_tools: ${var.disable_tools}
+              git_commit: ${bundle.git.commit}
+              
         - task_key: deploy_agent
           depends_on:
             - task_key: log_register_agent
@@ -19,5 +25,10 @@ resources:
             notebook_path: ../notebooks/04_deploy_agent/deploy_agent.py
             base_parameters:
               env: ${bundle.target}
+              uc_catalog: ${var.uc_catalog}
+              agent_schema: ${var.agent_schema}
+              model_name: ${var.model_name}
+              endpoint_name: ${var.endpoint_name}
+              scale_to_zero_enabled: ${var.scale_to_zero_enabled}
+              workload_size: ${var.workload_size}
               git_commit: ${bundle.git.commit}
-              experiment_name: ${var.experiment_name}

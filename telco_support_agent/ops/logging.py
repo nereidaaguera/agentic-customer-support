@@ -15,7 +15,6 @@ from mlflow.models.resources import (
 from mlflow.types.responses import ResponsesAgentRequest
 
 from telco_support_agent import PACKAGE_DIR, PROJECT_ROOT
-from telco_support_agent.utils.config import UC_CONFIG_FILE
 from telco_support_agent.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)

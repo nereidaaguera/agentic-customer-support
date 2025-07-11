@@ -2,9 +2,39 @@ bundle:
   name: telco-support-agent
 
 variables:
+  # Unity Catalog
+  uc_catalog:
+    description: Unity Catalog for all resources
+    default: telco_customer_support_${bundle.target}
+  agent_schema:
+    description: Schema for agent models and functions
+    default: agent
+  data_schema:
+    description: Schema for data tables
+    default: gold
+  model_name:
+    description: Model name in UC
+    default: telco_customer_support_agent
+    
+  # MLflow
   experiment_name:
-    default: /Shared/telco_support_agent/dev/dev_telco_support_agent
+    description: MLflow experiment name
+    default: /Shared/telco_support_agent/${bundle.target}/${bundle.target}_telco_support_agent
+    
+  # Deployment
+  endpoint_name:
+    description: Model serving endpoint name
+    default: telco-customer-support-agent-${bundle.target}
+  scale_to_zero_enabled:
+    description: Enable scale to zero
+    default: false
+  workload_size:
+    description: Endpoint workload size
+    default: Small
+    
+  # Features
   disable_tools:
+    description: Comma-separated list of tools to disable
     default: ""
 
 permissions:
@@ -26,6 +56,7 @@ targets:
     variables:
       experiment_name: /Shared/telco_support_agent/dev/dev_telco_support_agent
       disable_tools: ""
+      
   staging:
     default: false
     workspace:
@@ -34,7 +65,9 @@ targets:
       service_principal_name: ${workspace.current_user.userName}
     variables:
       experiment_name: /telco_support_agent/staging/experiments/staging_telco_support_agent
+      scale_to_zero_enabled: true
       disable_tools: get_usage_info
+      
   prod:
     default: false
     workspace:
@@ -43,4 +76,5 @@ targets:
       service_principal_name: ${workspace.current_user.userName}
     variables:
       experiment_name: /Shared/telco_support_agent/prod/prod_telco_support_agent
+      workload_size: Small
       disable_tools: ""
