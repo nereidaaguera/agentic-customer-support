@@ -78,13 +78,7 @@ from telco_support_agent.tools import initialize_tools
 print("Initializing required UC functions...")
 
 # Create UC config from our notebook config
-from telco_support_agent.agents import UCConfig
-uc_config = UCConfig(
-    catalog=config.uc_catalog,
-    agent_schema=config.agent_schema,
-    data_schema=config.data_schema,
-    model_name=config.model_name
-)
+uc_config = config.to_uc_config()
 
 results = initialize_tools(uc_config=uc_config)
 
@@ -137,6 +131,9 @@ logged_model_info = log_agent(
     input_example=config.input_example,
     environment=config.env,
     disable_tools=config.disable_tools,
+    uc_catalog=config.uc_catalog,
+    agent_schema=config.agent_schema,
+    data_schema=config.data_schema,
 )
 
 print(f"Logged agent: {logged_model_info.model_uri}")

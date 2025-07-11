@@ -33,18 +33,20 @@ class LogRegisterConfig(BaseModel):
     disable_tools: List[str] = Field(default_factory=list)
     git_commit: Optional[str] = None
     
+    def to_uc_config(self) -> 'UCConfig':
+        """Convert to UCConfig for Unity Catalog operations."""
+        from telco_support_agent.agents import UCConfig
+        return UCConfig(
+            catalog=self.uc_catalog,
+            agent_schema=self.agent_schema,
+            data_schema=self.data_schema,
+            model_name=self.model_name
+        )
+    
     @property
     def full_model_name(self) -> str:
         """Get the full Unity Catalog model name."""
-        return f"{self.uc_catalog}.{self.agent_schema}.{self.model_name}"
-    
-    def get_table_name(self, table: str) -> str:
-        """Get full table name in data schema."""
-        return f"{self.uc_catalog}.{self.data_schema}.{table}"
-    
-    def get_function_name(self, function: str) -> str:
-        """Get full function name in agent schema."""
-        return f"{self.uc_catalog}.{self.agent_schema}.{function}"
+        return self.to_uc_config().get_uc_model_name()
 
 
 class DeployAgentConfig(BaseModel):
@@ -91,7 +93,17 @@ This agent helps with telecom customer support queries including:
 
 Please test various query types and provide feedback on response quality."""
     
+    def to_uc_config(self) -> 'UCConfig':
+        """Convert to UCConfig for Unity Catalog operations."""
+        from telco_support_agent.agents import UCConfig
+        return UCConfig(
+            catalog=self.uc_catalog,
+            agent_schema=self.agent_schema,
+            data_schema="gold",  # Default data schema for deployment
+            model_name=self.model_name
+        )
+    
     @property
     def full_model_name(self) -> str:
         """Get the full Unity Catalog model name."""
-        return f"{self.uc_catalog}.{self.agent_schema}.{self.model_name}"
+        return self.to_uc_config().get_uc_model_name()

@@ -195,10 +195,10 @@ if config.monitoring_enabled:
 
     try:
         # create external monitor with empty assessments
-        # Note: Will need to update create_agent_monitor to accept config object
+        uc_config = config.to_uc_config()
         monitor = create_agent_monitor(
-            uc_catalog=config.uc_catalog,
-            agent_schema=config.agent_schema,
+            uc_config=uc_config,
+            experiment_name=f"/Shared/telco_support_agent/{config.env}/{config.env}_telco_support_agent",
             replace_existing=config.monitoring_replace_existing,
         )
         
