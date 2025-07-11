@@ -27,10 +27,11 @@ import itertools
 
 from mlflow.types.responses import ResponsesAgentRequest
 
-from telco_support_agent.utils.config import config_manager
 from telco_support_agent.agents.supervisor import SupervisorAgent
 from telco_support_agent.tools import initialize_tools
 from telco_support_agent.agents.types import AgentType
+from telco_support_agent.agents import UCConfig, AgentConfig
+from telco_support_agent.tools.registry import DOMAIN_FUNCTION_MAP
 
 # COMMAND ----------
 
@@ -40,24 +41,53 @@ for agent_type in AgentType:
 
 # COMMAND ----------
 
-print("Available agent types (configs):", config_manager.get_all_agent_types())
+# default UC config for testing
+uc_config = UCConfig(
+    catalog="telco_customer_support_dev",
+    data_schema="gold",
+)
 
-supervisor_config = config_manager.get_config("supervisor")
-print("\nSupervisor LLM endpoint:", supervisor_config["llm"]["endpoint"])
+print("Unity Catalog Configuration:")
+print(f"  Catalog: {uc_config.catalog}")
+print(f"  Data Schema: {uc_config.data_schema}")
 
-account_config = config_manager.get_config("account")
-print("\nAccount agent functions:", account_config["uc_functions"])
+print("\nAvailable agent types and their functions:")
+for agent_type, functions in DOMAIN_FUNCTION_MAP.items():
+    print(f"  {agent_type.upper()}: {functions}")
 
-billing_config = config_manager.get_config("billing")
-print("\nBilling agent LLM endpoint:", billing_config["llm"]["endpoint"])
-print("Billing agent functions:", billing_config["uc_functions"])
+# agent configs from YAML files
+try:
+    supervisor_config = AgentConfig.load_from_file("supervisor", uc_config)
+    print(f"\nSupervisor LLM endpoint: {supervisor_config.llm.endpoint}")
+except Exception as e:
+    print(f"\nCould not load supervisor config: {e}")
 
-tech_support_config = config_manager.get_config("tech_support")
-print("\nTech support agent LLM endpoint:", tech_support_config["llm"]["endpoint"])
+try:
+    account_config = AgentConfig.load_from_file("account", uc_config)
+    print(f"\nAccount agent LLM endpoint: {account_config.llm.endpoint}")
+    print(f"Account agent functions: {account_config.uc_functions}")
+except Exception as e:
+    print(f"\nCould not load account config: {e}")
 
-product_config = config_manager.get_config("product")
-print("\nProduct agent LLM endpoint:", product_config["llm"]["endpoint"])
-print("Product agent functions:", product_config["uc_functions"])
+try:
+    billing_config = AgentConfig.load_from_file("billing", uc_config)
+    print(f"\nBilling agent LLM endpoint: {billing_config.llm.endpoint}")
+    print(f"Billing agent functions: {billing_config.uc_functions}")
+except Exception as e:
+    print(f"\nCould not load billing config: {e}")
+
+try:
+    tech_support_config = AgentConfig.load_from_file("tech_support", uc_config)
+    print(f"\nTech support agent LLM endpoint: {tech_support_config.llm.endpoint}")
+except Exception as e:
+    print(f"\nCould not load tech_support config: {e}")
+
+try:
+    product_config = AgentConfig.load_from_file("product", uc_config)
+    print(f"\nProduct agent LLM endpoint: {product_config.llm.endpoint}")
+    print(f"Product agent functions: {product_config.uc_functions}")
+except Exception as e:
+    print(f"\nCould not load product config: {e}")
 
 # COMMAND ----------
 
@@ -66,7 +96,7 @@ print("Product agent functions:", product_config["uc_functions"])
 
 # COMMAND ----------
 
-supervisor = SupervisorAgent()
+supervisor = SupervisorAgent(uc_config=uc_config)
 
 print(f"Agent type: {supervisor.agent_type}")
 print(f"LLM endpoint: {supervisor.llm_endpoint}")
@@ -81,7 +111,7 @@ print(f"LLM parameters: {supervisor.llm_params}")
 
 print("Initializing UC functions...")
 
-results = initialize_tools()
+results = initialize_tools(uc_config=uc_config)
 
 success_count = 0
 total_count = 0
