@@ -18,9 +18,9 @@ class UCConfig(BaseModel):
     """Unity Catalog configuration."""
 
     catalog: str
-    agent_schema: str
     data_schema: str
-    model_name: str
+    agent_schema: str = "agent"
+    model_name: str = "telco_customer_support_agent"
 
     def get_uc_function_name(self, function_name: str) -> str:
         """Returns full UC function name."""
