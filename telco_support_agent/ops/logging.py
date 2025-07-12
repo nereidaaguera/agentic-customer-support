@@ -209,10 +209,11 @@ def _get_supervisor_resources(
         resources.append(DatabricksFunction(function_name=sys_func))
         logger.info(f"Added system function: {sys_func}")
 
-    # Vector Search indexes
+    # Vector Search indexes - always use prod catalog for data reading
+    data_catalog = "telco_customer_support_prod"
     vector_indexes = [
-        f"{uc_catalog}.{data_schema}.knowledge_base_index",
-        f"{uc_catalog}.{data_schema}.support_tickets_index",
+        f"{data_catalog}.{data_schema}.knowledge_base_index",
+        f"{data_catalog}.{data_schema}.support_tickets_index",
     ]
 
     for index_name in vector_indexes:

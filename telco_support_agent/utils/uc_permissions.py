@@ -25,7 +25,7 @@ def grant_function_permissions(
         client = WorkspaceClient()
 
     # check if permissions are configured
-    permissions = getattr(uc_config, 'permissions', None)
+    permissions = getattr(uc_config, "permissions", None)
     if not permissions:
         logger.warning(f"No permissions configured for function {function_name}")
         return True
