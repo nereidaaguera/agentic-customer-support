@@ -153,8 +153,8 @@ class BaseAgent(ResponsesAgent, abc.ABC):
     def _load_tools_from_config(self) -> list[dict]:
         """Load UC function tools based on the agent's configuration."""
         try:
-            catalog = self.config.uc_config.agent["catalog"]
-            schema = self.config.uc_config.agent["schema"]
+            catalog = self.config.uc_config.agent_catalog
+            schema = self.config.uc_config.agent_schema
 
             function_names = [
                 f"{catalog}.{schema}.{function_name}"
