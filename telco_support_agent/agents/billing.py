@@ -4,8 +4,8 @@ from typing import Optional
 
 from unitycatalog.ai.openai.toolkit import UCFunctionToolkit
 
-from telco_support_agent.agents import UCConfig
 from telco_support_agent.agents.base_agent import BaseAgent
+from telco_support_agent.config import UCConfig
 from telco_support_agent.tools.registry import get_toolkit_for_domain
 from telco_support_agent.utils.logging_utils import get_logger, setup_logging
 

@@ -11,7 +11,7 @@ import yaml
 from databricks.vector_search.client import VectorSearchClient
 from databricks.vector_search.index import VectorSearchIndex
 
-from telco_support_agent.agents import UCConfig
+from telco_support_agent.config import UCConfig
 from telco_support_agent.utils.logging_utils import get_logger, setup_logging
 from telco_support_agent.utils.spark_utils import spark
 

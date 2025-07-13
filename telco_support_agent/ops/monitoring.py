@@ -7,7 +7,7 @@ from databricks.agents.monitoring import (
     get_external_monitor,
 )
 
-from telco_support_agent.agents import UCConfig
+from telco_support_agent.config import UCConfig
 from telco_support_agent.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)

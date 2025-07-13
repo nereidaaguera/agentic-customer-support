@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Optional
 from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
-    from telco_support_agent.agents import UCConfig
+    from telco_support_agent.config.schemas import UCConfig
 
 
 class LogRegisterConfig(BaseModel):
@@ -46,7 +46,7 @@ class LogRegisterConfig(BaseModel):
 
     def to_uc_config(self) -> "UCConfig":
         """Convert to UCConfig for Unity Catalog operations."""
-        from telco_support_agent.agents import UCConfig
+        from telco_support_agent.config.schemas import UCConfig
 
         return UCConfig(
             agent_catalog=self.uc_catalog,
@@ -110,7 +110,7 @@ Please test various query types and provide feedback on response quality."""
 
     def to_uc_config(self) -> "UCConfig":
         """Convert to UCConfig for Unity Catalog operations."""
-        from telco_support_agent.agents import UCConfig
+        from telco_support_agent.config.schemas import UCConfig
 
         return UCConfig(
             agent_catalog=self.uc_catalog,

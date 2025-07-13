@@ -2,7 +2,7 @@
 
 from typing import Optional
 
-from telco_support_agent.agents import UCConfig
+from telco_support_agent.config import UCConfig
 from telco_support_agent.tools.registry import (
     DOMAIN_FUNCTION_MAP,
     _register_domain_functions,

@@ -2,7 +2,7 @@
 
 from databricks.sdk import WorkspaceClient
 
-from telco_support_agent.agents import UCConfig
+from telco_support_agent.config import UCConfig
 from telco_support_agent.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)

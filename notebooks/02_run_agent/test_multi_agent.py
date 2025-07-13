@@ -30,7 +30,7 @@ from mlflow.types.responses import ResponsesAgentRequest
 from telco_support_agent.agents.supervisor import SupervisorAgent
 from telco_support_agent.tools import initialize_tools
 from telco_support_agent.agents.types import AgentType
-from telco_support_agent.agents import UCConfig, AgentConfig
+from telco_support_agent.config import UCConfig, AgentConfig
 from telco_support_agent.tools.registry import DOMAIN_FUNCTION_MAP
 
 # COMMAND ----------

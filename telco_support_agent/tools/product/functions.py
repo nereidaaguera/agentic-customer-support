@@ -3,7 +3,7 @@
 from databricks.sdk import WorkspaceClient
 from unitycatalog.ai.core.databricks import DatabricksFunctionClient
 
-from telco_support_agent.agents import UCConfig
+from telco_support_agent.config import UCConfig
 from telco_support_agent.utils.logging_utils import get_logger
 from telco_support_agent.utils.uc_permissions import grant_function_permissions
 

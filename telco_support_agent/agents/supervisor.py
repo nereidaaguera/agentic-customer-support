@@ -13,7 +13,6 @@ from mlflow.types.responses import (
     ResponsesAgentStreamEvent,
 )
 
-from telco_support_agent.agents import UCConfig
 from telco_support_agent.agents.account import AccountAgent
 from telco_support_agent.agents.base_agent import BaseAgent
 from telco_support_agent.agents.billing import BillingAgent
@@ -27,6 +26,7 @@ from telco_support_agent.agents.utils.topic_utils import (
     load_topics_from_yaml,
     topic_classification,
 )
+from telco_support_agent.config import UCConfig
 from telco_support_agent.utils.logging_utils import get_logger, setup_logging
 
 setup_logging()

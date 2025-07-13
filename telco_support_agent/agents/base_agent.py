@@ -20,7 +20,6 @@ from mlflow.types.responses import (
 from unitycatalog.ai.core.databricks import DatabricksFunctionClient
 from unitycatalog.ai.openai.toolkit import UCFunctionToolkit
 
-from telco_support_agent.agents import AgentConfig, UCConfig
 from telco_support_agent.agents.utils.exceptions import (
     AgentConfigurationError,
     MissingCustomInputError,
@@ -34,6 +33,7 @@ from telco_support_agent.agents.utils.trace_utils import (
     patch_trace_info,
     update_trace_preview,
 )
+from telco_support_agent.config import AgentConfig, UCConfig
 from telco_support_agent.utils.logging_utils import get_logger, setup_logging
 
 setup_logging()

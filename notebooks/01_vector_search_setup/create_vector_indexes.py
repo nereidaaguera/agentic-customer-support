@@ -40,7 +40,7 @@ os.environ['TELCO_SUPPORT_AGENT_ENV'] = env
 # COMMAND ----------
 
 from telco_support_agent.data.vector_search import VectorSearchManager
-from telco_support_agent.agents import UCConfig
+from telco_support_agent.config import UCConfig
 from telco_support_agent.utils.logging_utils import setup_logging
 
 setup_logging()

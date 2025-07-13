@@ -2,5 +2,13 @@
 
 from .loader import WidgetConfigLoader
 from .notebooks import DeployAgentConfig, LogRegisterConfig
+from .schemas import AgentConfig, LLMConfig, UCConfig
 
-__all__ = ["WidgetConfigLoader", "LogRegisterConfig", "DeployAgentConfig"]
+__all__ = [
+    "WidgetConfigLoader",
+    "LogRegisterConfig",
+    "DeployAgentConfig",
+    "UCConfig",
+    "LLMConfig",
+    "AgentConfig",
+]
