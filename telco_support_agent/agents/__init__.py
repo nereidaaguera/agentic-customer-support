@@ -62,6 +62,8 @@ class AgentConfig(BaseModel):
     @classmethod
     def load_from_file(cls, agent_type: str, uc_config: UCConfig) -> "AgentConfig":
         """Load agent config from YAML file."""
+        import os
+
         # Find the agent config file
         config_paths = [
             Path.cwd() / "configs" / "agents" / f"{agent_type}.yaml",
@@ -70,15 +72,50 @@ class AgentConfig(BaseModel):
             / "agents"
             / f"{agent_type}.yaml",
             Path("/Workspace/Files") / "configs" / "agents" / f"{agent_type}.yaml",
+            # MLflow model serving paths - artifacts in the model directory
+            Path("/model/artifacts") / "configs" / "agents" / f"{agent_type}.yaml",
+            Path("/model") / "configs" / "agents" / f"{agent_type}.yaml",
+            Path("artifacts") / "configs" / "agents" / f"{agent_type}.yaml",
+            # Also check parent directories in case we're in a subdirectory
+            Path("../artifacts") / "configs" / "agents" / f"{agent_type}.yaml",
+            Path("../../artifacts") / "configs" / "agents" / f"{agent_type}.yaml",
         ]
+
+        # If MLFLOW_MODEL_DIR env var is set, also check there
+        mlflow_model_dir = os.environ.get("MLFLOW_MODEL_DIR")
+        if mlflow_model_dir:
+            config_paths.append(
+                Path(mlflow_model_dir)
+                / "artifacts"
+                / "configs"
+                / "agents"
+                / f"{agent_type}.yaml"
+            )
+            config_paths.append(
+                Path(mlflow_model_dir) / "configs" / "agents" / f"{agent_type}.yaml"
+            )
+
+        # Set up logging
+        import logging
+
+        logger = logging.getLogger(__name__)
 
         config_path = None
         for path in config_paths:
             if path.exists():
                 config_path = path
+                logger.info(f"Found {agent_type} config at: {path}")
+                logger.info(f"Running from directory: {os.getcwd()}")
                 break
 
         if not config_path:
+            # Log debugging info
+            logger.error(f"Config file not found for {agent_type}. Searched paths:")
+            for path in config_paths:
+                logger.error(f"  - {path} (exists: {path.exists()})")
+            logger.error(f"Current working directory: {os.getcwd()}")
+            logger.error(f"__file__ location: {__file__}")
+
             raise FileNotFoundError(f"Agent config file not found for {agent_type}")
 
         with open(config_path) as f:
