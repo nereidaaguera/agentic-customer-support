@@ -63,6 +63,47 @@ class AgentConfig(BaseModel):
     def load_from_file(cls, agent_type: str, uc_config: UCConfig) -> "AgentConfig":
         """Load agent config from YAML file."""
         import os
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        # Log environment for debugging
+        logger.info(f"Loading config for agent type: {agent_type}")
+        logger.info(f"Environment variables:")
+        for key in ["MLFLOW_RUN_ID", "MLFLOW_TRACKING_URI", "MLFLOW_MODEL_DIR", "DATABRICKS_HOST"]:
+            logger.info(f"  {key}: {os.environ.get(key, 'Not set')}")
+        
+        # First, try to load from MLflow artifacts if we're in a model serving context
+        try:
+            from mlflow.artifacts import download_artifacts
+            logger.info(f"Attempting to load {agent_type} config from MLflow artifacts...")
+            
+            # Check if we're in an MLflow context
+            import mlflow
+            run_id = mlflow.active_run().info.run_id if mlflow.active_run() else None
+            logger.info(f"MLflow active run ID: {run_id}")
+            
+            # Try to download from MLflow artifacts
+            artifact_path = f"configs/agents/{agent_type}.yaml"
+            logger.info(f"Trying to download artifact: {artifact_path}")
+            local_path = download_artifacts(artifact_path=artifact_path)
+            
+            if local_path:
+                logger.info(f"Downloaded artifact to: {local_path}")
+                if Path(local_path).exists():
+                    logger.info(f"Confirmed file exists at: {local_path}")
+                    with open(local_path) as f:
+                        config_dict = yaml.safe_load(f)
+                        logger.info(f"Successfully loaded {agent_type} config from MLflow artifacts")
+                        return cls(**config_dict, uc_config=uc_config)
+                else:
+                    logger.warning(f"Downloaded path doesn't exist: {local_path}")
+            else:
+                logger.warning("download_artifacts returned None")
+                
+        except ImportError as e:
+            logger.warning(f"MLflow not available: {e}")
+        except Exception as e:
+            logger.warning(f"Could not load from MLflow artifacts: {type(e).__name__}: {e}")
 
         # Find the agent config file
         config_paths = [
@@ -95,11 +136,6 @@ class AgentConfig(BaseModel):
                 Path(mlflow_model_dir) / "configs" / "agents" / f"{agent_type}.yaml"
             )
 
-        # Set up logging
-        import logging
-
-        logger = logging.getLogger(__name__)
-
         config_path = None
         for path in config_paths:
             if path.exists():
@@ -120,5 +156,6 @@ class AgentConfig(BaseModel):
 
         with open(config_path) as f:
             config_dict = yaml.safe_load(f)
-
+        
+        logger.info(f"Successfully loaded {agent_type} config from file system: {config_path}")
         return cls(**config_dict, uc_config=uc_config)
