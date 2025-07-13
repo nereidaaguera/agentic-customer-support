@@ -1,4 +1,4 @@
-"""Configuration models for each notebook - clear and direct."""
+"""Configuration models for each notebook."""
 
 from typing import TYPE_CHECKING, Any, Optional
 
@@ -66,6 +66,7 @@ class DeployAgentConfig(BaseModel):
 
     # Environment
     env: str
+    git_commit: Optional[str] = None
 
     # Unity Catalog
     uc_catalog: str
@@ -114,7 +115,7 @@ Please test various query types and provide feedback on response quality."""
         return UCConfig(
             agent_catalog=self.uc_catalog,
             agent_schema=self.agent_schema,
-            data_schema="gold",  # Default data schema for deployment
+            data_schema="gold",  # data schema not used in deployment
             model_name=self.model_name,
         )
 
