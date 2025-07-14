@@ -1,6 +1,5 @@
 """Core configuration schemas for the telco support agent."""
 
-import os
 from pathlib import Path
 from typing import Any
 
@@ -67,128 +66,28 @@ class AgentConfig(BaseModel):
 
         logger = logging.getLogger(__name__)
 
-        # Log environment for debugging
-        logger.info(f"Loading config for agent type: {agent_type}")
-        logger.info("Environment variables:")
-        for key in [
-            "MLFLOW_RUN_ID",
-            "MLFLOW_TRACKING_URI",
-            "MLFLOW_MODEL_DIR",
-            "DATABRICKS_HOST",
-        ]:
-            logger.info(f"  {key}: {os.environ.get(key, 'Not set')}")
-
-        # First, check model serving paths (these are most likely in production)
-        model_serving_paths = [
-            # Primary model serving locations
-            Path("/model/artifacts/configs/agents") / f"{agent_type}.yaml",
-            Path("/model/artifacts") / f"configs/agents/{agent_type}.yaml",
-            Path("/model/configs/agents") / f"{agent_type}.yaml",
-            # Check if code is in subdirectory
-            Path("/model/code/artifacts/configs/agents") / f"{agent_type}.yaml",
-        ]
-
-        for path in model_serving_paths:
-            if path.exists():
-                logger.info(f"Found {agent_type} config at model serving path: {path}")
-                with open(path) as f:
-                    config_dict = yaml.safe_load(f)
-                    return cls(**config_dict, uc_config=uc_config)
-
-        # If not in model serving, try MLflow artifacts as last resort
-        try:
-            from mlflow.artifacts import download_artifacts
-
-            artifact_path = f"configs/agents/{agent_type}.yaml"
-            logger.info(f"Trying to download artifact: {artifact_path}")
-            local_path = download_artifacts(artifact_path=artifact_path)
-
-            if local_path and Path(local_path).exists():
-                logger.info(f"Downloaded artifact to: {local_path}")
-                with open(local_path) as f:
-                    config_dict = yaml.safe_load(f)
-                    return cls(**config_dict, uc_config=uc_config)
-        except Exception as e:
-            logger.debug(f"Could not download from MLflow artifacts: {e}")
-
-        # Find the agent config file in development/workspace paths
+        # path checking - different between model serving and development
         config_paths = [
-            # Local development paths
-            Path.cwd() / "configs" / "agents" / f"{agent_type}.yaml",
+            # Model Serving: artifacts under /model/artifacts/
+            Path("/model/artifacts") / f"{agent_type}.yaml",
+            # Development/notebook setting: configs in project structure
             Path(__file__).parent.parent.parent
             / "configs"
             / "agents"
             / f"{agent_type}.yaml",
-            Path("/Workspace/Files") / "configs" / "agents" / f"{agent_type}.yaml",
-            # Relative artifact paths for other contexts
-            Path("artifacts") / "configs" / "agents" / f"{agent_type}.yaml",
-            Path("../artifacts") / "configs" / "agents" / f"{agent_type}.yaml",
-            Path("../../artifacts") / "configs" / "agents" / f"{agent_type}.yaml",
+            # Current working directory (for local development)
+            Path.cwd() / "configs" / "agents" / f"{agent_type}.yaml",
         ]
 
-        # If MLFLOW_MODEL_DIR env var is set, also check there
-        mlflow_model_dir = os.environ.get("MLFLOW_MODEL_DIR")
-        if mlflow_model_dir:
-            config_paths.extend(
-                [
-                    Path(mlflow_model_dir)
-                    / "artifacts"
-                    / "configs"
-                    / "agents"
-                    / f"{agent_type}.yaml",
-                    Path(mlflow_model_dir)
-                    / "configs"
-                    / "agents"
-                    / f"{agent_type}.yaml",
-                ]
-            )
-
-        config_path = None
         for path in config_paths:
             if path.exists():
-                config_path = path
                 logger.info(f"Found {agent_type} config at: {path}")
-                logger.info(f"Running from directory: {os.getcwd()}")
-                break
+                with open(path) as f:
+                    config_dict = yaml.safe_load(f)
+                    return cls(**config_dict, uc_config=uc_config)
 
-        if not config_path:
-            # Log extensive debugging info
-            logger.error(f"Config file not found for {agent_type}. Searched paths:")
-            for path in config_paths:
-                logger.error(f"  - {path} (exists: {path.exists()})")
-            logger.error(f"Current working directory: {os.getcwd()}")
-            logger.error(f"__file__ location: {__file__}")
+        logger.error(f"Config file not found for {agent_type}. Searched paths:")
+        for path in config_paths:
+            logger.error(f"  - {path} (exists: {path.exists()})")
 
-            # List contents of potential directories for debugging
-            debug_dirs = [
-                "/model",
-                "/model/artifacts",
-                "/model/code",
-                "/model/code/artifacts",
-                Path.cwd(),
-                Path.cwd() / "artifacts",
-                Path.cwd() / "configs",
-            ]
-            for debug_dir in debug_dirs:
-                try:
-                    if Path(debug_dir).exists():
-                        logger.error(f"Contents of {debug_dir}:")
-                        for item in Path(debug_dir).iterdir():
-                            logger.error(f"  - {item}")
-                            # If it's a directory, show its contents too
-                            if item.is_dir() and "config" in str(item).lower():
-                                logger.error(f"    Contents of {item}:")
-                                for subitem in item.iterdir():
-                                    logger.error(f"      - {subitem}")
-                except Exception as e:
-                    logger.error(f"Could not list {debug_dir}: {e}")
-
-            raise FileNotFoundError(f"Agent config file not found for {agent_type}")
-
-        with open(config_path) as f:
-            config_dict = yaml.safe_load(f)
-
-        logger.info(
-            f"Successfully loaded {agent_type} config from file system: {config_path}"
-        )
-        return cls(**config_dict, uc_config=uc_config)
+        raise FileNotFoundError(f"Agent config file not found for {agent_type}")
