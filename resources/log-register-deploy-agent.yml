@@ -1,3 +1,9 @@
+# Agent Log, Register & Deploy Pipeline
+#
+# Databricks job that handles complete agent deployment pipeline:
+# 1. log_register_agent: Logs the agent to MLflow and registers it in Unity Catalog
+# 2. deploy_agent: Deploys the registered agents using Agent Framework to a Databricks model serving endpoint
+
 resources:
   jobs:
     telco_log_register_deploy_agent:

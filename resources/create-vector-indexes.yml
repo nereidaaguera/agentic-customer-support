@@ -1,3 +1,10 @@
+# Vector Indexes Setup
+# 
+# Databricks job to set up vector search indexes.
+# This job creates vector indexes for:
+# - Knowledge base (policies, FAQs, guides) 
+# - Support tickets (historical ticket data)
+
 resources:
   jobs:
     telco_create_vector_indexes:
