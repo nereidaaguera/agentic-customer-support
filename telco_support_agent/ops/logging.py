@@ -146,9 +146,9 @@ def _collect_config_artifacts() -> dict[str, str]:
     # UC config is now passed via parameters, no file needed
 
     # topics.yaml file
-    topics_config_path = PROJECT_ROOT / "configs" / "topics.yaml"
+    topics_config_path = PROJECT_ROOT / "configs" / "agents" / "topics.yaml"
     if topics_config_path.exists():
-        topics_config_key = "configs/topics.yaml"
+        topics_config_key = "configs/agents/topics.yaml"
         artifacts[topics_config_key] = str(topics_config_path)
         logger.info(f"Adding topics config file as artifact: {topics_config_key}")
     else:
