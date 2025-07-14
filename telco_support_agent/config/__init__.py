@@ -1,4 +1,4 @@
-"""Configuration package for telco support agent."""
+"""Config package for telco support agent."""
 
 from .loader import WidgetConfigLoader
 from .notebooks import DeployAgentConfig, LogRegisterConfig

@@ -1,4 +1,4 @@
-"""Configuration models for each notebook."""
+"""Config models for each notebook."""
 
 from typing import TYPE_CHECKING, Any, Optional
 
@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 
 class LogRegisterConfig(BaseModel):
-    """Configuration for log_register_agent notebook."""
+    """Config for log_register_agent notebook."""
 
     # Environment
     env: str
@@ -62,7 +62,7 @@ class LogRegisterConfig(BaseModel):
 
 
 class DeployAgentConfig(BaseModel):
-    """Configuration for deploy_agent notebook."""
+    """Config for deploy_agent notebook."""
 
     # Environment
     env: str

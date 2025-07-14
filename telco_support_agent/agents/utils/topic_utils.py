@@ -41,9 +41,6 @@ def run_llm(
     )["choices"][0]["message"]["content"]
 
 
-# Removed TopicCategory class - using simple dictionaries instead
-
-
 def _create_topic_classification_prompt(
     message: str, topic_categories: list[dict]
 ) -> str:
@@ -126,7 +123,6 @@ def load_topics_from_yaml(yaml_path: Optional[str | Path] = None) -> list[dict]:
         List of topic dictionaries loaded from the YAML file.
     """
     if yaml_path is None:
-        # Simple path checking - check the main scenarios we know work
         search_paths = [
             # Model serving: MLflow flattens artifacts to /model/artifacts/
             Path("/model/artifacts") / "topics.yaml",
@@ -148,6 +144,5 @@ def load_topics_from_yaml(yaml_path: Optional[str | Path] = None) -> list[dict]:
     with open(yaml_path) as f:
         data = yaml.safe_load(f)
 
-    # Simple validation and return the topics list
     topics = data.get("topics", [])
     return [topic for topic in topics if topic.get("name")]

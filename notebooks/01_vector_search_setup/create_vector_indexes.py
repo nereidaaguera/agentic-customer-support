@@ -51,7 +51,7 @@ setup_logging()
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Configuration
+# MAGIC ## Config
 
 # COMMAND ----------
 
