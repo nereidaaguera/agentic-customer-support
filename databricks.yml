@@ -24,7 +24,7 @@ variables:
   # Deployment
   endpoint_name:
     description: Model serving endpoint name
-    default: telco-customer-support-agent-${bundle.target}
+    default: ${bundle.target}-telco-customer-support-agent
   scale_to_zero_enabled:
     description: Enable scale to zero
     default: false

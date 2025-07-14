@@ -87,7 +87,7 @@ class WidgetConfigLoader:
             "data_schema": "gold",
             "model_name": "telco_customer_support_agent",
             "experiment_name": "/Shared/telco_support_agent/dev/dev_telco_support_agent",
-            "endpoint_name": "telco-customer-support-agent-dev",
+            "endpoint_name": "dev-telco-customer-support-agent",
         }
 
         filtered_data = {}

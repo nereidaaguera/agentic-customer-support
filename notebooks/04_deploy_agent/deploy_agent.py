@@ -18,7 +18,7 @@ dbutils.widgets.text("git_commit", "")
 dbutils.widgets.text("uc_catalog", "telco_customer_support_dev")
 dbutils.widgets.text("agent_schema", "agent")
 dbutils.widgets.text("model_name", "telco_customer_support_agent")
-dbutils.widgets.text("endpoint_name", "telco-customer-support-agent-dev")
+dbutils.widgets.text("endpoint_name", "dev-telco-customer-support-agent")
 dbutils.widgets.text("scale_to_zero_enabled", "false")
 dbutils.widgets.text("workload_size", "Small")
 
