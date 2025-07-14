@@ -13,7 +13,6 @@ resources:
           notebook_task:
             notebook_path: ../notebooks/03_log_register_agent/log_register_agent.py
             base_parameters:
-              # Pass all needed parameters
               env: ${bundle.target}
               uc_catalog: ${var.uc_catalog}
               agent_schema: ${var.agent_schema}

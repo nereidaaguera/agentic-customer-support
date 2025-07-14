@@ -45,7 +45,7 @@ from telco_support_agent.ops.registry import register_agent_to_uc
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Configuration
+# MAGIC ## Config
 # COMMAND ----------
 
 config = WidgetConfigLoader(dbutils).load(LogRegisterConfig)
