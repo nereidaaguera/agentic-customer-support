@@ -55,8 +55,8 @@ class VectorSearchManager:
         """
         if config_path is None:
             raise FileNotFoundError(
-                "Could not find vector_search.yaml config file. "
-                "Please specify config_path or ensure file exists in configs/ directory"
+                "Could not find create_vector_indexes.yaml config file. "
+                "Please specify config_path or ensure file exists in configs/data/ directory"
             )
 
         logger.info(f"Loading vector search config from: {config_path}")

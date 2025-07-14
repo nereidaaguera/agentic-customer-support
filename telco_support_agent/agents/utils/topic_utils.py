@@ -51,8 +51,8 @@ def _create_topic_classification_prompt(
     formatted_topic_categories = "\n".join(
         [
             f"""    <topic>
-            <name>{topic.get('name', '')}</name>
-            <description>{topic.get('description', 'No description')}</description>
+            <name>{topic.get("name", "")}</name>
+            <description>{topic.get("description", "No description")}</description>
             </topic>"""
             for topic in topic_categories
         ]
@@ -104,7 +104,7 @@ def topic_classification(
         rationale = deserialized_result.get("rationale", "No rationale provided")
 
         # Validate topic is one of the available categories or 'other'
-        valid_topics = {cat.get('name', '') for cat in topic_categories} | {"other"}
+        valid_topics = {cat.get("name", "") for cat in topic_categories} | {"other"}
         if topic not in valid_topics:
             topic = "other"
             rationale = "Invalid topic returned, defaulting to other"
@@ -130,7 +130,7 @@ def load_topics_from_yaml(yaml_path: Optional[str | Path] = None) -> list[dict]:
         search_paths = [
             # Model serving: MLflow flattens artifacts to /model/artifacts/
             Path("/model/artifacts") / "topics.yaml",
-            # Development/notebook: configs in project structure  
+            # Development/notebook: configs in project structure
             PROJECT_ROOT / "configs" / "agents" / "topics.yaml",
             # Current working directory (for local development)
             Path.cwd() / "configs" / "agents" / "topics.yaml",

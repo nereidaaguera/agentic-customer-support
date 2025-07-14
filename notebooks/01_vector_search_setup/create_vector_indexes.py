@@ -19,6 +19,8 @@
 # COMMAND ----------
 
 dbutils.widgets.text("env", "dev")
+dbutils.widgets.text("uc_catalog", "telco_customer_support_dev")
+dbutils.widgets.text("data_schema", "gold")
 
 # COMMAND ----------
 
@@ -48,24 +50,33 @@ setup_logging()
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Init Vector Search Manager
+# MAGIC ## Configuration
 
 # COMMAND ----------
 
-config_path = str(Path(root_path) / "configs" / "vector_search.yaml")
+# Get widget values
+uc_catalog = dbutils.widgets.get("uc_catalog")
+data_schema = dbutils.widgets.get("data_schema")
+
+config_path = str(Path(root_path) / "configs" / "data" / "create_vector_indexes.yaml")
 print(f"Config path: {config_path}")
 
-# Create UC config based on environment
+# Create UC config - for vector search we only need data catalog/schema
 uc_config = UCConfig(
-    catalog=f"telco_customer_support_{env}",
-    agent_schema="agent",
-    data_schema="gold",
+    data_catalog=uc_catalog,
+    data_schema=data_schema,
+    # Agent configs not used for vector search but required by UCConfig
+    agent_catalog="telco_customer_support_prod",
+    agent_schema="agent", 
     model_name="telco_customer_support_agent"
 )
 
 vs_manager = VectorSearchManager(config_path=config_path, uc_config=uc_config)
 
 print("✅ Vector Search Manager initialized successfully")
+print(f"   Environment: {env}")
+print(f"   UC Catalog: {uc_catalog}")
+print(f"   Data Schema: {data_schema}")
 print(f"   Endpoint: {vs_manager.endpoint_name}")
 print(f"   Knowledge Base: {vs_manager.kb_table} -> {vs_manager.kb_index_name}")
 print(f"   Support Tickets: {vs_manager.tickets_table} -> {vs_manager.tickets_index_name}")
