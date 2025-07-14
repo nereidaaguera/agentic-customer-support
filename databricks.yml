@@ -25,6 +25,9 @@ variables:
   endpoint_name:
     description: Model serving endpoint name
     default: ${bundle.target}-telco-customer-support-agent
+  vector_search_endpoint_name:
+    description: Vector search endpoint name
+    default: ${bundle.target}-telco-support-agent-vector-search
   scale_to_zero_enabled:
     description: Enable scale to zero
     default: false

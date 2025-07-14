@@ -23,13 +23,17 @@ class VectorSearchManager:
     """Manager for vector search indexes and endpoints."""
 
     def __init__(
-        self, config_path: Optional[str] = None, uc_config: Optional[UCConfig] = None
+        self,
+        config_path: Optional[str] = None,
+        uc_config: Optional[UCConfig] = None,
+        endpoint_name: Optional[str] = None,
     ):
         """Initialize the vector search manager.
 
         Args:
             config_path: Optional path to vector search config file
             uc_config: Optional Unity Catalog configuration
+            endpoint_name: Optional vector search endpoint name (overrides config)
         """
         self.client = VectorSearchClient()
         self.config = self._load_config(config_path)
@@ -39,6 +43,7 @@ class VectorSearchManager:
             data_schema="gold",
             model_name="telco_customer_support_agent",
         )
+        self.endpoint_name = endpoint_name
 
         self._setup_names()
 
@@ -80,8 +85,11 @@ class VectorSearchManager:
         self.kb_index_name = f"{self.uc_config.catalog}.{self.uc_config.data_schema}.{self.config['indexes']['knowledge_base']['name']}"
         self.tickets_index_name = f"{self.uc_config.catalog}.{self.uc_config.data_schema}.{self.config['indexes']['support_tickets']['name']}"
 
-        # vector search endpoint
-        self.endpoint_name = self.config["endpoint"]["name"]
+        # vector search endpoint - use parameter if provided, otherwise fall back to config
+        if self.endpoint_name is None:
+            self.endpoint_name = self.config.get("endpoint", {}).get(
+                "name", "telco-support-agent-vector-search"
+            )
 
         logger.info("Setup complete:")
         logger.info(f"  Endpoint: {self.endpoint_name}")

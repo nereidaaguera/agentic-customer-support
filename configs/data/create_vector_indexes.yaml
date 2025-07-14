@@ -1,13 +1,8 @@
 # Vector Search Config
-
-environment:
-  catalog: telco_customer_support_prod
-  source_schema: gold
-  agent_schema: agent
+# Environment-specific parameters (catalog, schema, endpoint name) are provided via notebook widgets
 
 # Vector search endpoint
 endpoint:
-  name: telco-support-agent-vector-search
   type: STANDARD
 
 # Embedding model configuration

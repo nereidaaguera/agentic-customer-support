@@ -21,6 +21,7 @@
 dbutils.widgets.text("env", "dev")
 dbutils.widgets.text("uc_catalog", "telco_customer_support_dev")
 dbutils.widgets.text("data_schema", "gold")
+dbutils.widgets.text("vector_search_endpoint_name", "dev-telco-support-agent-vector-search")
 
 # COMMAND ----------
 
@@ -57,6 +58,7 @@ setup_logging()
 # Get widget values
 uc_catalog = dbutils.widgets.get("uc_catalog")
 data_schema = dbutils.widgets.get("data_schema")
+vector_search_endpoint_name = dbutils.widgets.get("vector_search_endpoint_name")
 
 config_path = str(Path(root_path) / "configs" / "data" / "create_vector_indexes.yaml")
 print(f"Config path: {config_path}")
@@ -71,13 +73,17 @@ uc_config = UCConfig(
     model_name="telco_customer_support_agent"
 )
 
-vs_manager = VectorSearchManager(config_path=config_path, uc_config=uc_config)
+vs_manager = VectorSearchManager(
+    config_path=config_path, 
+    uc_config=uc_config,
+    endpoint_name=vector_search_endpoint_name
+)
 
 print("✅ Vector Search Manager initialized successfully")
 print(f"   Environment: {env}")
 print(f"   UC Catalog: {uc_catalog}")
 print(f"   Data Schema: {data_schema}")
-print(f"   Endpoint: {vs_manager.endpoint_name}")
+print(f"   Vector Search Endpoint: {vector_search_endpoint_name}")
 print(f"   Knowledge Base: {vs_manager.kb_table} -> {vs_manager.kb_index_name}")
 print(f"   Support Tickets: {vs_manager.tickets_table} -> {vs_manager.tickets_index_name}")
 
