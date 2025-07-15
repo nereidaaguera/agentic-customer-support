@@ -2,7 +2,7 @@
 
 from databricks.sdk import WorkspaceClient
 
-from telco_support_agent.utils.config import UCConfig
+from telco_support_agent.config import UCConfig
 from telco_support_agent.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
@@ -25,7 +25,7 @@ def grant_function_permissions(
         client = WorkspaceClient()
 
     # check if permissions are configured
-    permissions = uc_config.agent.get("permissions")
+    permissions = getattr(uc_config, "permissions", None)
     if not permissions:
         logger.warning(f"No permissions configured for function {function_name}")
         return True

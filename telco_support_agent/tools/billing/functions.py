@@ -3,7 +3,7 @@
 from databricks.sdk import WorkspaceClient
 from unitycatalog.ai.core.databricks import DatabricksFunctionClient
 
-from telco_support_agent.utils.config import UCConfig, config_manager
+from telco_support_agent.config import UCConfig
 from telco_support_agent.utils.logging_utils import get_logger
 from telco_support_agent.utils.uc_permissions import grant_function_permissions
 
@@ -23,8 +23,8 @@ def register_get_billing_info(uc_config: UCConfig):
           customer STRING COMMENT 'The customer ID in the format CUS-XXXXX',
           billing_start_date_input STRING COMMENT 'The billing start date in YYYY-MM-DD format. Defaults to first day of current month.',
           billing_end_date_input STRING COMMENT 'The billing end date in YYYY-MM-DD format. Defaults to first day of next month.',
-          additional_charges_input FLOAT COMMENT 'Filter on additional_charges. Must be non negative. If 0., only rows with non-NULL additional_charges are included. Default is float 0.0',
-          total_amount_input FLOAT COMMENT 'Filter on total_amount. Must be non negative. If 0., only rows with non-NULL total_amount are included. Default is float 0.0',
+          additional_charges_input DOUBLE COMMENT 'Filter on additional_charges. Must be non negative. If 0, only rows with non-NULL additional_charges are included. Can be NULL to skip filtering.',
+          total_amount_input DOUBLE COMMENT 'Filter on total_amount. Must be non negative. If 0, only rows with non-NULL total_amount are included. Can be NULL to skip filtering.',
           status_input STRING COMMENT 'Billing status. Possible values: Paid, Unpaid, Late, Partial, All. Defaults to All. If All, return rows of all statuses.'
         )
         RETURNS STRING
@@ -53,14 +53,14 @@ def register_get_billing_info(uc_config: UCConfig):
           AND billing_table.billing_date >= billing_start_date_input
           AND billing_table.billing_date < billing_end_date_input
           AND (
-                (additional_charges_input = 0. AND billing_table.additional_charges IS NOT NULL)
-                OR
-                (additional_charges_input > 0. AND ABS(billing_table.additional_charges - additional_charges_input) <= 1)
+                (additional_charges_input IS NULL)
+                OR (additional_charges_input = 0.0 AND billing_table.additional_charges IS NOT NULL)
+                OR (additional_charges_input > 0.0 AND ABS(billing_table.additional_charges - additional_charges_input) <= 1.0)
               )
           AND (
-                (total_amount_input = 0. AND billing_table.total_amount IS NOT NULL)
-                OR
-                (total_amount_input > 0. AND ABS(billing_table.total_amount - total_amount_input) <= 1)
+                (total_amount_input IS NULL)
+                OR (total_amount_input = 0.0 AND billing_table.total_amount IS NOT NULL)
+                OR (total_amount_input > 0.0 AND ABS(billing_table.total_amount - total_amount_input) <= 1.0)
               )
           AND (
                 (status_input = "All" AND billing_table.status IS NOT NULL)
@@ -141,7 +141,15 @@ def register_get_usage_info(uc_config: UCConfig):
         print(f"Error registering get_usage_info: {str(e)}")
 
 
-# call registration functions
-uc_config = config_manager.get_uc_config()
-register_get_billing_info(uc_config)
-register_get_usage_info(uc_config)
+# Auto-registration with default UC config
+# Note: This should ideally be called explicitly with proper UC config
+if __name__ == "__main__":
+    # Default UC config for auto-registration
+    uc_config = UCConfig(
+        agent_catalog="telco_customer_support_prod",
+        agent_schema="agent",
+        data_schema="gold",
+        model_name="telco_customer_support_agent",
+    )
+    register_get_billing_info(uc_config)
+    register_get_usage_info(uc_config)

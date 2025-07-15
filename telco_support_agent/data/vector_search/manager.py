@@ -11,7 +11,7 @@ import yaml
 from databricks.vector_search.client import VectorSearchClient
 from databricks.vector_search.index import VectorSearchIndex
 
-from telco_support_agent.utils.config import config_manager
+from telco_support_agent.config import UCConfig
 from telco_support_agent.utils.logging_utils import get_logger, setup_logging
 from telco_support_agent.utils.spark_utils import spark
 
@@ -22,14 +22,28 @@ logger = get_logger(__name__)
 class VectorSearchManager:
     """Manager for vector search indexes and endpoints."""
 
-    def __init__(self, config_path: Optional[str] = None):
+    def __init__(
+        self,
+        config_path: Optional[str] = None,
+        uc_config: Optional[UCConfig] = None,
+        endpoint_name: Optional[str] = None,
+    ):
         """Initialize the vector search manager.
 
         Args:
             config_path: Optional path to vector search config file
+            uc_config: Optional Unity Catalog configuration
+            endpoint_name: Optional vector search endpoint name (overrides config)
         """
         self.client = VectorSearchClient()
         self.config = self._load_config(config_path)
+        self.uc_config = uc_config or UCConfig(
+            agent_catalog="telco_customer_support_prod",
+            agent_schema="agent",
+            data_schema="gold",
+            model_name="telco_customer_support_agent",
+        )
+        self.endpoint_name = endpoint_name
 
         self._setup_names()
 
@@ -46,8 +60,8 @@ class VectorSearchManager:
         """
         if config_path is None:
             raise FileNotFoundError(
-                "Could not find vector_search.yaml config file. "
-                "Please specify config_path or ensure file exists in configs/ directory"
+                "Could not find create_vector_indexes.yaml config file. "
+                "Please specify config_path or ensure file exists in configs/data/ directory"
             )
 
         logger.info(f"Loading vector search config from: {config_path}")
@@ -59,26 +73,23 @@ class VectorSearchManager:
 
     def _setup_names(self) -> None:
         """Setup full table and index names from config."""
-        uc_config = config_manager.get_uc_config()
-
         # source tables
-        self.kb_table = uc_config.get_uc_table_name(
+        self.kb_table = self.uc_config.get_uc_table_name(
             self.config["indexes"]["knowledge_base"]["source_table"]
         )
-        self.tickets_table = uc_config.get_uc_table_name(
+        self.tickets_table = self.uc_config.get_uc_table_name(
             self.config["indexes"]["support_tickets"]["source_table"]
         )
 
         # index names
-        self.kb_index_name = uc_config.get_uc_index_name(
-            self.config["indexes"]["knowledge_base"]["name"]
-        )
-        self.tickets_index_name = uc_config.get_uc_index_name(
-            self.config["indexes"]["support_tickets"]["name"]
-        )
+        self.kb_index_name = f"{self.uc_config.catalog}.{self.uc_config.data_schema}.{self.config['indexes']['knowledge_base']['name']}"
+        self.tickets_index_name = f"{self.uc_config.catalog}.{self.uc_config.data_schema}.{self.config['indexes']['support_tickets']['name']}"
 
-        # vector search endpoint
-        self.endpoint_name = self.config["endpoint"]["name"]
+        # vector search endpoint - use parameter if provided, otherwise fall back to config
+        if self.endpoint_name is None:
+            self.endpoint_name = self.config.get("endpoint", {}).get(
+                "name", "telco-support-agent-vector-search"
+            )
 
         logger.info("Setup complete:")
         logger.info(f"  Endpoint: {self.endpoint_name}")

@@ -3,7 +3,7 @@
 from databricks.sdk import WorkspaceClient
 from unitycatalog.ai.core.databricks import DatabricksFunctionClient
 
-from telco_support_agent.utils.config import UCConfig, config_manager
+from telco_support_agent.config import UCConfig
 from telco_support_agent.utils.logging_utils import get_logger
 from telco_support_agent.utils.uc_permissions import grant_function_permissions
 
@@ -121,9 +121,17 @@ def register_customer_subscriptions(uc_config: UCConfig):
         print(f"Error registering get_customer_subscriptions: {str(e)}")
 
 
-logger.info("Register account UC function")
-# call registration functions
-uc_config = config_manager.get_uc_config()
-register_customer_info(uc_config)
-register_customer_subscriptions(uc_config)
-logger.info("End account UC function")
+# Auto-registration with default UC config
+# Note: This should ideally be called explicitly with proper UC config
+if __name__ == "__main__":
+    logger.info("Register account UC function")
+    # Default UC config for auto-registration
+    uc_config = UCConfig(
+        agent_catalog="telco_customer_support_prod",
+        agent_schema="agent",
+        data_schema="gold",
+        model_name="telco_customer_support_agent",
+    )
+    register_customer_info(uc_config)
+    register_customer_subscriptions(uc_config)
+    logger.info("End account UC function")

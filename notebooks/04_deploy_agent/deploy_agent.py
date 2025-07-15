@@ -15,7 +15,12 @@
 
 dbutils.widgets.text("env", "dev")
 dbutils.widgets.text("git_commit", "")
-dbutils.widgets.text("experiment_name", "/Shared/telco_support_agent/dev/dev_telco_support_agent")
+dbutils.widgets.text("uc_catalog", "telco_customer_support_dev")
+dbutils.widgets.text("agent_schema", "agent")
+dbutils.widgets.text("model_name", "telco_customer_support_agent")
+dbutils.widgets.text("endpoint_name", "dev-telco-customer-support-agent")
+dbutils.widgets.text("scale_to_zero_enabled", "false")
+dbutils.widgets.text("workload_size", "Small")
 
 # COMMAND ----------
 
@@ -23,61 +28,48 @@ import os
 import sys
 
 import mlflow
-import yaml
 
 project_root = os.path.abspath(os.path.join(os.getcwd(), "../.."))
 sys.path.append(project_root)
 
-env = dbutils.widgets.get("env")
-git_commit = dbutils.widgets.get("git_commit")
-experiment_name = dbutils.widgets.get("experiment_name")
-
-os.environ['TELCO_SUPPORT_AGENT_ENV'] = env
-
 # COMMAND ----------
 
+from telco_support_agent.config import WidgetConfigLoader, DeployAgentConfig
 from telco_support_agent.ops.deployment import (AgentDeploymentError,
                                                 cleanup_old_deployments,
                                                 deploy_agent)
 from telco_support_agent.ops.registry import get_latest_model_version
-from telco_support_agent.utils.config import config_manager
-
-# COMMAND ----------
-
-mlflow.set_experiment(experiment_name)
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Load Deployment Config
+# MAGIC ## Config
 
 # COMMAND ----------
 
-CONFIG_PATH = "../../configs/deploy_agent.yaml"
-
-with open(CONFIG_PATH) as f:
-    deploy_agent_config = yaml.safe_load(f)
-
-print("Loaded deployment configuration:")
-print(yaml.dump(deploy_agent_config, sort_keys=False, default_flow_style=False))
+config = WidgetConfigLoader(dbutils).load(DeployAgentConfig)
+print("Config loaded successfully!")
 
 # COMMAND ----------
 
-uc_config = config_manager.get_uc_config()
-deployment_config = deploy_agent_config.get("deployment", {})
-environment_vars = deploy_agent_config.get("environment_vars", {}) | {"TELCO_SUPPORT_AGENT_ENV": env}
-permissions = deploy_agent_config.get("permissions")
-instructions = deploy_agent_config.get("instructions")
+print("Deployment configuration:")
+print(f"  Model: {config.full_model_name}")
+print(f"  Endpoint: {config.endpoint_name}")
+print(f"  Scale to zero: {config.scale_to_zero_enabled}")
+print(f"  Workload size: {config.workload_size}")
+print(f"  Environment: {config.env}")
+print(f"  Git commit: {config.git_commit}")
 
-uc_model_name = uc_config.get_uc_model_name()
+# COMMAND ----------
 
-if "version" in uc_config.agent:
-    model_version = uc_config.agent["version"]
+# Get model version
+if config.model_version:
+    model_version = config.model_version
     print(f"Using specified model version: {model_version}")
 else:
-    model_version = get_latest_model_version(uc_model_name)
+    model_version = get_latest_model_version(config.full_model_name)
     if model_version is None:
-        raise ValueError(f"No versions found for model: {uc_model_name}")
+        raise ValueError(f"No versions found for model: {config.full_model_name}")
     print(f"Using latest model version: {model_version}")
 
 # COMMAND ----------
@@ -89,7 +81,7 @@ else:
 
 # COMMAND ----------
 
-model_uri = f"models:/{uc_model_name}/{model_version}"
+model_uri = f"models:/{config.full_model_name}/{model_version}"
 print(f"Loading model: {model_uri}")
 
 try:
@@ -121,47 +113,38 @@ except Exception as e:
 
 # COMMAND ----------
 
-endpoint_name = f"{env}-{deployment_config.get('endpoint_name')}"
-
 print("Deploying agent..")
-print(f"Model: {uc_model_name} version {model_version}")
-print(f"Endpoint: {endpoint_name}")
-print(f"Workload Size: {deployment_config.get('workload_size', 'Small')}")
-print(f"Scale-to-zero: {deployment_config.get('scale_to_zero_enabled', False)}")
-print(f"Wait for endpoint to be ready: {deployment_config.get('wait_for_ready', True)}")
-print(f"  Environment: {env}")
-print(f"  Git Commit: {git_commit}")
-print(f"  Experiment Name: {experiment_name}")
+print(f"Model: {config.full_model_name} version {model_version}")
+print(f"Endpoint: {config.endpoint_name}")
+print(f"Workload Size: {config.workload_size}")
+print(f"Scale-to-zero: {config.scale_to_zero_enabled}")
+print(f"Wait for endpoint to be ready: {config.wait_for_ready}")
+print(f"Environment: {config.env}")
+print(f"Git Commit: {config.git_commit}")
 
-if environment_vars:
-    print(f"Environment variables: {list(environment_vars.keys())}")
+if config.permissions:
+    print("Setting permissions for:")
+    for perm_config in config.permissions:
+        users = perm_config.get('users', [])
+        permission_level = perm_config.get('permission_level', 'Unknown')
+        print(f"  - {permission_level}: {', '.join(users)}")
 
-if permissions:
-    if isinstance(permissions, list):
-        print("Setting permissions for:")
-        for perm_config in permissions:
-            users = perm_config.get('users', [])
-            permission_level = perm_config.get('permission_level', 'Unknown')
-            print(f"  - {permission_level}: {', '.join(users)}")
-    else:
-        print(f"Setting permissions for: {permissions.get('users', [])}")
-
-if instructions:
+if config.instructions:
     print("Setting review instructions")
 
 try:
     deployment_result = deploy_agent(
-        uc_model_name=uc_model_name,
+        uc_model_name=config.full_model_name,
         model_version=model_version,
-        deployment_name=endpoint_name,
-        tags=deployment_config.get("tags"),
-        scale_to_zero_enabled=deployment_config.get("scale_to_zero_enabled", False),
-        environment_vars=environment_vars if environment_vars else None,
-        workload_size=deployment_config.get("workload_size", "Small"),
-        wait_for_ready=deployment_config.get("wait_for_ready", True),
-        permissions=permissions,
-        instructions=instructions,
-        budget_policy_id=deployment_config.get("budget_policy_id"),
+        deployment_name=config.endpoint_name,
+        tags={"environment": config.env, "git_commit": config.git_commit} if config.git_commit else {"environment": config.env},
+        scale_to_zero_enabled=config.scale_to_zero_enabled,
+        environment_vars={"TELCO_SUPPORT_AGENT_ENV": config.env},
+        workload_size=config.workload_size,
+        wait_for_ready=config.wait_for_ready,
+        permissions=config.permissions,
+        instructions=config.instructions,
+        budget_policy_id=None,
     )
 
     print("✅ Deployment completed successfully!")
@@ -179,9 +162,9 @@ print("\n" + "="*50)
 print("DEPLOYMENT SUMMARY")
 print("="*50)
 print(f"Endpoint Name: {deployment_result.endpoint_name}")
-print(f"Model: {uc_model_name} (version {model_version})")
-print(f"Workload Size: {deployment_config.get('workload_size', 'Small')}")
-print(f"Scale-to-zero: {'Enabled' if deployment_config.get('scale_to_zero_enabled', False) else 'Disabled'}")
+print(f"Model: {config.full_model_name} (version {model_version})")
+print(f"Workload Size: {config.workload_size}")
+print(f"Scale-to-zero: {'Enabled' if config.scale_to_zero_enabled else 'Disabled'}")
 print(f"Query Endpoint: {deployment_result.query_endpoint}")
 
 if hasattr(deployment_result, 'review_app_url'):
@@ -201,24 +184,22 @@ print("="*50)
 from telco_support_agent.ops.monitoring import (AgentMonitoringError,
                                                 create_agent_monitor)
 
-monitoring_config = deploy_agent_config.get("monitoring", {})
-
-if monitoring_config.get("enabled", False):
+if config.monitoring_enabled:
     print("="*50)
     print("SETTING UP AGENT MONITORING")
     print("="*50)
-    print(f"Experiment: {experiment_name}")
-    print(f"Agent catalog: {uc_config.agent['catalog']}")
-    print(f"Agent schema: {uc_config.agent['schema']}")
+    print(f"Agent catalog: {config.uc_catalog}")
+    print(f"Agent schema: {config.agent_schema}")
     print("Assessments: []")
     print()
 
     try:
         # create external monitor with empty assessments
+        uc_config = config.to_uc_config()
         monitor = create_agent_monitor(
             uc_config=uc_config,
-            experiment_name=experiment_name,
-            replace_existing=monitoring_config.get("replace_existing", False),
+            experiment_name=f"/Shared/telco_support_agent/{config.env}/{config.env}_telco_support_agent",
+            replace_existing=config.monitoring_replace_existing,
         )
         
         print("✅ External monitor created successfully!")
@@ -233,13 +214,13 @@ if monitoring_config.get("enabled", False):
         
     except AgentMonitoringError as e:
         print(f"❌ Failed to create monitor: {str(e)}")
-        if monitoring_config.get("fail_on_error", False):
+        if config.monitoring_fail_on_error:
             raise
         else:
             print("Continuing deployment...")
     except Exception as e:
         print(f"❌ Unexpected monitoring error: {str(e)}")
-        if monitoring_config.get("fail_on_error", False):
+        if config.monitoring_fail_on_error:
             raise
         else:
             print("Continuing deployment...")
@@ -247,7 +228,7 @@ if monitoring_config.get("enabled", False):
     print("="*50)
 else:
     print("External monitoring is disabled in configuration")
-    print("To enable, set 'monitoring.enabled: true' in deploy_agent.yaml")
+    print("To enable, set monitoring_enabled: true in configuration")
 
 # COMMAND ----------
 
@@ -256,30 +237,26 @@ else:
 
 # COMMAND ----------
 
-cleanup_enabled = deploy_agent_config.get("cleanup_old_versions", False)
-
-if cleanup_enabled:
-    cleanup_config = deploy_agent_config.get("cleanup", {})
-
+if config.cleanup_old_versions:
     print("="*50)
     print("CLEANING UP OLD DEPLOYMENT VERSIONS")
     print("="*50)
-    print(f"Model: {uc_model_name}")
+    print(f"Model: {config.full_model_name}")
     print(f"Current version: {model_version}")
     print(f"Endpoint: {deployment_result.endpoint_name}")
-    print(f"Keep previous versions: {cleanup_config.get('keep_previous_count', 1)}")
+    print(f"Keep previous versions: {config.keep_previous_count}")
     print()
 
     try:
         cleanup_result = cleanup_old_deployments(
-            model_name=uc_model_name,
+            model_name=config.full_model_name,
             current_version=str(model_version),
             endpoint_name=deployment_result.endpoint_name,
-            keep_previous_count=cleanup_config.get("keep_previous_count", 1),
-            max_deletion_attempts=cleanup_config.get("max_deletion_attempts", 3),
-            wait_between_attempts=cleanup_config.get("wait_between_attempts", 60),
-            wait_after_deletion=cleanup_config.get("wait_after_deletion", 180),
-            raise_on_error=cleanup_config.get("raise_on_error", False),
+            keep_previous_count=config.keep_previous_count,
+            max_deletion_attempts=3,
+            wait_between_attempts=60,
+            wait_after_deletion=180,
+            raise_on_error=False,
         )
 
         print("✅ Cleanup completed!")
@@ -295,21 +272,15 @@ if cleanup_enabled:
 
     except AgentDeploymentError as e:
         print(f"❌ Cleanup failed with error: {str(e)}")
-        if cleanup_config.get("raise_on_error", False):
-            raise
-        else:
-            print("Continuing despite cleanup failure (raise_on_error=false)")
+        print("Continuing despite cleanup failure")
     except Exception as e:
         print(f"❌ Unexpected cleanup error: {str(e)}")
-        if cleanup_config.get("raise_on_error", False):
-            raise
-        else:
-            print("Continuing despite cleanup failure (raise_on_error=false)")
+        print("Continuing despite cleanup failure")
 
     print("="*50)
 else:
     print("Cleanup of old versions is disabled in configuration")
-    print("To enable, set 'cleanup_old_versions: true' in deploy_agent.yaml")
+    print("To enable, set cleanup_old_versions: true in configuration")
 
 # COMMAND ----------
 

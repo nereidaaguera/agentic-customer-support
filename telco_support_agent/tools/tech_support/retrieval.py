@@ -13,7 +13,7 @@ import mlflow
 from databricks_openai import VectorSearchRetrieverTool
 from mlflow.entities import SpanType
 
-from telco_support_agent.utils.config import config_manager
+from telco_support_agent.config import UCConfig
 from telco_support_agent.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
@@ -30,17 +30,23 @@ class KnowledgeBaseRetriever:
     - Service procedures
     """
 
-    def __init__(self, num_results: int = 5, environment: str = "prod"):
+    def __init__(self, num_results: int = 5, uc_config: Optional[UCConfig] = None):
         """Init knowledge base retriever.
 
         Args:
             num_results: Max number of results to return per search
-            environment: Environment to use (dev, prod)
+            uc_config: Unity Catalog configuration
         """
         self.num_results = num_results
-        self.environment = environment
 
-        uc_config = config_manager.get_uc_config()
+        if not uc_config:
+            # Default UC config if not provided
+            uc_config = UCConfig(
+                agent_catalog="telco_customer_support_prod",
+                agent_schema="agent",
+                data_schema="gold",
+                model_name="telco_customer_support_agent",
+            )
 
         self.index_name = uc_config.get_uc_index_name("knowledge_base_index")
 
@@ -180,17 +186,23 @@ class SupportTicketsRetriever:
     - Customer interaction history
     """
 
-    def __init__(self, num_results: int = 3, environment: str = "prod"):
+    def __init__(self, num_results: int = 3, uc_config: Optional[UCConfig] = None):
         """Init support tickets retriever.
 
         Args:
             num_results: Max number of results to return per search
-            environment: Environment to use (dev, prod)
+            uc_config: Unity Catalog configuration
         """
         self.num_results = num_results
-        self.environment = environment
 
-        uc_config = config_manager.get_uc_config()
+        if not uc_config:
+            # Default UC config if not provided
+            uc_config = UCConfig(
+                agent_catalog="telco_customer_support_prod",
+                agent_schema="agent",
+                data_schema="gold",
+                model_name="telco_customer_support_agent",
+            )
 
         self.index_name = uc_config.get_uc_index_name("support_tickets_index")
 
@@ -329,15 +341,14 @@ class TechSupportRetriever:
     into a single interface for tech support agent with async parallel search capabilities.
     """
 
-    def __init__(self, environment: str = "prod"):
+    def __init__(self, uc_config: Optional[UCConfig] = None):
         """Init both retrievers.
 
         Args:
-            environment: Environment to use (dev, prod)
+            uc_config: Unity Catalog configuration
         """
-        self.environment = environment
-        self.kb_retriever = KnowledgeBaseRetriever(environment=environment)
-        self.tickets_retriever = SupportTicketsRetriever(environment=environment)
+        self.kb_retriever = KnowledgeBaseRetriever(uc_config=uc_config)
+        self.tickets_retriever = SupportTicketsRetriever(uc_config=uc_config)
 
         logger.info(
             "Initialized TechSupportRetriever with both knowledge base and support tickets"

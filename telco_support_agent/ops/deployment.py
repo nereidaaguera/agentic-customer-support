@@ -248,15 +248,25 @@ def cleanup_old_deployments(
                         time.sleep(10)
 
                 except Exception as e:
+                    error_str = str(e)
                     logger.warning(
                         f"Failed to delete deployment for version {version} "
-                        f"(attempt {attempt}/{max_deletion_attempts}): {str(e)}"
+                        f"(attempt {attempt}/{max_deletion_attempts}): {error_str}"
                     )
+
+                    # if deployment doesn't exist, no need to retry
+                    if "does not exist" in error_str.lower():
+                        logger.info(
+                            f"Deployment for version {version} does not exist, skipping further attempts"
+                        )
+                        break
+
                     if attempt == max_deletion_attempts:
                         result["versions_failed"].append(version)
-                    time.sleep(
-                        wait_between_attempts * 2
-                    )  # wait longer between retry attempts
+                    else:
+                        time.sleep(
+                            wait_between_attempts * 2
+                        )  # wait longer between retry attempts
 
             if not deleted:
                 logger.warning(
