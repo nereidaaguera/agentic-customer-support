@@ -66,23 +66,24 @@ print(f"Model: {model_uri}")
 
 # COMMAND ----------
 
+# Evaluation data with inputs matching the predict_fn parameters
 eval_data = [
     {
         "inputs": {
-            "input": [{"role": "user", "content": "What plan am I currently on?"}],
-            "custom_inputs": {"customer": "CUS-10001"}
+            "messages": [{"role": "user", "content": "What plan am I currently on?"}],
+            "customer_id": "CUS-10001"
         }
     },
     {
         "inputs": {
-            "input": [{"role": "user", "content": "My internet is very slow today"}],
-            "custom_inputs": {"customer": "CUS-10002"}
+            "messages": [{"role": "user", "content": "My internet is very slow today"}],
+            "customer_id": "CUS-10002"
         }
     },
     {
         "inputs": {
-            "input": [{"role": "user", "content": "Can you show me my last bill?"}],
-            "custom_inputs": {"customer": "CUS-10003"}
+            "messages": [{"role": "user", "content": "Can you show me my last bill?"}],
+            "customer_id": "CUS-10003"
         }
     }
 ]
@@ -98,7 +99,7 @@ print(f"Evaluation dataset: {len(eval_data)} samples")
 
 print(f"Available scorers: {len(SCORERS)}")
 for scorer in SCORERS:
-    print(f"  - {getattr(scorer, '__name__', 'unknown')}")
+    print(f"  - {scorer.name}")
 
 # COMMAND ----------
 
@@ -123,12 +124,33 @@ print("Evaluation complete!")
 
 # COMMAND ----------
 
-if hasattr(eval_results, 'metrics'):
-    print("Metrics:")
-    for name, value in eval_results.metrics.items():
-        print(f"  {name}: {value}")
+# evaluation metrics
+print("Evaluation Metrics:")
+for metric_name, metric_value in eval_results.metrics.items():
+    print(f"  {metric_name}: {metric_value:.3f}")
 
-if hasattr(eval_results, 'tables'):
-    results_df = eval_results.tables['eval_results']
-    print(f"\nResults shape: {results_df.shape}")
-    display(results_df)
+# COMMAND ----------
+
+# detailed results - get traces with assessments
+eval_traces = mlflow.search_traces(run_id=eval_results.run_id)
+print(f"Detailed results: {eval_traces.shape[0]} traces x {eval_traces.shape[1]} columns")
+
+print("\nTrace columns:")
+for col in eval_traces.columns:
+    print(f"  - {col}")
+
+# COMMAND ----------
+
+eval_traces.iloc[0]['trace']
+
+# COMMAND ----------
+
+if len(eval_traces) > 0:
+    print("Sample assessments from first trace:")
+    sample_assessments = eval_traces.iloc[0]['assessments']
+    for assessment in sample_assessments:
+        print(f"  - {assessment.name}: {assessment.feedback.value}")
+        # Check for rationale in feedback object
+        if hasattr(assessment.feedback, 'rationale') and assessment.feedback.rationale:
+            print(f"    Rationale: {assessment.feedback.rationale[:100]}...")
+        print()

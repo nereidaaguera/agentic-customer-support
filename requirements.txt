@@ -50,7 +50,6 @@ googleapis-common-protos==1.70.0
 graphene==3.4.3
 graphql-core==3.2.6
 graphql-relay==3.2.0
-greenlet==3.2.2
 grpcio-status==1.71.0
 grpcio==1.71.0
 gunicorn==23.0.0
