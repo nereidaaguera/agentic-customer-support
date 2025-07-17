@@ -16,6 +16,10 @@
 
 dbutils.widgets.text("experiment_name", "/Shared/telco_support_agent/dev/dev_telco_support_agent")
 dbutils.widgets.text("model_version", "")
+dbutils.widgets.text("env", "dev")
+dbutils.widgets.text("uc_catalog", "telco_customer_support_dev")
+dbutils.widgets.text("agent_schema", "agent")
+dbutils.widgets.text("model_name", "telco_customer_support_agent")
 
 # COMMAND ----------
 
@@ -27,28 +31,36 @@ import pandas as pd
 project_root = os.path.abspath(os.path.join(os.getcwd(), "../.."))
 sys.path.append(project_root)
 
-experiment_name = dbutils.widgets.get("experiment_name")
-model_version = dbutils.widgets.get("model_version")
 
 # COMMAND ----------
 
 from telco_support_agent.evaluation import SCORERS
 from telco_support_agent.ops.registry import get_latest_model_version
-from telco_support_agent.utils.config import config_manager
-
-# COMMAND ----------
-
-mlflow.set_experiment(experiment_name)
+from telco_support_agent.config import WidgetConfigLoader, RunEvalConfig
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Agent Model Veriosn
+# MAGIC ## Config
 
 # COMMAND ----------
 
-uc_config = config_manager.get_uc_config()
-uc_model_name = uc_config.get_uc_model_name()
+config = WidgetConfigLoader(dbutils).load(RunEvalConfig)
+
+mlflow.set_experiment(config.experiment_name)
+
+print("Config loaded successfully!")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Agent Model Version
+
+# COMMAND ----------
+
+uc_model_name = config.to_uc_config().get_uc_model_name()
+
+model_version = config.model_version
 
 if model_version:
     print(f"Using specified model version: {model_version}")
@@ -58,6 +70,7 @@ else:
 
 model_uri = f"models:/{uc_model_name}/{model_version}"
 print(f"Model: {model_uri}")
+
 
 # COMMAND ----------
 
