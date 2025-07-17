@@ -1,4 +1,4 @@
-"""Configuration settings for the Telco Support Agent UI."""
+"""Config settings for the Telco Support Agent UI."""
 
 import logging
 import os

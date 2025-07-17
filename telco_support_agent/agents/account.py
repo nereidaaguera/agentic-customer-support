@@ -3,6 +3,7 @@
 from typing import Optional
 
 from telco_support_agent.agents.base_agent import BaseAgent
+from telco_support_agent.config import UCConfig
 from telco_support_agent.tools.registry import get_toolkit_for_domain
 from telco_support_agent.utils.logging_utils import get_logger, setup_logging
 
@@ -22,6 +23,7 @@ class AccountAgent(BaseAgent):
         llm_endpoint: Optional[str] = None,
         config_dir: Optional[str] = None,
         disable_tools: Optional[list[str]] = None,
+        uc_config: Optional[UCConfig] = None,
     ) -> None:
         """Initialize the account agent.
 
@@ -29,9 +31,16 @@ class AccountAgent(BaseAgent):
             llm_endpoint: Optional LLM endpoint override
             config_dir: Optional directory for config files
             disable_tools: Optional list of tool names to disable
+            uc_config: Optional UC configuration for Unity Catalog resources
         """
         # get toolkit for account domain
-        toolkit = get_toolkit_for_domain("account")
+        toolkit = get_toolkit_for_domain(
+            "account",
+            uc_config
+            or UCConfig(
+                agent_catalog="telco_customer_support_prod", data_schema="gold"
+            ),
+        )
 
         logger.info(f"Account agent initialized with {len(toolkit.tools)} tools")
 
@@ -42,4 +51,5 @@ class AccountAgent(BaseAgent):
             tools=toolkit.tools,
             inject_tool_args=["customer"],
             disable_tools=disable_tools,
+            uc_config=uc_config,
         )

@@ -10,7 +10,7 @@ from databricks.agents.monitoring import (
     get_external_monitor,
 )
 
-from telco_support_agent.utils.config import UCConfig
+from telco_support_agent.config import UCConfig
 from telco_support_agent.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
@@ -54,10 +54,10 @@ def create_agent_monitor(
             except ValueError:
                 logger.info(f"No existing monitor found for endpoint: {experiment_id}")
 
-        # create monitor with custom metrics
-        logger.info(f"Creating monitor for endpoint: {experiment_id}")
-        logger.info(f"Using agent catalog: {uc_config.agent['catalog']}")
-        logger.info(f"Using agent schema: {uc_config.agent['schema']}")
+        # create monitor with empty assessments
+        logger.info(f"Creating external monitor for experiment: {experiment_id}")
+        logger.info(f"Using agent catalog: {uc_config.catalog}")
+        logger.info(f"Using agent schema: {uc_config.agent_schema}")
 
         assessments = []
 
@@ -79,8 +79,8 @@ def create_agent_monitor(
         )
 
         monitor = create_external_monitor(
-            catalog_name=uc_config.agent["catalog"],
-            schema_name=uc_config.agent["schema"],
+            catalog_name=uc_config.catalog,
+            schema_name=uc_config.agent_schema,
             assessments_config=assessments_config,
             experiment_id=experiment_id,
         )
@@ -89,7 +89,7 @@ def create_agent_monitor(
             "Successfully created external monitor with custom telco assessments."
         )
         logger.info(
-            f"Monitor will create tables in: {uc_config.agent['catalog']}.{uc_config.agent['schema']}"
+            f"Monitor will create tables in: {uc_config.catalog}.{uc_config.agent_schema}"
         )
         return monitor
 

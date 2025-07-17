@@ -20,7 +20,6 @@ from mlflow.types.responses import (
 from unitycatalog.ai.core.databricks import DatabricksFunctionClient
 from unitycatalog.ai.openai.toolkit import UCFunctionToolkit
 
-from telco_support_agent.agents import AgentConfig
 from telco_support_agent.agents.utils.exceptions import (
     AgentConfigurationError,
     MissingCustomInputError,
@@ -34,6 +33,7 @@ from telco_support_agent.agents.utils.trace_utils import (
     patch_trace_info,
     update_trace_preview,
 )
+from telco_support_agent.config import AgentConfig, UCConfig
 from telco_support_agent.utils.logging_utils import get_logger, setup_logging
 
 setup_logging()
@@ -59,6 +59,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         config_dir: Optional[Path | str] = None,
         inject_tool_args: Optional[list[str]] = None,
         disable_tools: Optional[list[str]] = None,
+        uc_config: Optional[UCConfig] = None,
     ):
         """Initialize base agent from config file.
 
@@ -71,10 +72,11 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             config_dir: Optional directory for config files
             inject_tool_args: Optional list of additional tool arguments to be injected into tool calls from custom_inputs.
             disable_tools: Optional list of tool names to disable. Can be simple names or full UC function names.
+            uc_config: Optional UC configuration for Unity Catalog resources
         """
         # load config file
         self.agent_type = agent_type
-        self.config = self._load_config(agent_type, config_dir)
+        self.config = self._load_config(agent_type, config_dir, uc_config)
         if disable_tools is None:
             disable_tools = self._load_disable_tools_from_artifact()
         self.disable_tools = disable_tools or []
@@ -111,28 +113,38 @@ class BaseAgent(ResponsesAgent, abc.ABC):
 
     @classmethod
     def _load_config(
-        cls, agent_type: str, config_dir: Optional[Union[str, Path]] = None
+        cls,
+        agent_type: str,
+        config_dir: Optional[Union[str, Path]] = None,
+        uc_config: Optional[UCConfig] = None,
     ) -> AgentConfig:
         """Load agent configuration from YAML file.
 
         Args:
             agent_type: Type of agent to load config for
             config_dir: Optional directory for config files
+            uc_config: Optional UC config, if not provided will use defaults
 
         Returns:
             Validated agent configuration
         """
         # use cached config if available
-        if agent_type in cls._config_cache:
-            return cls._config_cache[agent_type]
+        cache_key = f"{agent_type}_{uc_config.catalog if uc_config else 'default'}"
+        if cache_key in cls._config_cache:
+            return cls._config_cache[cache_key]
 
         try:
-            from telco_support_agent.utils.config import config_manager
+            # Create default UC config if not provided
+            if not uc_config:
+                uc_config = UCConfig(
+                    agent_catalog="telco_customer_support_dev",
+                    agent_schema="agent",
+                    data_schema="gold",
+                    model_name="telco_customer_support_agent",
+                )
 
-            config_dict = config_manager.get_config(agent_type)
-            uc_config = config_manager.get_uc_config()
-            config = AgentConfig(**config_dict, uc_config=uc_config)
-            cls._config_cache[agent_type] = config
+            config = AgentConfig.load_from_file(agent_type, uc_config)
+            cls._config_cache[cache_key] = config
             return config
 
         except (FileNotFoundError, ValueError) as e:
@@ -141,8 +153,8 @@ class BaseAgent(ResponsesAgent, abc.ABC):
     def _load_tools_from_config(self) -> list[dict]:
         """Load UC function tools based on the agent's configuration."""
         try:
-            catalog = self.config.uc_config.agent["catalog"]
-            schema = self.config.uc_config.agent["schema"]
+            catalog = self.config.uc_config.agent_catalog
+            schema = self.config.uc_config.agent_schema
 
             function_names = [
                 f"{catalog}.{schema}.{function_name}"
@@ -206,19 +218,18 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             Path.cwd() / "configs" / "disable_tools.json",
         ]
 
-        # Add development paths if config_manager is available
+        # Add development paths using package directory
         try:
-            from telco_support_agent.utils.config import config_manager
+            from telco_support_agent import PROJECT_ROOT
 
-            project_root = config_manager._project_root
             search_paths.extend(
                 [
-                    project_root / "configs" / "disable_tools.json",
-                    project_root / "configs" / "agents" / "disable_tools.json",
+                    PROJECT_ROOT / "configs" / "disable_tools.json",
+                    PROJECT_ROOT / "configs" / "agents" / "disable_tools.json",
                 ]
             )
         except Exception as e:
-            logger.debug(f"Could not access config_manager for development paths: {e}")
+            logger.debug(f"Could not access PROJECT_ROOT for development paths: {e}")
 
         return search_paths
 

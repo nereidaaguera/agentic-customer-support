@@ -1,0 +1,21 @@
+# Vector Indexes Setup
+# 
+# Databricks job to set up vector search indexes.
+# This job creates vector indexes for:
+# - Knowledge base (policies, FAQs, guides) 
+# - Support tickets (historical ticket data)
+
+resources:
+  jobs:
+    telco_create_vector_indexes:
+      name: telco_create_vector_indexes_${bundle.target}
+      tasks:
+        - task_key: create_vector_indexes
+          notebook_task:
+            notebook_path: ../notebooks/01_vector_search_setup/create_vector_indexes.py
+            base_parameters:
+              # Environment-specific parameters
+              env: ${bundle.target}
+              uc_catalog: ${var.uc_catalog}
+              data_schema: ${var.data_schema}
+              vector_search_endpoint_name: ${var.vector_search_endpoint_name}
