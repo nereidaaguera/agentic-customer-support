@@ -9,7 +9,7 @@ from telco_support_agent.evaluation.scorers.base_scorer import GuidelinesScorer
 
 class RoutingAccuracyScorer(GuidelinesScorer):
     guidelines = [
-        "If the query is about customer information of the account, plans, or devices, it should be routed to the 'account' agent.",
+        "If the query is about customer-specific information (account details, subscriptions, plans), it should be routed to the 'account' agent.",
         "If the query is about bills, payments, charges, refunds, payment methods, or billing disputes, it should be routed to the 'billing' agent.",
         "If the query is about technical issues, internet problems, equipment troubleshooting, service outages, or connectivity problems, it should be routed to the 'tech_support' agent.",
         "If the query is about plan information, upgrades, downgrades, new services, or feature questions, it should be routed to the 'product' agent.",

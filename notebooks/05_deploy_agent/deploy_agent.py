@@ -44,7 +44,7 @@ from telco_support_agent.utils.config import config_manager
 
 # COMMAND ----------
 
-mlflow.set_experiment(experiment_name)
+experiment = mlflow.set_experiment(experiment_name)
 
 # COMMAND ----------
 
@@ -215,18 +215,18 @@ if monitoring_config.get("enabled", False):
     # display custom metrics
     print("Custom Telco Assessments:")
     for metric in SCORERS:
-        metric_name = getattr(metric, '__name__', 'unknown_metric')
-        print(f"  - {metric_name}")
+        print(f"  - {metric.name}")
     print()
 
     try:
         # create external monitor with custom metrics
         monitor = create_agent_monitor(
             uc_config=uc_config,
-            experiment_name=experiment_name,
+            experiment_id=experiment.experiment_id,
             replace_existing=monitoring_config.get("replace_existing", False),
             sample=monitoring_config.get("sample_rate", 0.1),
-            custom_metrics=[scorer.get_custom_metric() for scorer in SCORERS],
+            # Taking only top 4 because more than that throws an error.
+            custom_metrics=[scorer.get_custom_metric() for scorer in SCORERS[:4]],
         )
 
         print("✅ External monitor created successfully!")

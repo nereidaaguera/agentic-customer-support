@@ -70,20 +70,20 @@ print(f"Model: {model_uri}")
 eval_data = [
     {
         "inputs": {
-            "messages": [{"role": "user", "content": "What plan am I currently on?"}],
-            "customer_id": "CUS-10001"
+            "input": [{"role": "user", "content": "What plan am I currently on?"}],
+            "custom_inputs": {"customer": "CUS-10001"}
         }
     },
     {
         "inputs": {
-            "messages": [{"role": "user", "content": "My internet is very slow today"}],
-            "customer_id": "CUS-10002"
+            "input": [{"role": "user", "content": "My internet is very slow today"}],
+            "custom_inputs": {"customer": "CUS-10002"}
         }
     },
     {
         "inputs": {
-            "messages": [{"role": "user", "content": "Can you show me my last bill?"}],
-            "customer_id": "CUS-10003"
+            "input": [{"role": "user", "content": "Can you show me my last bill?"}],
+            "custom_inputs": {"customer": "CUS-10003"}
         }
     }
 ]

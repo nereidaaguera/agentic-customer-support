@@ -10,13 +10,14 @@ from telco_support_agent.evaluation.scorers.base_scorer import GuidelinesScorer
 
 class ToolAccuracyScorer(GuidelinesScorer):
     guidelines = [
-        "If the query requires customer-specific information (account details, profile, status), the 'get_customer_info' tool should be called with the correct customer ID",
-        "If the query is about billing, payments, or charges, the 'get_billing_info' tool should be called with appropriate date ranges and filters",
-        "If the query asks about available plans, upgrades, or service options, the 'get_plans_info' tool should be called",
-        "If the query is about technical issues or troubleshooting, technical support retrieval tools should be used to find relevant documentation",
-        "Tools should be called with correct and complete parameters - missing required parameters or incorrect formats indicate poor tool usage",
-        "Tools should not be called unnecessarily when the query can be answered without customer-specific data",
-        "If customer-specific information is needed but no tools were called, this indicates missing tool usage",
+        "If the query requires customer-specific information (account details, profile, status), the 'get_customer_info' tool should be called with the correct customer ID.",
+        "If the query requires customer-specific information about subscriptions or plans, the 'customer_subscriptions' tools should be called with the correct customer ID.",
+        "If the query is about billing, payments, or charges, the 'get_billing_info' tool should be called with appropriate date ranges and filters.",
+        "If the query asks about available plans, upgrades, or service options, the 'get_plans_info' tool should be called.",
+        "If the query is about technical issues or troubleshooting, technical support retrieval tools should be used to find relevant documentation.",
+        "Tools should be called with correct and complete parameters - missing required parameters or incorrect formats indicate poor tool usage.",
+        "Tools should not be called unnecessarily when the query can be answered without customer-specific data.",
+        "If customer-specific information is needed but no tools were called, this indicates missing tool usage.",
     ]
 
     def __init__(self):
@@ -39,9 +40,9 @@ class ToolAccuracyScorer(GuidelinesScorer):
         tool_calls = []
         for span in spans:
             if span.span_type == "TOOL":
-                tool_name = span.name.replace("tool_", "")
+                tool_name = span.inputs["tool_name"].split("__")[-1]
                 tool_calls.append(tool_name)
-        tools_used = ",".join(tool_calls) if tool_calls else ""
+        tools_used = ", ".join(tool_calls) if tool_calls else ""
         request = str(inputs["input"])
         response = str(outputs["output"][-1])
         return {"tools_used": tools_used, "request": request, "response": response}
@@ -61,9 +62,9 @@ class ToolAccuracyScorer(GuidelinesScorer):
             tool_calls = []
             for span in spans:
                 if span.span_type == "TOOL":
-                    tool_name = span.name.replace("tool_", "")
+                    tool_name = span.inputs["tool_name"].split("__")[-1]
                     tool_calls.append(tool_name)
-            tools_used = ",".join(tool_calls) if tool_calls else ""
+            tools_used = ", ".join(tool_calls) if tool_calls else ""
 
             request = str(request["request"]["input"])
             response = str(response["output"][-1])
@@ -75,7 +76,8 @@ class ToolAccuracyScorer(GuidelinesScorer):
             }
 
             guidelines = [
-                "If the query requires customer-specific information (account details, profile, status), the 'get_customer_info' tool should be called with the correct customer ID",
+                "If the query requires customer-specific information (account details, profile, status), the 'get_customer_info' tool should be called with the correct customer ID.",
+                "If the query requires customer-specific information about subscriptions or plans, the 'customer_subscriptions' tools should be called with the correct customer ID.",
                 "If the query is about billing, payments, or charges, the 'get_billing_info' tool should be called with appropriate date ranges and filters",
                 "If the query asks about available plans, upgrades, or service options, the 'get_plans_info' tool should be called",
                 "If the query is about technical issues or troubleshooting, technical support retrieval tools should be used to find relevant documentation",

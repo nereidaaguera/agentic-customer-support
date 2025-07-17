@@ -4,6 +4,7 @@ from typing import Optional
 
 from databricks.agents.monitoring import (
     AssessmentsSuiteConfig,
+    CustomMetric,
     create_external_monitor,
     delete_external_monitor,
     get_external_monitor,
@@ -64,12 +65,8 @@ def create_agent_monitor(
             logger.info("Adding custom telco metrics to monitoring")
             for metric_func in custom_metrics:
                 metric_name = getattr(metric_func, "__name__", "unknown_metric")
-                logger.info(f"  - Adding custom metric: {metric_name}")
-                assessments.append(metric_func)
-        else:
-            logger.warning(
-                "No custom metrics provided - monitor will have no assessments"
-            )
+                logger.info(f"Adding custom metric: {metric_name}")
+                assessments.append(CustomMetric(metric_func))
 
         logger.info(
             f"Monitor configured with {len(assessments)} custom telco assessments"
