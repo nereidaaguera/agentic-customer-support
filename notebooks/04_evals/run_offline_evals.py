@@ -32,7 +32,7 @@ model_version = dbutils.widgets.get("model_version")
 
 # COMMAND ----------
 
-from telco_support_agent.evaluation import OFFLINE_SCORERS
+from telco_support_agent.evaluation import SCORERS
 from telco_support_agent.ops.registry import get_latest_model_version
 from telco_support_agent.utils.config import config_manager
 
@@ -96,17 +96,22 @@ print(f"Evaluation dataset: {len(eval_data)} samples")
 
 # COMMAND ----------
 
-print(f"Available scorers: {len(OFFLINE_SCORERS)}")
-for scorer in OFFLINE_SCORERS:
+print(f"Available scorers: {len(SCORERS)}")
+for scorer in SCORERS:
     print(f"  - {getattr(scorer, '__name__', 'unknown')}")
 
 # COMMAND ----------
 
-eval_results = mlflow.evaluate(
-    model=model_uri,
+model = mlflow.pyfunc.load_model(model_uri=model_uri)
+def run_model(input, custom_inputs):
+  return model.predict({'input': input, 'custom_inputs': custom_inputs})
+
+# COMMAND ----------
+
+eval_results = mlflow.genai.evaluate(
     data=eval_data,
-    scorers=OFFLINE_SCORERS,
-    model_type="databricks-agent"
+    predict_fn=run_model,
+    scorers=[scorer.get_scorer() for scorer in SCORERS],
 )
 
 print("Evaluation complete!")
@@ -124,6 +129,6 @@ if hasattr(eval_results, 'metrics'):
         print(f"  {name}: {value}")
 
 if hasattr(eval_results, 'tables'):
-    results_df = eval_results.tables['eval_results_table']
+    results_df = eval_results.tables['eval_results']
     print(f"\nResults shape: {results_df.shape}")
     display(results_df)

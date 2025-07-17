@@ -21,9 +21,8 @@ EXCLUDED_PACKAGES = {
     'pywin32',
     'colorama',
     'waitress',
-    
+
     # Pre-installed in Databricks Runtime - causes conflicts if reinstalled
-    'databricks-connect',
     'databricks-cli',
     'py4j',
 }
@@ -32,23 +31,23 @@ packages = {}
 for line in lines:
     if not line.strip():
         continue
-    
+
     # Check if this line has platform markers
     if ' ; ' in line:
         clean_line, markers = line.split(' ; ', 1)
-        
+
         # Skip Windows-specific packages
         if 'platform_system == "Windows"' in markers or 'sys_platform == "win32"' in markers:
             continue
     else:
         clean_line = line.strip()
-    
+
     if '==' in clean_line:
         pkg_name = clean_line.split('==')[0]
-        
+
         if pkg_name in EXCLUDED_PACKAGES:
             continue
-            
+
         # Keep the last occurrence
         packages[pkg_name] = clean_line
 
