@@ -197,8 +197,10 @@ if config.monitoring_enabled:
     print(f"Agent schema: {config.agent_schema}")
     # display custom metrics
     print("Custom Telco Assessments:")
-    for metric in SCORERS:
-        print(f"  - {metric.name}")
+    # Taking only top 4 because more than that throws an error.
+    scorers = SCORERS[:4]
+    for scorer in scorers:
+        print(f"  - {scorer.name}")
     print()
 
     try:
@@ -208,8 +210,7 @@ if config.monitoring_enabled:
             uc_config=uc_config,
             experiment_id=experiment.experiment_id,
             replace_existing=config.monitoring_replace_existing,
-            # Taking only top 4 because more than that throws an error.
-            custom_metrics=[scorer.get_custom_metric() for scorer in SCORERS[:4]],
+            custom_metrics=[scorer.get_custom_metric() for scorer in scorers],
         )
 
         print("✅ External monitor created successfully!")
@@ -220,7 +221,7 @@ if config.monitoring_enabled:
         if hasattr(monitor, 'monitoring_page_url'):
             print(f"Monitoring page: {monitor.monitoring_page_url}")
 
-        print(f"\nNote: Monitor created with {len(SCORERS)} custom scorer assessments.")
+        print(f"\nNote: Monitor created with {len(scorers)} custom scorer assessments.")
 
     except AgentMonitoringError as e:
         print(f"❌ Failed to create monitor: {str(e)}")

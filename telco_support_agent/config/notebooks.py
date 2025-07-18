@@ -111,7 +111,7 @@ class DeployAgentConfig(BaseModel):
 
     # Monitoring
     monitoring_enabled: bool = True
-    monitoring_replace_existing: bool = False
+    monitoring_replace_existing: bool = True
     monitoring_fail_on_error: bool = False
 
     # Permissions

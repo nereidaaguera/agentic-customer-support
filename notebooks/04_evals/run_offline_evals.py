@@ -164,6 +164,6 @@ if len(eval_traces) > 0:
     for assessment in sample_assessments:
         print(f"  - {assessment.name}: {assessment.feedback.value}")
         # Check for rationale in feedback object
-        if hasattr(assessment.feedback, 'rationale') and assessment.feedback.rationale:
-            print(f"    Rationale: {assessment.feedback.rationale[:100]}...")
+        if hasattr(assessment, 'rationale') and assessment.rationale:
+            print(f"    Rationale: {assessment.rationale}")
         print()
