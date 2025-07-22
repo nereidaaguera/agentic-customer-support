@@ -54,8 +54,8 @@ targets:
     default: true
     workspace:
       host: https://e2-demo-west.cloud.databricks.com
-#    run_as:
-#      service_principal_name: ${workspace.current_user.userName}
+    run_as:
+      service_principal_name: ${workspace.current_user.userName}
     variables:
       experiment_name: /Shared/telco_support_agent/dev/dev_telco_support_agent
       disable_tools: ""
@@ -64,8 +64,8 @@ targets:
     default: false
     workspace:
       host: https://e2-demo-west.cloud.databricks.com
-#    run_as:
-#      service_principal_name: ${workspace.current_user.userName}
+    run_as:
+      service_principal_name: ${workspace.current_user.userName}
     variables:
       experiment_name: /telco_support_agent/staging/experiments/staging_telco_support_agent
       scale_to_zero_enabled: true
@@ -75,8 +75,8 @@ targets:
     default: false
     workspace:
       host: https://e2-demo-west.cloud.databricks.com
-#    run_as:
-#      service_principal_name: ${workspace.current_user.userName}
+    run_as:
+      service_principal_name: ${workspace.current_user.userName}
     variables:
       experiment_name: /Shared/telco_support_agent/prod/prod_telco_support_agent
       workload_size: Small
