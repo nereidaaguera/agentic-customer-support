@@ -16,11 +16,12 @@
 import os
 import sys
 
+# Add the project root to Python path
 root_path = os.path.abspath(os.path.join(os.getcwd(), "../../.."))
 print(f"Root path: {root_path}")
 
-if root_path:
-    sys.path.append(root_path)
+if root_path not in sys.path:
+    sys.path.insert(0, root_path)
     print(f"Added {root_path} to Python path")
 
 # COMMAND ----------
@@ -43,7 +44,7 @@ nest_asyncio.apply()
 
 # COMMAND ----------
 
-tech_agent = TechSupportAgent(environment="prod", override_mcp_server_urls=[
+tech_agent = TechSupportAgent(override_mcp_server_urls=[
     "https://e2-demo-west.cloud.databricks.com/api/2.0/mcp/functions/system/ai"
 ])
 

@@ -1,5 +1,11 @@
 import logging
 import os
+import sys
+
+# Add the project root to Python path
+root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if root_path not in sys.path:
+    sys.path.insert(0, root_path)
 
 from telco_support_agent.agents.tech_support import TechSupportAgent
 
@@ -37,7 +43,7 @@ def _query_agent(query):
                         print(chunk["text"], end="")
                 print("")
             else:
-                print(f"Unexpected agent output item, displaying it anyways: {item}")
+                print(f"Unexpected agent output item: {item}")
 
 
 query = "Is there an outage in Moscone center?"

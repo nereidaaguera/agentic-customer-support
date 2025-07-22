@@ -65,5 +65,5 @@ system_prompt: |
    Remember: Your goal is to resolve the customer's technical issue efficiently while providing an excellent support experience.
 
 mcp_servers:
-   - server_url: https://mcp-telco-outage-info-server-2556758628403379.aws.databricksapps.com/mcp/
+   - server_url: https://mcp-telco-outage-info-server-2556758628403379.aws.databricksapps.com/mcp
      app_name: mcp-telco-outage-info-server
