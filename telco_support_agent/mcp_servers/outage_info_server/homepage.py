@@ -32,29 +32,6 @@ async def demo_homepage(request):
             </div>
 
             <div class="tool-section">
-                <h2>📡 Check Outage Status</h2>
-                <p>Monitor current network outages across regions</p>
-                <button id="btn-check-outage-all" class="button">Check All Regions</button>
-                <button id="btn-check-outage-bay" class="button">Bay Area Only</button>
-                <div id="outage-response" class="response-box" style="display:none;"></div>
-            </div>
-
-            <div class="tool-section">
-                <h2>📊 Network Metrics</h2>
-                <p>Get real-time network performance metrics</p>
-                <button id="btn-metrics-all" class="button">All Regions</button>
-                <button id="btn-metrics-dtla" class="button">Downtown LA</button>
-                <div id="metrics-response" class="response-box" style="display:none;"></div>
-            </div>
-
-            <div class="tool-section">
-                <h2>⚠️ Report Network Issue</h2>
-                <p>Report incidents to the operations team</p>
-                <button id="btn-report-degraded" class="button">Report Degraded Performance</button>
-                <div id="report-response" class="response-box" style="display:none;"></div>
-            </div>
-
-            <div class="tool-section">
                 <h2>🔧 Available MCP Tools</h2>
                 <button id="btn-list-tools" class="button">List All Tools</button>
                 <div id="tools-response" class="response-box" style="display:none;"></div>
@@ -62,47 +39,13 @@ async def demo_homepage(request):
         </div>
 
         <script>
-            async function callTool(toolName, args = {}) {
-                let responseDivId;
-                switch(toolName) {
-                    case 'check-outage-status':
-                        responseDivId = 'outage-response';
-                        break;
-                    case 'get-network-metrics':
-                        responseDivId = 'metrics-response';
-                        break;
-                    case 'report-network-issue':
-                        responseDivId = 'report-response';
-                        break;
-                    default:
-                        console.error("Unknown tool name:", toolName);
-                        return;
-                }
-
-                const div = document.getElementById(responseDivId);
-                div.style.display = 'block';
-                div.innerHTML = '<div class="loading">🔄 Calling telco operations API...</div>';
-
-                try {
-                    const response = await fetch(`/mcp/tools/${toolName}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(args)
-                    });
-                    const result = await response.json();
-                    div.innerHTML = '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
-                } catch (error) {
-                    div.innerHTML = '<div style="color: red;">Error: ' + error.message + '</div>';
-                }
-            }
-
             async function listTools() {
               const div = document.getElementById('tools-response');
               div.style.display = 'block';
               div.innerHTML = '<div class="loading">🔄 Fetching available tools...</div>';
 
               try {
-                const response = await fetch(`/mcp/`, {
+                const response = await fetch(`/mcp`, {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
@@ -167,11 +110,6 @@ async def demo_homepage(request):
 
             document.addEventListener("DOMContentLoaded", () => {
                 // Wire up buttons with click handlers
-                document.getElementById("btn-check-outage-all").addEventListener("click", () => callTool('check-outage-status'));
-                document.getElementById("btn-check-outage-bay").addEventListener("click", () => callTool('check-outage-status', {region: 'Bay Area'}));
-                document.getElementById("btn-metrics-all").addEventListener("click", () => callTool('get-network-metrics'));
-                document.getElementById("btn-metrics-dtla").addEventListener("click", () => callTool('get-network-metrics', {region: 'Downtown LA'}));
-                document.getElementById("btn-report-degraded").addEventListener("click", () => callTool('report-network-issue', { issue_type: 'degraded_performance', region: 'Bay Area', description: 'Multiple customer reports of slow data speeds during peak hours' }));
                 document.getElementById("btn-list-tools").addEventListener("click", listTools);
             });
         </script>
