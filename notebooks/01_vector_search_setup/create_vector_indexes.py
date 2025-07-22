@@ -19,6 +19,9 @@
 # COMMAND ----------
 
 dbutils.widgets.text("env", "dev")
+dbutils.widgets.text("uc_catalog", "telco_customer_support_dev")
+dbutils.widgets.text("data_schema", "gold")
+dbutils.widgets.text("vector_search_endpoint_name", "dev-telco-support-agent-vector-search")
 
 # COMMAND ----------
 
@@ -40,6 +43,7 @@ os.environ['TELCO_SUPPORT_AGENT_ENV'] = env
 # COMMAND ----------
 
 from telco_support_agent.data.vector_search import VectorSearchManager
+from telco_support_agent.config import UCConfig
 from telco_support_agent.utils.logging_utils import setup_logging
 
 setup_logging()
@@ -47,17 +51,39 @@ setup_logging()
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Init Vector Search Manager
+# MAGIC ## Config
 
 # COMMAND ----------
 
-config_path = str(Path(root_path) / "configs" / "vector_search.yaml")
+# Get widget values
+uc_catalog = dbutils.widgets.get("uc_catalog")
+data_schema = dbutils.widgets.get("data_schema")
+vector_search_endpoint_name = dbutils.widgets.get("vector_search_endpoint_name")
+
+config_path = str(Path(root_path) / "configs" / "data" / "create_vector_indexes.yaml")
 print(f"Config path: {config_path}")
 
-vs_manager = VectorSearchManager(config_path=config_path)
+# Create UC config - for vector search we only need data catalog/schema
+uc_config = UCConfig(
+    data_catalog=uc_catalog,
+    data_schema=data_schema,
+    # Agent configs not used for vector search but required by UCConfig
+    agent_catalog="telco_customer_support_prod",
+    agent_schema="agent", 
+    model_name="telco_customer_support_agent"
+)
+
+vs_manager = VectorSearchManager(
+    config_path=config_path, 
+    uc_config=uc_config,
+    endpoint_name=vector_search_endpoint_name
+)
 
 print("✅ Vector Search Manager initialized successfully")
-print(f"   Endpoint: {vs_manager.endpoint_name}")
+print(f"   Environment: {env}")
+print(f"   UC Catalog: {uc_catalog}")
+print(f"   Data Schema: {data_schema}")
+print(f"   Vector Search Endpoint: {vector_search_endpoint_name}")
 print(f"   Knowledge Base: {vs_manager.kb_table} -> {vs_manager.kb_index_name}")
 print(f"   Support Tickets: {vs_manager.tickets_table} -> {vs_manager.tickets_index_name}")
 

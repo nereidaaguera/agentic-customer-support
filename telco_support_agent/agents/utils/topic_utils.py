@@ -2,9 +2,8 @@
 
 import json
 import logging
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 
 import yaml
 from mlflow.deployments import get_deploy_client
@@ -42,49 +41,17 @@ def run_llm(
     )["choices"][0]["message"]["content"]
 
 
-@dataclass(frozen=True, eq=True)
-class TopicCategory:
-    """Represents a topic category for classification.
-
-    Args:
-        name: The name of the topic category
-        description: Optional description of the topic category
-    """
-
-    name: str
-    description: Optional[str] = None
-
-    def __hash__(self) -> int:
-        """Generate hash for the topic category."""
-        return hash((self.name, self.description or ""))
-
-    @classmethod
-    def from_dict(cls, topic_dict: dict[str, Any]) -> "TopicCategory":
-        """Create a TopicCategory from a dictionary.
-
-        Args:
-            topic_dict: Dictionary containing topic information
-
-        Returns:
-            TopicCategory instance
-        """
-        return cls(
-            name=topic_dict.get("name") or topic_dict.get("topic"),
-            description=topic_dict.get("description"),
-        )
-
-
 def _create_topic_classification_prompt(
-    message: str, topic_categories: list[TopicCategory]
+    message: str, topic_categories: list[dict]
 ) -> str:
     """Create a prompt for topic classification."""
     formatted_topic_categories = "\n".join(
         [
             f"""    <topic>
-            <name>{topic_category.name}</name>
-            <description>{topic_category.description or "No description"}</description>
+            <name>{topic.get("name", "")}</name>
+            <description>{topic.get("description", "No description")}</description>
             </topic>"""
-            for topic_category in topic_categories
+            for topic in topic_categories
         ]
     )[4:]
 
@@ -109,7 +76,7 @@ If the query spans multiple domains or involves complex interconnected issues ac
 
 def topic_classification(
     content: str,
-    topic_categories: list[TopicCategory],
+    topic_categories: list[dict],
     model: str = "dbdemos-openai-gpt4",
 ) -> dict[str, str]:
     """Classify content into topics using an LLM.
@@ -134,7 +101,7 @@ def topic_classification(
         rationale = deserialized_result.get("rationale", "No rationale provided")
 
         # Validate topic is one of the available categories or 'other'
-        valid_topics = {cat.name for cat in topic_categories} | {"other"}
+        valid_topics = {cat.get("name", "") for cat in topic_categories} | {"other"}
         if topic not in valid_topics:
             topic = "other"
             rationale = "Invalid topic returned, defaulting to other"
@@ -146,30 +113,23 @@ def topic_classification(
         return {"topic": "other", "rationale": f"Classification error: {str(e)}"}
 
 
-def load_topics_from_yaml(
-    yaml_path: Optional[str | Path] = None,
-) -> list[TopicCategory]:
+def load_topics_from_yaml(yaml_path: Optional[str | Path] = None) -> list[dict]:
     """Load topic categories from a YAML file.
 
     Args:
         yaml_path: Optional path to the YAML file. If not provided, will search for topics.yaml
-                  in the project's configs directory.
 
     Returns:
-        List of TopicCategory objects loaded from the YAML file.
-
-    Raises:
-        FileNotFoundError: If the YAML file cannot be found
-        yaml.YAMLError: If the YAML file is malformed
-        ValueError: If the YAML structure is invalid
+        List of topic dictionaries loaded from the YAML file.
     """
     if yaml_path is None:
         search_paths = [
-            PROJECT_ROOT / "configs" / "topics.yaml",
-            Path("/Workspace/Repos/") / "*/telco-support-agent/configs/topics.yaml",
-            Path.cwd() / "configs" / "topics.yaml",
-            Path("/model/artifacts/configs") / "topics.yaml",
+            # Model serving: MLflow flattens artifacts to /model/artifacts/
             Path("/model/artifacts") / "topics.yaml",
+            # Development/notebook: configs in project structure
+            PROJECT_ROOT / "configs" / "agents" / "topics.yaml",
+            # Current working directory (for local development)
+            Path.cwd() / "configs" / "agents" / "topics.yaml",
         ]
 
         yaml_path = None
@@ -179,29 +139,10 @@ def load_topics_from_yaml(
                 break
 
         if yaml_path is None:
-            raise FileNotFoundError(
-                "Could not find topics.yaml in any of the expected locations"
-            )
+            raise FileNotFoundError("Could not find topics.yaml")
 
     with open(yaml_path) as f:
         data = yaml.safe_load(f)
 
-    if not isinstance(data, dict) or "topics" not in data:
-        raise ValueError(
-            "YAML file must contain a 'topics' key with a list of topic definitions"
-        )
-
-    if not isinstance(data["topics"], list):
-        raise ValueError("'topics' must be a list of topic definitions")
-
-    topics = []
-    for topic_data in data["topics"]:
-        try:
-            topic = TopicCategory.from_dict(topic_data)
-            if topic.name:
-                topics.append(topic)
-        except Exception as e:
-            _logger.warning(f"Skipping invalid topic: {e}")
-            continue
-
-    return topics
+    topics = data.get("topics", [])
+    return [topic for topic in topics if topic.get("name")]

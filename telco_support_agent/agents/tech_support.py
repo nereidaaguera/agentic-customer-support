@@ -13,6 +13,7 @@ from mcp.client.streamable_http import streamablehttp_client
 from pydantic import BaseModel
 
 from telco_support_agent.agents.base_agent import BaseAgent
+from telco_support_agent.config import UCConfig
 from telco_support_agent.tools.tech_support import TechSupportRetriever
 from telco_support_agent.utils.logging_utils import get_logger, setup_logging
 
@@ -126,22 +127,21 @@ class TechSupportAgent(BaseAgent):
         self,
         llm_endpoint: Optional[str] = None,
         config_dir: Optional[str] = None,
-        environment: str = "prod",
-        override_mcp_server_urls: Optional[list[str]] = None,
         disable_tools: Optional[list[str]] = None,
+        uc_config: Optional[UCConfig] = None,
+        override_mcp_server_urls: Optional[list[str]] = None,
     ) -> None:
         """Init agent.
 
         Args:
             llm_endpoint: Optional LLM endpoint override
             config_dir: Optional directory for config files
-            environment: Environment to use for retrievers (dev, prod)
             disable_tools: Optional list of tool names to disable
+            uc_config: Optional UC configuration for Unity Catalog resources
             override_mcp_server_urls: Optional list of MCP server URLs to discover tools from. If specified,
             takes precedence over MCP servers specified in the config
         """
-        # Initialize traditional retrieval tools
-        self.retriever = TechSupportRetriever(environment=environment)
+        self.retriever = TechSupportRetriever(uc_config=uc_config)
         retriever_tools = self.retriever.get_tools()
 
         # mapping of tool names to their executable objects
@@ -153,8 +153,8 @@ class TechSupportAgent(BaseAgent):
         # Discover and setup MCP tools
         mcp_tools = []
         self.mcp_tool_infos = []
-        self.config = BaseAgent.load_config(
-            agent_type="tech_support", config_dir=config_dir
+        self.config = BaseAgent._load_config(
+            agent_type="tech_support", config_dir=config_dir, uc_config=uc_config
         )
         mcp_server_urls = override_mcp_server_urls or [
             server_spec.server_url for server_spec in self.config.mcp_servers
@@ -180,6 +180,7 @@ class TechSupportAgent(BaseAgent):
             tools=all_tools,  # tool specs for LLM (retrieval + MCP)
             vector_search_tools=vector_search_tools,  # executable objects
             disable_tools=disable_tools,
+            uc_config=uc_config,
         )
 
     def execute_tool(self, tool_name: str, args: dict) -> Any:

@@ -1,4 +1,4 @@
-"""Configuration settings for the Telco Support Agent UI."""
+"""Config settings for the Telco Support Agent UI."""
 
 import logging
 import os
@@ -45,6 +45,11 @@ class Settings(BaseSettings):
         )
     )
 
+    # MLflow settings
+    mlflow_experiment_path_override: str = Field(
+        default_factory=lambda: os.getenv("MLFLOW_EXPERIMENT_PATH", "")
+    )
+
     # Request settings
     request_timeout: int = Field(default=300)
     max_retries: int = Field(default=3)
@@ -53,7 +58,6 @@ class Settings(BaseSettings):
         """Initialize settings with logging."""
         super().__init__(**kwargs)
 
-        # Ensure databricks_host has proper protocol
         if self.databricks_host and not self.databricks_host.startswith(
             ("http://", "https://")
         ):
@@ -62,7 +66,13 @@ class Settings(BaseSettings):
                 f"Added https:// protocol to Databricks host: {self.databricks_host}"
             )
 
-        # Log configuration (but not sensitive data)
+        # Configure MLflow environment variables
+        if self.has_auth:
+            os.environ["DATABRICKS_HOST"] = self.databricks_host
+            if self.databricks_token:
+                os.environ["DATABRICKS_TOKEN"] = self.databricks_token
+            # Note: OAuth credentials are handled by the service layer
+
         logger.info("Initialized settings:")
         logger.info(f"  Environment: {self.environment}")
         logger.info(f"  Port: {self.port}")
@@ -70,6 +80,7 @@ class Settings(BaseSettings):
         logger.info(f"  Endpoint Name: {self.databricks_endpoint_name}")
         logger.info(f"  Full Endpoint URL: {self.databricks_endpoint}")
         logger.info(f"  Auth Method: {self.auth_method}")
+        logger.info(f"  MLflow Experiment Path: {self.mlflow_experiment_path}")
 
         if self.auth_method == "none":
             logger.warning(
@@ -138,6 +149,27 @@ class Settings(BaseSettings):
             pass
 
         return headers
+
+    @property
+    def mlflow_experiment_path(self) -> str:
+        """Get the MLflow experiment path based on environment and endpoint."""
+        if self.mlflow_experiment_path_override:
+            return self.mlflow_experiment_path_override
+
+        # get environment and base name from endpoint name
+        if self.databricks_endpoint_name.startswith("dev-"):
+            env = "dev"
+        elif self.databricks_endpoint_name.startswith("prod-"):
+            env = "prod"
+        else:
+            if self.environment == "production":
+                env = "prod"
+            else:
+                env = "dev"
+
+        experiment_path = f"/Shared/telco_support_agent/{env}/{env}_telco_support_agent"
+
+        return experiment_path
 
 
 @lru_cache

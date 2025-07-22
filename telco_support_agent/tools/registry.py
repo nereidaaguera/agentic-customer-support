@@ -3,7 +3,7 @@
 from unitycatalog.ai.openai.toolkit import UCFunctionToolkit
 
 from telco_support_agent.agents.agent_types import AgentType
-from telco_support_agent.utils.config import config_manager
+from telco_support_agent.config import UCConfig
 from telco_support_agent.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
@@ -27,11 +27,12 @@ DOMAIN_FUNCTION_MAP = {
 }
 
 
-def get_toolkit_for_domain(domain: str) -> UCFunctionToolkit:
+def get_toolkit_for_domain(domain: str, uc_config: UCConfig) -> UCFunctionToolkit:
     """Get a toolkit for a specific domain.
 
     Args:
         domain: Domain to get the toolkit for (e.g., "account", "billing")
+        uc_config: Unity Catalog configuration
 
     Returns:
         UCFunctionToolkit: Toolkit containing the appropriate functions
@@ -42,20 +43,20 @@ def get_toolkit_for_domain(domain: str) -> UCFunctionToolkit:
     except ValueError:
         logger.warning(f"Requested toolkit for non-standard domain: {domain}")
 
-    function_names = get_functions_for_domain(domain)
+    function_names = get_functions_for_domain(domain, uc_config)
     return UCFunctionToolkit(function_names=function_names)
 
 
-def get_functions_for_domain(domain: str) -> list[str]:
+def get_functions_for_domain(domain: str, uc_config: UCConfig) -> list[str]:
     """Get function names for a specific domain.
 
     Args:
         domain: Domain to get function names for (e.g., "account", "billing")
+        uc_config: Unity Catalog configuration
 
     Returns:
         List of function names for the domain
     """
-    uc_config = config_manager.get_uc_config()
     function_names = [
         uc_config.get_uc_function_name(function_name)
         for function_name in DOMAIN_FUNCTION_MAP.get(domain, [])
@@ -85,11 +86,12 @@ def check_function_exists(function_name: str) -> bool:
         return False
 
 
-def _register_domain_functions(domain: str) -> dict[str, bool]:
+def _register_domain_functions(domain: str, uc_config: UCConfig) -> dict[str, bool]:
     """Register UC functions for a specific domain.
 
     Args:
         domain: Domain to register functions for
+        uc_config: Unity Catalog configuration
 
     Returns:
         Dict mapping function names to registration status
@@ -107,17 +109,17 @@ def _register_domain_functions(domain: str) -> dict[str, bool]:
 
     if domain not in domain_modules:
         logger.warning(f"No function module found for domain: {domain}")
-        return dict.fromkeys(get_functions_for_domain(domain), False)
+        return dict.fromkeys(get_functions_for_domain(domain, uc_config), False)
 
     # import module to trigger registration
     try:
         logger.info(f"Importing functions for domain: {domain}")
         importlib.import_module(domain_modules[domain])
 
-        for func_name in get_functions_for_domain(domain):
+        for func_name in get_functions_for_domain(domain, uc_config):
             results[func_name] = check_function_exists(func_name)
 
         return results
     except Exception as e:
         logger.error(f"Error registering functions for domain {domain}: {e}")
-        return dict.fromkeys(get_functions_for_domain(domain), False)
+        return dict.fromkeys(get_functions_for_domain(domain, uc_config), False)

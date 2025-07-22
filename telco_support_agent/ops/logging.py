@@ -1,4 +1,4 @@
-"""Log Agent models to MLflow using Models from Code approach - updated for custom inputs."""
+"""Log Agent models to MLflow."""
 
 import inspect
 from typing import Optional
@@ -16,7 +16,6 @@ from mlflow.models.resources import (
 from mlflow.types.responses import ResponsesAgentRequest
 
 from telco_support_agent import PACKAGE_DIR, PROJECT_ROOT
-from telco_support_agent.utils.config import UC_CONFIG_FILE
 from telco_support_agent.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
@@ -29,6 +28,9 @@ def log_agent(
     resources: Optional[list[Resource]] = None,
     environment: str = "prod",
     disable_tools: Optional[list[str]] = None,
+    uc_catalog: Optional[str] = None,
+    agent_schema: Optional[str] = None,
+    data_schema: Optional[str] = None,
 ) -> ModelInfo:
     """Log agent using MLflow Models from Code approach.
 
@@ -39,6 +41,9 @@ def log_agent(
         resources: Optional list of resources (if None, will auto-detect)
         environment: Environment for resource detection (dev, prod)
         disable_tools: Optional list of tool names to disable. Can be simple names or full UC function names.
+        uc_catalog: Unity Catalog name
+        agent_schema: Schema for agent models and functions
+        data_schema: Schema for data tables
 
     Returns:
         ModelInfo object containing details of the logged model
@@ -54,7 +59,11 @@ def log_agent(
 
     # auto-detect resources if not provided
     if resources is None:
-        resources = _get_supervisor_resources(environment)
+        # Use provided UC config or defaults
+        catalog = uc_catalog or f"telco_customer_support_{environment}"
+        agent_sch = agent_schema or "agent"
+        data_sch = data_schema or "gold"
+        resources = _get_supervisor_resources(catalog, agent_sch, data_sch)
 
     if input_example is None:
         input_example = {
@@ -135,16 +144,12 @@ def _collect_config_artifacts() -> dict[str, str]:
             artifacts[artifact_key] = str(config_file)
             logger.info(f"Adding config artifact: {artifact_key}")
 
-    # UC config file
-    uc_config_path = PROJECT_ROOT / "configs" / UC_CONFIG_FILE
-    uc_config_key = f"configs/{UC_CONFIG_FILE}"
-    logger.info(f"Adding uc config file as artifact: {uc_config_key}")
-    artifacts[uc_config_key] = str(uc_config_path)
+    # UC config is now passed via parameters, no file needed
 
     # topics.yaml file
-    topics_config_path = PROJECT_ROOT / "configs" / "topics.yaml"
+    topics_config_path = PROJECT_ROOT / "configs" / "agents" / "topics.yaml"
     if topics_config_path.exists():
-        topics_config_key = "configs/topics.yaml"
+        topics_config_key = "configs/agents/topics.yaml"
         artifacts[topics_config_key] = str(topics_config_path)
         logger.info(f"Adding topics config file as artifact: {topics_config_key}")
     else:
@@ -155,23 +160,29 @@ def _collect_config_artifacts() -> dict[str, str]:
     return artifacts
 
 
-def _get_supervisor_resources(environment: str) -> list[Resource]:
+def _get_supervisor_resources(
+    uc_catalog: str, agent_schema: str, data_schema: str
+) -> list[Resource]:
     """Get all resources needed by the supervisor agent."""
-    from telco_support_agent.utils.config import config_manager
+    import yaml
+
+    from telco_support_agent.tools.registry import DOMAIN_FUNCTION_MAP
 
     resources = []
 
-    # get configs for all available agent types
+    # Get configs for all available agent types by scanning files
     agent_configs = {}
-    available_agent_types = config_manager.get_all_agent_types()
-    logger.info(f"Discovered agent types: {available_agent_types}")
+    config_dir = PROJECT_ROOT / "configs" / "agents"
 
-    for agent_type in available_agent_types:
-        try:
-            agent_configs[agent_type] = config_manager.get_config(agent_type)
-            logger.info(f"Loaded config for {agent_type} agent")
-        except Exception as e:
-            logger.warning(f"Could not load {agent_type} config: {e}")
+    if config_dir.exists():
+        for config_file in config_dir.glob("*.yaml"):
+            agent_type = config_file.stem
+            try:
+                with open(config_file) as f:
+                    agent_configs[agent_type] = yaml.safe_load(f)
+                    logger.info(f"Loaded config for {agent_type} agent")
+            except Exception as e:
+                logger.warning(f"Could not load {agent_type} config: {e}")
 
     # LLM endpoints
     llm_endpoints = set()
@@ -183,37 +194,36 @@ def _get_supervisor_resources(environment: str) -> list[Resource]:
                 llm_endpoints.add(endpoint)
                 logger.info(f"Added LLM endpoint: {endpoint}")
 
-    uc_config = config_manager.get_uc_config()
-    # UC functions
+    # UC functions based on domain function map
     uc_functions = set()
-    for _, config in agent_configs.items():
-        if "uc_functions" in config:
-            for func_name in config["uc_functions"]:
-                uc_func_name = uc_config.get_uc_function_name(func_name)
-                if uc_func_name not in uc_functions:
-                    resources.append(DatabricksFunction(function_name=uc_func_name))
-                    uc_functions.add(uc_func_name)
-                    logger.info(f"Added UC function: {uc_func_name}")
+    for functions in DOMAIN_FUNCTION_MAP.values():
+        for func_name in functions:
+            uc_func_name = f"{uc_catalog}.{agent_schema}.{func_name}"
+            if uc_func_name not in uc_functions:
+                resources.append(DatabricksFunction(function_name=uc_func_name))
+                uc_functions.add(uc_func_name)
+                logger.info(f"Added UC function: {uc_func_name}")
 
+    # Handle custom MCP server app dependencies
     databricks_app_dependencies = set()
     for _, config in agent_configs.items():
-        # Handle custom MCP server app dependencies
         for mcp_server_spec in config.get("mcp_servers", []):
             if app_name := mcp_server_spec.get("app_name"):
                 resources.append(DatabricksApp(app_name=app_name))
                 databricks_app_dependencies.add(app_name)
                 logger.info(f"Added Databricks app dependency: {app_name}")
 
-    # system functions used by agents
+    # System functions used by agents
     system_functions = ["system.ai.python_exec"]
     for sys_func in system_functions:
         resources.append(DatabricksFunction(function_name=sys_func))
         logger.info(f"Added system function: {sys_func}")
 
-    # Vector Search indexes
+    # Vector Search indexes - always use prod catalog for data reading
+    data_catalog = "telco_customer_support_prod"
     vector_indexes = [
-        uc_config.get_uc_index_name("knowledge_base_index"),
-        uc_config.get_uc_index_name("support_tickets_index"),
+        f"{data_catalog}.{data_schema}.knowledge_base_index",
+        f"{data_catalog}.{data_schema}.support_tickets_index",
     ]
 
     for index_name in vector_indexes:
@@ -258,7 +268,3 @@ def _log_config_dicts() -> None:
                 mlflow.log_dict(config_dict, f"configs/agents/{config_file.name}")
         except Exception as e:
             logger.warning(f"Error logging config {config_file.name}: {e}")
-    # Log UC config file
-    with open(PROJECT_ROOT / "configs" / UC_CONFIG_FILE) as f:
-        uc_config_dict = yaml.safe_load(f)
-        mlflow.log_dict(uc_config_dict, f"configs/{UC_CONFIG_FILE}")

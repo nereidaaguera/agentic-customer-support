@@ -17,7 +17,7 @@
             <div v-if="message.sender === 'bot'" class="message-with-intelligence">
               <div v-html="formatMessage(message.text)" class="message-text"></div>
               <!-- Add feedback panel with conditions -->
-              <div v-if="index !== 0 && message.animationComplete" class="feedback-panel">
+              <div v-if="index !== 0 && message.animationComplete && message.trace_id" class="feedback-panel">
                 <div class="feedback-controls">
                   <button 
                     class="feedback-button"
@@ -62,8 +62,9 @@
                     color="primary"
                     variant="text"
                     class="see-evaluations-btn"
-                    href="https://app.getreprise.com/launch/dnbxeoy/"
+                    :href="message.feedbackState.experimentUrl || '#'"
                     target="_blank"
+                    :disabled="!message.feedbackState.experimentUrl"
                   >
                     <v-icon icon="mdi-chart-box" class="mr-1" size="small" />
                     See Evaluations
@@ -169,7 +170,7 @@
 import { ref, onMounted, nextTick, watch } from 'vue';
 import { marked } from 'marked';
 import { type ApiMessage } from '@/types/ChatMessage';
-import { sendMessageToAgent, agentResultsEmitter, getPredefinedQuestions } from '@/services/api';
+import { sendMessageToAgent, agentResultsEmitter, getPredefinedQuestions, submitFeedback as apiSubmitFeedback } from '@/services/api';
 import type { AgentResponse, ToolCall } from '@/types/AgentResponse';
 
 const props = defineProps<{
@@ -209,11 +210,13 @@ interface Message {
   timestamp: Date;
   agentResponse?: AgentResponse | null;
   animationComplete?: boolean;
+  trace_id?: string;
   feedbackState?: {
     type: 'positive' | 'negative';
     showInput: boolean;
     text: string;
     submitted?: boolean;
+    experimentUrl?: string;
   };
 }
 
@@ -372,14 +375,14 @@ const handleAgentStreamingResponse = (event: any) => {
         non_intelligent_answer: event.data.final_answer
       });
       
-      startTypingAnimation(event.data.final_answer, !props.intelligenceEnabled);
+      startTypingAnimation(event.data.final_answer, !props.intelligenceEnabled, event.data.trace_id);
       isTyping.value = false;
       break;
   }
 };
 
 // Word-by-word typing animation function
-const startTypingAnimation = async (text: string, isNonIntelligent = false) => {
+const startTypingAnimation = async (text: string, isNonIntelligent = false, traceId?: string) => {
   // Create the message first with empty text
   const messageId = currentMessageId.value;
   messages.value.push({
@@ -387,7 +390,8 @@ const startTypingAnimation = async (text: string, isNonIntelligent = false) => {
     text: '',
     sender: 'bot',
     timestamp: new Date(),
-    animationComplete: false
+    animationComplete: false,
+    trace_id: traceId
   });
 
   isShowingTypingAnimation.value = false;
@@ -547,26 +551,49 @@ const handleFeedbackClick = (message: Message, type: 'positive' | 'negative') =>
   };
 };
 
-const submitFeedback = (message: Message) => {
-  if (!message.feedbackState) return;
+const submitFeedback = async (message: Message) => {
+  if (!message.feedbackState || !message.trace_id) return;
+  
+  // Use a default agent ID or could be passed as a prop in the future
+  const agentId = 'cs-agent-001'; // Default customer service agent ID
   
   const feedback = {
     messageId: message.id,
     type: message.feedbackState.type,
     text: message.feedbackState.text,
-    customerId: props.customerId
+    agentId: agentId,
+    traceId: message.trace_id
   };
   
   console.log('Submitting feedback:', feedback);
-  // Here you can add logic to send the feedback to your backend
   
-  // Update the feedback state to show the evaluations button
-  message.feedbackState = {
-    ...message.feedbackState,
-    showInput: false,
-    submitted: true,
-    text: ''
-  };
+  try {
+    // Submit feedback to the backend using the trace_id
+    const result = await apiSubmitFeedback(
+      message.trace_id,
+      message.feedbackState.type === 'positive',
+      message.feedbackState.text || null,
+      agentId
+    );
+    
+    if (result.success) {
+      console.log('Feedback submitted successfully');
+      // Update the feedback state to show the evaluations button
+      message.feedbackState = {
+        ...message.feedbackState,
+        showInput: false,
+        submitted: true,
+        text: '',
+        experimentUrl: result.experimentUrl
+      };
+    } else {
+      console.error('Failed to submit feedback');
+      // Could show an error message to the user here
+    }
+  } catch (error) {
+    console.error('Error submitting feedback:', error);
+    // Could show an error message to the user here
+  }
 };
 </script>
 
