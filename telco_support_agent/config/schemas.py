@@ -51,7 +51,7 @@ class UCConfig(BaseModel):
 
 class MCPServer(BaseModel):
     """MCP Server configuration."""
-    
+
     server_url: str
     app_name: Optional[str] = None
 
