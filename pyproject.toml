@@ -20,7 +20,6 @@ unitycatalog-openai = {extras = ["databricks"], version = "^0.2.0"}
 databricks-agents = "^1.1.0"
 databricks-vectorsearch = "^0.56.0"
 databricks-openai = "0.4.1"
-databricks-connect = "16.4.1"
 databricks-mcp = "0.2.1"
 
 [tool.poetry.group.dev.dependencies]
