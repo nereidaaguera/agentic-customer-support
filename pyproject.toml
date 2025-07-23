@@ -92,6 +92,7 @@ ignore = [
     "N805",    # First argument of a method should be named `self`
     "N812",    # Lowercase method imported as non-lowercase
     "UP007",   # Use `X | Y` for type annotations - ignoring to support Python <3.10
+    "UP045",   # Use `X | None` for type annotations - ignoring to support older style
     "S608"
 ]
 
