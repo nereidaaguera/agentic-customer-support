@@ -25,6 +25,7 @@ dbutils.widgets.text("model_name", "telco_customer_support_agent")
 
 import os
 import sys
+
 import mlflow
 import pandas as pd
 
@@ -34,9 +35,9 @@ sys.path.append(project_root)
 
 # COMMAND ----------
 
+from telco_support_agent.config import RunEvalsConfig, WidgetConfigLoader
 from telco_support_agent.evaluation import SCORERS
 from telco_support_agent.ops.registry import get_latest_model_version
-from telco_support_agent.config import WidgetConfigLoader, RunEvalConfig
 
 # COMMAND ----------
 
@@ -45,7 +46,7 @@ from telco_support_agent.config import WidgetConfigLoader, RunEvalConfig
 
 # COMMAND ----------
 
-config = WidgetConfigLoader(dbutils).load(RunEvalConfig)
+config = WidgetConfigLoader(dbutils).load(RunEvalsConfig)
 
 mlflow.set_experiment(config.experiment_name)
 

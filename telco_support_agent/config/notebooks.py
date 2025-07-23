@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from telco_support_agent.config.schemas import UCConfig
 
 
-class RunEvalConfig(BaseModel):
+class RunEvalsConfig(BaseModel):
     # Environment
     env: str
 
