@@ -49,10 +49,12 @@ from telco_support_agent.ops.registry import get_latest_model_version
 # COMMAND ----------
 
 config = WidgetConfigLoader(dbutils).load(DeployAgentConfig)
+print("Config loaded successfully!")
+
+# COMMAND ----------
 
 experiment = mlflow.set_experiment(f"/Shared/telco_support_agent/{config.env}/{config.env}_telco_support_agent")
-
-print("Config loaded successfully!")
+print(experiment.experiment_id)
 
 # COMMAND ----------
 
@@ -63,6 +65,7 @@ print(f"  Scale to zero: {config.scale_to_zero_enabled}")
 print(f"  Workload size: {config.workload_size}")
 print(f"  Environment: {config.env}")
 print(f"  Git commit: {config.git_commit}")
+print(f"  Experiment ID: {experiment.experiment_id}")
 
 # COMMAND ----------
 
@@ -193,6 +196,8 @@ if config.monitoring_enabled:
     print("="*50)
     print("SETTING UP AGENT MONITORING")
     print("="*50)
+    print(f"Experiment Name: {experiment.name}")
+    print(f"Experiment ID: {experiment.experiment_id}")
     print(f"Agent catalog: {config.uc_catalog}")
     print(f"Agent schema: {config.agent_schema}")
     # display custom metrics
