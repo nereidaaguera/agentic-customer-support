@@ -1,5 +1,10 @@
 import logging
 import os
+import sys
+
+# add project root
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, project_root)
 
 from telco_support_agent.agents.tech_support import TechSupportAgent
 
