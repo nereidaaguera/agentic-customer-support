@@ -7,6 +7,7 @@ import mlflow
 import yaml
 from mlflow.models.model import ModelInfo
 from mlflow.models.resources import (
+    DatabricksApp,
     DatabricksFunction,
     DatabricksServingEndpoint,
     DatabricksVectorSearchIndex,
@@ -202,6 +203,15 @@ def _get_supervisor_resources(
                 resources.append(DatabricksFunction(function_name=uc_func_name))
                 uc_functions.add(uc_func_name)
                 logger.info(f"Added UC function: {uc_func_name}")
+
+    # Handle custom MCP server app dependencies
+    databricks_app_dependencies = set()
+    for _, config in agent_configs.items():
+        for mcp_server_spec in config.get("mcp_servers", []):
+            if app_name := mcp_server_spec.get("app_name"):
+                resources.append(DatabricksApp(app_name=app_name))
+                databricks_app_dependencies.add(app_name)
+                logger.info(f"Added Databricks app dependency: {app_name}")
 
     # System functions used by agents
     system_functions = ["system.ai.python_exec"]

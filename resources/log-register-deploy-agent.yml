@@ -36,3 +36,9 @@ resources:
               scale_to_zero_enabled: ${var.scale_to_zero_enabled}
               workload_size: ${var.workload_size}
               git_commit: ${bundle.git.commit}
+
+  apps:
+    mcp-outage-info-server:
+      name: "mcp-telco-outage-info-server"
+      description: "Server containing telco outage info"
+      source_code_path: ../telco_support_agent/mcp_servers/outage_info_server

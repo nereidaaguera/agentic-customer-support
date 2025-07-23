@@ -1,7 +1,7 @@
 """Core configuration schemas for the telco support agent."""
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import yaml
 from pydantic import BaseModel, Field
@@ -49,6 +49,13 @@ class UCConfig(BaseModel):
         return self.agent_catalog
 
 
+class MCPServer(BaseModel):
+    """MCP Server configuration."""
+
+    server_url: str
+    app_name: Optional[str] = None
+
+
 class AgentConfig(BaseModel):
     """Model for agent configuration from YAML."""
 
@@ -57,6 +64,7 @@ class AgentConfig(BaseModel):
     llm: LLMConfig
     system_prompt: str
     uc_functions: list[str] = Field(default_factory=list)
+    mcp_servers: list[MCPServer] = Field(default_factory=list)
     uc_config: UCConfig
 
     @classmethod

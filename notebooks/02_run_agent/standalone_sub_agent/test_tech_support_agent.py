@@ -16,11 +16,12 @@
 import os
 import sys
 
+# Add the project root to Python path
 root_path = os.path.abspath(os.path.join(os.getcwd(), "../../.."))
 print(f"Root path: {root_path}")
 
-if root_path:
-    sys.path.append(root_path)
+if root_path not in sys.path:
+    sys.path.insert(0, root_path)
     print(f"Added {root_path} to Python path")
 
 # COMMAND ----------
@@ -43,7 +44,9 @@ nest_asyncio.apply()
 
 # COMMAND ----------
 
-tech_agent = TechSupportAgent(environment="prod")
+tech_agent = TechSupportAgent(override_mcp_server_urls=[
+    "https://e2-demo-west.cloud.databricks.com/api/2.0/mcp/functions/system/ai"
+])
 
 print(f"\nAgent initialized successfully!")
 print(f"   Agent type: {tech_agent.agent_type}")
@@ -194,3 +197,12 @@ complex_queries = [
 
 for i, query in enumerate(complex_queries, 1):
     test_query(query, f"_complex_{i}")
+
+# COMMAND ----------
+
+mcp_queries = [
+    "Can you estimate how much data I’ll use if I watch Netflix in HD for 3 hours every night for a month? "
+    "Use math to ensure precise calculations.",
+]
+for i, query in enumerate(mcp_queries):
+    test_query(query, f"_mcp_{i}")
