@@ -1,0 +1,1 @@
+"""Outage info server package."""

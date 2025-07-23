@@ -14,11 +14,11 @@ from mlflow.types.responses import (
 )
 
 from telco_support_agent.agents.account import AccountAgent
+from telco_support_agent.agents.agent_types import AgentType
 from telco_support_agent.agents.base_agent import BaseAgent
 from telco_support_agent.agents.billing import BillingAgent
 from telco_support_agent.agents.product import ProductAgent
 from telco_support_agent.agents.tech_support import TechSupportAgent
-from telco_support_agent.agents.types import AgentType
 from telco_support_agent.agents.utils.message_formatting import (
     extract_user_query,
 )

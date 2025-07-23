@@ -176,7 +176,11 @@ The project uses Databricks Asset Bundles (DAB) for deployment:
 ```bash
 # deploy to dev env
 databricks bundle deploy -t dev
+databricks bundle run mcp-outage-info-server -t dev
+databricks bundle run telco_log_register_deploy_agent -t dev
 
 # deploy to prod env
 databricks bundle deploy -t prod
+databricks bundle run mcp-outage-info-server -t prod
+databricks bundle run telco_log_register_deploy_agent -t prod
 ```

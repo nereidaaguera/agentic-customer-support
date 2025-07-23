@@ -48,3 +48,5 @@ poetry.lock
 # Databricks
 .databricks
 bundle-schema.json
+
+mlruns/

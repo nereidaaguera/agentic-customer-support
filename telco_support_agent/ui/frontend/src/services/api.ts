@@ -936,6 +936,14 @@ export const getPredefinedQuestions = async () => {
     {
       preview: "iPhone promotions",
       text: "Are there any active promotions for iPhone upgrades?"
+    },
+    {
+      preview: "SF outage check",
+      text: "Is there a network outage in San Francisco?"
+    },
+    {
+      preview: "LA network quality",
+      text: "What's the network performance in Downtown LA?"
     }
   ];
 };
