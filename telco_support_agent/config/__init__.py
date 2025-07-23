@@ -1,7 +1,7 @@
 """Config manager package for Telco Support Agent."""
 
 from .loader import WidgetConfigLoader
-from .notebooks import DeployAgentConfig, LogRegisterConfig
+from .notebooks import DeployAgentConfig, LogRegisterConfig, RunEvalsConfig
 from .schemas import AgentConfig, LLMConfig, UCConfig
 
 __all__ = [
@@ -11,4 +11,5 @@ __all__ = [
     "UCConfig",
     "LLMConfig",
     "AgentConfig",
+    "RunEvalsConfig",
 ]

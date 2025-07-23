@@ -40,6 +40,7 @@ from telco_support_agent.ops.deployment import (AgentDeploymentError,
                                                 deploy_agent)
 from telco_support_agent.ops.registry import get_latest_model_version
 
+
 # COMMAND ----------
 
 # MAGIC %md
@@ -48,6 +49,9 @@ from telco_support_agent.ops.registry import get_latest_model_version
 # COMMAND ----------
 
 config = WidgetConfigLoader(dbutils).load(DeployAgentConfig)
+
+experiment = mlflow.set_experiment(f"/Shared/telco_support_agent/{config.env}/{config.env}_telco_support_agent")
+
 print("Config loaded successfully!")
 
 # COMMAND ----------
@@ -183,6 +187,7 @@ print("="*50)
 
 from telco_support_agent.ops.monitoring import (AgentMonitoringError,
                                                 create_agent_monitor)
+from telco_support_agent.evaluation import SCORERS
 
 if config.monitoring_enabled:
     print("="*50)
@@ -190,28 +195,34 @@ if config.monitoring_enabled:
     print("="*50)
     print(f"Agent catalog: {config.uc_catalog}")
     print(f"Agent schema: {config.agent_schema}")
-    print("Assessments: []")
+    # display custom metrics
+    print("Custom Telco Assessments:")
+    # Taking only top 4 because more than that throws an error.
+    scorers = SCORERS[:4]
+    for scorer in scorers:
+        print(f"  - {scorer.name}")
     print()
 
     try:
-        # create external monitor with empty assessments
+        # create external monitor with custom metrics
         uc_config = config.to_uc_config()
         monitor = create_agent_monitor(
             uc_config=uc_config,
-            experiment_name=f"/Shared/telco_support_agent/{config.env}/{config.env}_telco_support_agent",
+            experiment_id=experiment.experiment_id,
             replace_existing=config.monitoring_replace_existing,
+            custom_metrics=[scorer.get_custom_metric() for scorer in scorers],
         )
-        
+
         print("✅ External monitor created successfully!")
         print(f"Monitor ID: {getattr(monitor, 'id', 'N/A')}")
         print(f"Experiment ID: {getattr(monitor, 'experiment_id', 'N/A')}")
         print(f"Evaluated traces table: {getattr(monitor, 'evaluated_traces_table', 'N/A')}")
-        
+
         if hasattr(monitor, 'monitoring_page_url'):
             print(f"Monitoring page: {monitor.monitoring_page_url}")
-        
-        print("\nNote: Monitor created with empty assessments.")
-        
+
+        print(f"\nNote: Monitor created with {len(scorers)} custom scorer assessments.")
+
     except AgentMonitoringError as e:
         print(f"❌ Failed to create monitor: {str(e)}")
         if config.monitoring_fail_on_error:
@@ -224,7 +235,7 @@ if config.monitoring_enabled:
             raise
         else:
             print("Continuing deployment...")
-    
+
     print("="*50)
 else:
     print("External monitoring is disabled in configuration")

@@ -7,19 +7,20 @@ readme = "README.md"
 packages = [{include = "telco_support_agent"}]
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = ">=3.12,<3.13.dev0"
 pydantic = "^2.10.0"
 faker = "^20.1.0"
 databricks-sdk = "0.52.0"
-mlflow = "^3.1.1"
+mlflow = {extras = ["databricks"], version = ">=3.1"}
 openai = "^1.78.0"
 backoff = "^2.2.1"
 six = "1.16.0"
 unitycatalog-ai = {extras = ["databricks"], version = "^0.3.0"}
 unitycatalog-openai = {extras = ["databricks"], version = "^0.2.0"}
-databricks-agents = "^1.0.0rc1"
+databricks-agents = "^1.1.0"
 databricks-vectorsearch = "^0.56.0"
 databricks-openai = "0.4.1"
+databricks-connect = "16.4.1"
 databricks-mcp = "0.2.1"
 
 [tool.poetry.group.dev.dependencies]

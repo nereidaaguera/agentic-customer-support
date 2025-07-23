@@ -8,6 +8,31 @@ if TYPE_CHECKING:
     from telco_support_agent.config.schemas import UCConfig
 
 
+class RunEvalsConfig(BaseModel):
+    # Environment
+    env: str
+
+    # Unity Catalog
+    uc_catalog: str
+    agent_schema: str
+    model_name: str
+    model_version: Optional[int] = None  # if not set, use latest
+
+    # MLflow
+    experiment_name: str
+
+    def to_uc_config(self) -> "UCConfig":
+        """Convert to UCConfig for Unity Catalog operations."""
+        from telco_support_agent.config.schemas import UCConfig
+
+        return UCConfig(
+            agent_catalog=self.uc_catalog,
+            agent_schema=self.agent_schema,
+            data_schema="gold",
+            model_name=self.model_name,
+        )
+
+
 class LogRegisterConfig(BaseModel):
     """Config for log_register_agent notebook."""
 
@@ -86,7 +111,7 @@ class DeployAgentConfig(BaseModel):
 
     # Monitoring
     monitoring_enabled: bool = True
-    monitoring_replace_existing: bool = False
+    monitoring_replace_existing: bool = True
     monitoring_fail_on_error: bool = False
 
     # Permissions
