@@ -35,8 +35,8 @@ databricks bundle deploy -t <environment>
 
 Run specific jobs:
 ```bash
-databricks bundle run telco_log_register_deploy_agent -t <environment>
-databricks bundle run telco_create_vector_indexes -t <environment>
+databricks bundle run log_register_deploy_agent -t <environment>
+databricks bundle run create_vector_indexes -t <environment>
 ```
 
 Deploy app code to running apps:

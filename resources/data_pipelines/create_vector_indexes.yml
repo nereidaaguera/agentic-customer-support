@@ -7,7 +7,7 @@
 
 resources:
   jobs:
-    telco_create_vector_indexes:
+    create_vector_indexes:
       name: telco_create_vector_indexes_${bundle.target}
       tasks:
         - task_key: create_vector_indexes

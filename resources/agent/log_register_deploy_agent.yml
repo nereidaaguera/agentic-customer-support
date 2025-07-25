@@ -6,7 +6,7 @@
 
 resources:
   jobs:
-    telco_log_register_deploy_agent:
+    log_register_deploy_agent:
       name: telco_log_register_deploy_agent_${bundle.target}
       tasks:
         - task_key: log_register_agent
