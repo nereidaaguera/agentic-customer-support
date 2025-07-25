@@ -146,7 +146,7 @@ try:
         deployment_name=config.endpoint_name,
         tags={"environment": config.env, "git_commit": config.git_commit} if config.git_commit else {"environment": config.env},
         scale_to_zero_enabled=config.scale_to_zero_enabled,
-        environment_vars={"TELCO_SUPPORT_AGENT_ENV": config.env},
+        environment_vars={},
         workload_size=config.workload_size,
         wait_for_ready=config.wait_for_ready,
         permissions=config.permissions,

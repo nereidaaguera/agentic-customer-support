@@ -4,8 +4,6 @@ static_dir: static
 env:
   - name: 'ENV'
     value: 'development'
-  - name: 'TELCO_SUPPORT_AGENT_ENV'
-    value: 'dev'
   - name: 'DATABRICKS_HOST'
     value: 'https://e2-demo-west.cloud.databricks.com/'
   - name: 'DATABRICKS_TOKEN'
@@ -19,6 +17,6 @@ env:
   #   value: 'staging-telco-customer-support-agent'
   # prod endpoint:
   # - name: 'DATABRICKS_ENDPOINT_NAME'
-  #   value: 'prod-telco-customer-support-agent'
+  #   value: 'prod-telco-customer-support-agent'  
   - name: 'CORS_ORIGINS'
     value: 'http://localhost:3000,http://localhost:5173'

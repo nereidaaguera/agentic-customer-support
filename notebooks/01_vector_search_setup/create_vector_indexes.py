@@ -37,9 +37,6 @@ if root_path:
     sys.path.append(root_path)
 
 env = dbutils.widgets.get("env")
-
-os.environ['TELCO_SUPPORT_AGENT_ENV'] = env
-
 # COMMAND ----------
 
 from telco_support_agent.data.vector_search import VectorSearchManager
@@ -67,10 +64,6 @@ print(f"Config path: {config_path}")
 uc_config = UCConfig(
     data_catalog=uc_catalog,
     data_schema=data_schema,
-    # Agent configs not used for vector search but required by UCConfig
-    agent_catalog="telco_customer_support_prod",
-    agent_schema="agent", 
-    model_name="telco_customer_support_agent"
 )
 
 vs_manager = VectorSearchManager(

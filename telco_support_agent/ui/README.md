@@ -171,17 +171,14 @@ Each environment config file sets appropriate variables:
 
 **Development (`app_dev.yaml`):**
 - `ENV=dev`
-- `TELCO_SUPPORT_AGENT_ENV=dev`
 - `DATABRICKS_ENDPOINT_NAME=dev-telco-customer-support-agent`
 
 **Staging (`app_staging.yaml`):**
 - `ENV=staging`
-- `TELCO_SUPPORT_AGENT_ENV=staging`
 - `DATABRICKS_ENDPOINT_NAME=staging-telco-customer-support-agent`
 
 **Production (`app_prod.yaml`):**
 - `ENV=prod`
-- `TELCO_SUPPORT_AGENT_ENV=prod`
 - `DATABRICKS_ENDPOINT_NAME=prod-telco-customer-support-agent`
 
 ### Monitoring Deployments
@@ -250,7 +247,6 @@ uvicorn backend.app.main:app --reload  # backend
 
 **Production (`app.yaml`):**
 - `ENV=prod`
-- `TELCO_SUPPORT_AGENT_ENV=prod`
 
 **Development (`app_local.yaml`):**
 - `DATABRICKS_HOST`: Your Databricks workspace URL
