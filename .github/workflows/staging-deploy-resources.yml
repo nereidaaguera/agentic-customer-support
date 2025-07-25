@@ -3,8 +3,8 @@ name: Staging - Deploy Databricks Resources
 on:
   workflow_dispatch:
     inputs:
-      deploy_apps:
-        description: 'Deploy app code (MCP servers, UI)'
+      deploy_ui:
+        description: 'Force deploy UI app'
         required: false
         default: false
         type: boolean
@@ -44,32 +44,31 @@ jobs:
           databricks bundle deploy -t staging
           echo "Deployment to staging completed successfully"
 
-      - name: Check for App Changes
-        id: app-changes
+      - name: Check for UI Changes
+        id: ui-changes
         run: |
-          if git diff --name-only HEAD~1 HEAD | grep -E '^(telco_support_agent/mcp_servers/|telco_support_agent/ui/)'; then
+          if git diff --name-only HEAD~1 HEAD | grep -E '^(telco_support_agent/ui/|resources/ui/customer_support_app\.yml)'; then
             echo "changed=true" >> $GITHUB_OUTPUT
           else
             echo "changed=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Deploy App Code
-        if: ${{ github.event.inputs.deploy_apps == true && (steps.app-changes.outputs.changed == 'true' || github.event_name == 'workflow_dispatch') }}
+      - name: Deploy MCP Server
         env:
           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
         run: |
-          echo "Deploying app code..."
-          
-          # Deploy MCP server app
           echo "Deploying MCP server..."
           databricks bundle run outage_info_mcp_server -t staging
-          
-          # Deploy UI app  
+
+      - name: Deploy UI App
+        if: ${{ github.event.inputs.deploy_ui == 'true' || steps.ui-changes.outputs.changed == 'true' }}
+        env:
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+        run: |
           echo "Deploying UI app..."
           databricks bundle run customer_support_ui -t staging
-          
-          echo "App code deployed successfully"
 
       - name: Post Deployment Summary
         if: always()
@@ -79,7 +78,8 @@ jobs:
           echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **App Changes**: ${{ steps.app-changes.outputs.changed == 'true' && 'Detected' || 'None' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Apps Deployed**: ${{ github.event.inputs.deploy_apps == true && 'Yes' || 'No' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **UI Changes**: ${{ steps.ui-changes.outputs.changed == 'true' && 'Detected' || 'None' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Force UI Deploy**: ${{ github.event.inputs.deploy_ui == 'true' && 'Yes' || 'No' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **UI Deployed**: ${{ (github.event.inputs.deploy_ui == 'true' || steps.ui-changes.outputs.changed == 'true') && 'Yes' || 'No' }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "✅ Ready for production deployment when release tag is created." >> $GITHUB_STEP_SUMMARY

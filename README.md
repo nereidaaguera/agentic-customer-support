@@ -200,12 +200,19 @@ The project uses Databricks Asset Bundles (DAB) for deployment across three envi
 2. **Dev Deployment** (`dev-deploy-resources.yml`)
    - Manual workflow dispatch
    - Deploys to dev environment
-   - Optional app deployment flag for MCP servers and UI
+   - Always deploys MCP server
+   - UI deployment:
+     - Automatic: deploys when changes detected in `telco_support_agent/ui/` or `resources/ui/customer_support_app.yml`
+     - Manual: force deploy with `deploy_ui` flag
    - Runs on protected runner group
 
 3. **Staging Deployment** (`staging-deploy-resources.yml`)
    - Automatically triggers on push to main branch
-   - Manual workflow dispatch with optional app deployment
+   - Manual workflow dispatch available
+   - Always deploys MCP server
+   - UI deployment:
+     - Automatic: deploys when changes detected in `telco_support_agent/ui/` or `resources/ui/customer_support_app.yml`
+     - Manual: force deploy with `deploy_ui` flag
    - Uses Python 3.10 for compatibility
 
 4. **Production Deployment** (`prod-deploy-resources.yml`)
@@ -214,6 +221,10 @@ The project uses Databricks Asset Bundles (DAB) for deployment across three envi
    - Validates prerequisites:
      - Tag must be on main branch
      - Staging deployment must be successful
+   - Always deploys MCP server
+   - UI deployment:
+     - Automatic: deploys when changes detected in `telco_support_agent/ui/` or `resources/ui/customer_support_app.yml`
+     - Manual: force deploy with `deploy_ui` flag
    - Uses Python 3.10 for compatibility
 
 ### Manual Deployment Commands
