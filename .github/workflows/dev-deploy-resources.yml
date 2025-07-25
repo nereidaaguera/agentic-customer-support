@@ -1,0 +1,82 @@
+name: Dev - Deploy Databricks Resources
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_apps:
+        description: 'Deploy app code (MCP servers, UI)'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  deploy:
+    name: Deploy to Dev
+    environment: dev
+    runs-on:
+      group: databricks-field-eng-protected-runner-group
+      labels: linux-ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup databricks CLI
+        uses: databricks/setup-cli@main
+
+      - name: Validate bundle for dev
+        id: validate
+        env:
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+        run: |
+          databricks bundle validate -t dev
+
+      - name: Deploy bundle to dev
+        id: deploy
+        env:
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+        run: |
+          databricks bundle deploy -t dev
+
+      - name: Check for App Changes
+        id: app-changes
+        run: |
+          if git diff --name-only HEAD~1 HEAD | grep -E '^(telco_support_agent/mcp_servers/|telco_support_agent/ui/)'; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Deploy App Code
+        if: ${{ github.event.inputs.deploy_apps == true && (steps.app-changes.outputs.changed == 'true' || github.event_name == 'workflow_dispatch') }}
+        env:
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+        run: |
+          echo "Deploying app code..."
+          
+          # Deploy MCP server app
+          echo "Deploying MCP server..."
+          databricks bundle run outage_info_mcp_server -t dev
+          
+          # Deploy UI app
+          echo "Deploying UI app..."
+          databricks bundle run customer_support_ui -t dev
+          
+          echo "App code deployed successfully"
+
+      - name: Post Deployment Summary
+        if: always()
+        run: |
+          echo "## Dev Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: Dev" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **App Changes**: ${{ steps.app-changes.outputs.changed == 'true' && 'Detected' || 'None' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Apps Deployed**: ${{ github.event.inputs.deploy_apps == true && 'Yes' || 'No' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Dev deployment completed." >> $GITHUB_STEP_SUMMARY

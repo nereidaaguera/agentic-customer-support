@@ -1,0 +1,137 @@
+name: Prod - Deploy Databricks Resources
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag to deploy'
+        required: true
+        type: string
+      deploy_apps:
+        description: 'Deploy app code (MCP servers, UI)'
+        required: false
+        default: false
+        type: boolean
+  release:
+    types: [published]
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    environment: prod
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || github.event.inputs.release_tag }}
+          fetch-depth: 0
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10" 
+
+      - name: Install dependencies
+        run: |
+          pip install requests          
+          
+      - name: Validate Prerequisites
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Validating deployment prerequisites..."
+          
+          # Validate release tag format
+          RELEASE_TAG="${{ github.event.release.tag_name || github.event.inputs.release_tag }}"
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Invalid release tag format: $RELEASE_TAG"
+            echo "Release tags must follow semantic versioning (e.g., v1.2.3)"
+            exit 1
+          fi
+          echo "✅ Release tag format validated: $RELEASE_TAG"
+          
+          # Verify tag exists and get its commit
+          TAG_COMMIT=$(git rev-list -n 1 "$RELEASE_TAG" 2>/dev/null || echo "")
+          if [[ -z "$TAG_COMMIT" ]]; then
+            echo "❌ Release tag $RELEASE_TAG not found"
+            exit 1
+          fi
+          
+          # Check if tag is on main branch
+          if ! git branch -r --contains "$TAG_COMMIT" | grep -q "origin/main"; then
+            echo "❌ Release tag $RELEASE_TAG is not on the main branch"
+            echo "Production releases must be created from the main branch"
+            exit 1
+          fi
+          echo "✅ Release tag is on main branch"
+          
+          # Check staging deployment was successful
+          LATEST_STAGING_RUN=$(gh run list --workflow="staging-deploy-resources.yml" --branch=main --limit=1 --json=conclusion --jq='.[0].conclusion')
+          if [[ "$LATEST_STAGING_RUN" != "success" ]]; then
+            echo "❌ Latest staging deployment was not successful: $LATEST_STAGING_RUN"
+            echo "DO NOT deploy to production without successful staging deployment."
+            exit 1
+          fi
+          
+          echo "✅ All prerequisites validated successfully"
+          
+      - uses: databricks/setup-cli@main
+
+      - name: Validate Bundle for Prod
+        id: validate
+        env:
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+        run: |
+          echo "Validating bundle configuration..."
+          databricks bundle validate -t prod
+          
+      - name: Deploy Bundle to Prod
+        id: deploy
+        env:
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+        run: |
+          echo "Deploying to production environment..."
+          databricks bundle deploy -t prod
+          echo "Bundle deployed successfully"
+
+      - name: Check for App Changes
+        id: app-changes
+        run: |
+          if git diff --name-only HEAD~1 HEAD | grep -E '^(telco_support_agent/mcp_servers/|telco_support_agent/ui/)'; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Deploy App Code
+        if: ${{ github.event.inputs.deploy_apps == true && (steps.app-changes.outputs.changed == 'true' || github.event_name == 'workflow_dispatch') }}
+        env:
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+        run: |
+          echo "Deploying app code..."
+          
+          # Deploy MCP server app
+          echo "Deploying MCP server..."
+          databricks bundle run outage_info_mcp_server -t prod
+          
+          # Deploy UI app
+          echo "Deploying UI app..."
+          databricks bundle run customer_support_ui -t prod
+          
+          echo "App code deployed successfully"
+
+      - name: Post Deployment Summary
+        if: always()
+        run: |
+          echo "## Production Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: Production" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release Tag**: ${{ github.event.release.tag_name || github.event.inputs.release_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **App Changes**: ${{ steps.app-changes.outputs.changed == 'true' && 'Detected' || 'None' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Apps Deployed**: ${{ github.event.inputs.deploy_apps == true && 'Yes' || 'No' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🚀 Production deployment completed." >> $GITHUB_STEP_SUMMARY

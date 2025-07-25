@@ -19,6 +19,15 @@ User interface application resources:
 
 ## Deployment
 
+### CI/CD Workflows
+
+- **PR Validation**: Runs on pull requests to validate bundle configuration and run tests
+- **Dev Deployment**: Manual trigger only for developer testing
+- **Staging Deployment**: Automatic on push to `main` branch for integration testing
+- **Prod Deployment**: Manual trigger or release tag creation with validation
+
+### Manual Deployment
+
 Deploy all resources to an environment:
 ```bash
 databricks bundle deploy -t <environment>

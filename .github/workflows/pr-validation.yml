@@ -1,0 +1,60 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  lint-and-unit-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: 1.5.1
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Install dev dependencies
+        run: poetry install --only dev --no-interaction
+
+      - name: Check formatting with Ruff
+        run: poetry run ruff format --check .
+
+      - name: Lint with Ruff
+        run: poetry run ruff check .
+
+      - name: Install test dependencies
+        run: poetry install --only test --no-interaction
+
+      - name: Run unit tests
+        run: poetry run pytest tests/unit/
+
+  # validate Databricks asset bundle for each env
+  validate-databricks-asset-bundle:
+    needs: lint-and-unit-test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: [dev, staging, prod]
+    environment: ${{ matrix.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: databricks/setup-cli@main
+
+      - name: Validate Bundle Configuration
+        env:
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+        run: |
+          echo "Validating bundle configuration for ${{ matrix.environment }} environment..."
+          databricks bundle validate -t ${{ matrix.environment }}
+          echo "${{ matrix.environment }} bundle configuration is valid"
