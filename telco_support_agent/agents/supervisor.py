@@ -1,5 +1,6 @@
 """Supervisor agent to orchestrate specialized sub-agents."""
 
+import os
 from collections.abc import Generator
 from typing import NamedTuple, Optional, Union
 from uuid import uuid4
@@ -122,11 +123,27 @@ class SupervisorAgent(BaseAgent):
 
         if agent_type_enum in agents_classes:
             try:
-                agent = agents_classes[agent_type_enum](
-                    llm_endpoint=self.llm_endpoint,
-                    disable_tools=self.disable_tools,
-                    uc_config=self.config.uc_config,
-                )
+                # Prepare agent initialization kwargs
+                agent_kwargs = {
+                    "llm_endpoint": self.llm_endpoint,
+                    "disable_tools": self.disable_tools,
+                    "uc_config": self.config.uc_config,
+                }
+                
+                # For tech support agent, add environment-specific MCP server URL
+                if agent_type_enum == AgentType.TECH_SUPPORT:
+                    # Check for explicit MCP_SERVER_URL first
+                    mcp_server_url = os.getenv("MCP_SERVER_URL")
+                    
+                    if mcp_server_url:
+                        # Use explicit URL if provided
+                        agent_kwargs["override_mcp_server_urls"] = [mcp_server_url]
+                        logger.info(f"Using explicit MCP server URL: {mcp_server_url}")
+                    else:
+                        # Otherwise, use URL from config file (no override)
+                        logger.info("MCP_SERVER_URL not set, using URL from config file")
+                
+                agent = agents_classes[agent_type_enum](**agent_kwargs)
                 self._sub_agents[agent_type_str] = agent
                 logger.info(f"Initialized {agent_type_str} agent")
                 return agent

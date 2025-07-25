@@ -39,6 +39,6 @@ resources:
 
   apps:
     mcp-outage-info-server:
-      name: "mcp-telco-outage-info-server"
+      name: "telco-outage-info-mcp-server-${bundle.target}"
       description: "Server containing telco outage info"
       source_code_path: ../telco_support_agent/mcp_servers/outage_info_server
