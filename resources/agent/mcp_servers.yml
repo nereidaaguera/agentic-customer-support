@@ -1,0 +1,11 @@
+# MCP Servers
+#
+# Databricks apps that provide MCP (Model Context Protocol) servers
+# for agent tools and capabilities
+
+resources:
+  apps:
+    outage_info_mcp_server:
+      name: "telco_outage_info_mcp_server_${bundle.target}"
+      description: "Server containing telco outage info"
+      source_code_path: ../telco_support_agent/mcp_servers/outage_info_server

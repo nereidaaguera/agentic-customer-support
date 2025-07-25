@@ -1,0 +1,10 @@
+# Customer Support UI Application
+#
+# Databricks app providing the customer support UI interface
+
+resources:
+  apps:
+    customer_support_ui:
+      name: "telco_customer_support_ui_${bundle.target}"
+      description: "Customer support UI application"
+      source_code_path: ../telco_support_agent/ui
