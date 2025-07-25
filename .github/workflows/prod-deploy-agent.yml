@@ -45,7 +45,7 @@ jobs:
         if: steps.mcp-server-changes.outputs.changed == 'true'
         run: |
           echo "MCP server changes detected. Deploying code to app..."
-          databricks bundle run mcp-outage-info-server -t prod
+          databricks bundle run outage_info_mcp_server -t prod
           echo "MCP server app code deployed successfully"
 
       - name: Post Deployment Summary

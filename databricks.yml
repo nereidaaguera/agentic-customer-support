@@ -47,7 +47,7 @@ permissions:
     group_name: users
 
 include:
-  - ./resources/*.yml
+  - ./resources/**/*.yml
 
 targets:
   dev:
