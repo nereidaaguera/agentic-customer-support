@@ -28,6 +28,7 @@ databricks-mcp==0.2.1
 databricks-openai==0.4.1
 databricks-sdk==0.52.0
 databricks-vectorsearch==0.56
+dbdemos-tracker>=0.1.4
 dataclasses-json==0.6.7
 deprecation==2.1.0
 distro==1.9.0

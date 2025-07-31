@@ -4,7 +4,8 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from dbdemos_tracker import Tracker
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -54,7 +55,28 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Include routers
+    # dbdemos tracking middleware
+    @app.middleware("http")
+    async def track_app_usage(request: Request, call_next):
+        """Track app usage with dbdemos-tracker."""
+        # extract user email from Gap-Auth header
+        user_email = request.headers.get("gap-auth", "")
+
+        # track app view
+        if user_email and "@" in user_email:
+            try:
+                tracker = Tracker("2556758628403379")
+                tracker.track_app_view(
+                    user_email=user_email,
+                    app_name="agentic-customer-support",
+                    path=str(request.url.path),
+                )
+            except Exception as e:
+                print(f"Tracking error: {e}")
+
+        response = await call_next(request)
+        return response
+
     app.include_router(agent_router, prefix="/api")
 
     # Serve static files (frontend build)
