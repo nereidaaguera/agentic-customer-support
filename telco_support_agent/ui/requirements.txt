@@ -17,3 +17,5 @@ databricks-sdk
 
 # MLflow
 mlflow
+
+dbdemos_tracker
