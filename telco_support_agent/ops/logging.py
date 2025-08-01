@@ -54,10 +54,9 @@ def log_agent(
     logger.info(f"Using package directory: {PACKAGE_DIR}")
     logger.info(f"Using project root: {PROJECT_ROOT}")
 
-    # Set default config directory if not provided
+    # default config dir if not provided
     if config_dir is None:
         config_dir = PROJECT_ROOT / "configs" / "agents"
-    
     logger.info(f"Using config directory: {config_dir}")
 
     # config artifacts

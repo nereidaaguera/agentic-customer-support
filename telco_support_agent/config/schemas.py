@@ -42,11 +42,6 @@ class UCConfig(BaseModel):
         """Returns full UC model name (uses agent catalog)."""
         return f"{self.agent_catalog}.{self.agent_schema}.{self.model_name}"
 
-    # Backward compatibility
-    @property
-    def catalog(self) -> str:
-        """Backward compatibility - returns agent catalog."""
-        return self.agent_catalog
 
 
 class MCPServer(BaseModel):

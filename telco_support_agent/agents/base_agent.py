@@ -4,7 +4,7 @@ import abc
 import json
 from collections.abc import Generator
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any, Optional
 from uuid import uuid4
 
 import backoff
@@ -165,7 +165,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             Validated agent configuration
         """
         # use cached config if available
-        cache_key = f"{agent_type}_{uc_config.catalog if uc_config else 'default'}"
+        cache_key = f"{agent_type}_{uc_config.agent_catalog if uc_config else 'default'}"
         if cache_key in cls._config_cache:
             return cls._config_cache[cache_key]
 
