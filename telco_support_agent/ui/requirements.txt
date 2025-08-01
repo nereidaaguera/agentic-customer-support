@@ -18,4 +18,6 @@ databricks-sdk
 # MLflow
 mlflow
 
+# dbdemos tracking
 dbdemos_tracker
+databricks-sdk>=0.61.0

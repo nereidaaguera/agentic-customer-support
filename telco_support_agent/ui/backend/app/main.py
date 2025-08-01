@@ -4,6 +4,7 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+from databricks.sdk import WorkspaceClient
 from dbdemos_tracker import Tracker
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -59,13 +60,13 @@ def create_app() -> FastAPI:
     @app.middleware("http")
     async def track_app_usage(request: Request, call_next):
         """Track app usage with dbdemos-tracker."""
-        # extract user email from Gap-Auth header
-        user_email = request.headers.get("gap-auth", "")
+        user_email = request.headers.get('X-Forwarded-Email')
 
         # track app view
-        if user_email and "@" in user_email:
+        if user_email:
             try:
-                tracker = Tracker("2556758628403379")
+                org = WorkspaceClient().get_workspace_id()
+                tracker = Tracker(org)
                 tracker.track_app_view(
                     user_email=user_email,
                     app_name="agentic-customer-support",
