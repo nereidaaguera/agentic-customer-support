@@ -1,6 +1,7 @@
 """Log Agent models to MLflow."""
 
 import inspect
+from pathlib import Path
 from typing import Optional
 
 import mlflow
@@ -30,6 +31,7 @@ def log_agent(
     environment: str = "prod",
     disable_tools: Optional[list[str]] = None,
     uc_config: Optional[UCConfig] = None,
+    config_dir: Optional[Path] = None,
 ) -> ModelInfo:
     """Log agent using MLflow Models from Code approach.
 
@@ -41,6 +43,7 @@ def log_agent(
         environment: Environment for resource detection (dev, prod)
         disable_tools: Optional list of tool names to disable. Can be simple names or full UC function names.
         uc_config: Unity Catalog configuration object
+        config_dir: Optional directory containing agent config files (defaults to PROJECT_ROOT/configs/agents)
 
     Returns:
         ModelInfo object containing details of the logged model
@@ -51,8 +54,14 @@ def log_agent(
     logger.info(f"Using package directory: {PACKAGE_DIR}")
     logger.info(f"Using project root: {PROJECT_ROOT}")
 
+    # Set default config directory if not provided
+    if config_dir is None:
+        config_dir = PROJECT_ROOT / "configs" / "agents"
+    
+    logger.info(f"Using config directory: {config_dir}")
+
     # config artifacts
-    artifacts = _collect_config_artifacts()
+    artifacts = _collect_config_artifacts(config_dir)
 
     # default UC config if not provided
     if uc_config is None:
@@ -68,7 +77,8 @@ def log_agent(
         resources = _get_supervisor_resources(
             uc_config.agent_catalog, 
             uc_config.agent_schema, 
-            uc_config.data_schema
+            uc_config.data_schema,
+            config_dir
         )
 
     if input_example is None:
@@ -83,7 +93,7 @@ def log_agent(
     extra_pip_requirements = _get_requirements()
 
     with mlflow.start_run():
-        _log_config_dicts(uc_config)
+        _log_config_dicts(uc_config, config_dir)
 
         if disable_tools:
             import json
@@ -139,10 +149,9 @@ def _validate_agent_with_custom_inputs(agent_class: type, input_example: dict) -
         raise ValueError(f"Agent validation failed: {str(e)}") from e
 
 
-def _collect_config_artifacts() -> dict[str, str]:
+def _collect_config_artifacts(config_dir: Path) -> dict[str, str]:
     """Collect configuration files as artifacts."""
     artifacts = {}
-    config_dir = PROJECT_ROOT / "configs" / "agents"
 
     if config_dir.exists():
         for config_file in config_dir.glob("*.yaml"):
@@ -151,7 +160,7 @@ def _collect_config_artifacts() -> dict[str, str]:
             logger.info(f"Adding config artifact: {artifact_key}")
 
     # topics.yaml file
-    topics_config_path = PROJECT_ROOT / "configs" / "agents" / "topics.yaml"
+    topics_config_path = config_dir / "topics.yaml"
     if topics_config_path.exists():
         topics_config_key = "configs/agents/topics.yaml"
         artifacts[topics_config_key] = str(topics_config_path)
@@ -165,7 +174,7 @@ def _collect_config_artifacts() -> dict[str, str]:
 
 
 def _get_supervisor_resources(
-    uc_catalog: str, agent_schema: str, data_schema: str
+    uc_catalog: str, agent_schema: str, data_schema: str, config_dir: Path
 ) -> list[Resource]:
     """Get all resources needed by the supervisor agent."""
     import yaml
@@ -176,7 +185,6 @@ def _get_supervisor_resources(
 
     # Get configs for all available agent types by scanning files
     agent_configs = {}
-    config_dir = PROJECT_ROOT / "configs" / "agents"
 
     if config_dir.exists():
         for config_file in config_dir.glob("*.yaml"):
@@ -258,7 +266,7 @@ def _get_requirements() -> list[str]:
         return []
 
 
-def _log_config_dicts(uc_config: UCConfig) -> None:
+def _log_config_dicts(uc_config: UCConfig, config_dir: Path) -> None:
     """Log configuration files as MLflow dictionaries."""
     # Log UC config
     uc_config_data = uc_config.model_dump()
@@ -266,8 +274,6 @@ def _log_config_dicts(uc_config: UCConfig) -> None:
     logger.info(f"Logged UC config: {uc_config_data}")
     
     # Log agent config files
-    config_dir = PROJECT_ROOT / "configs" / "agents"
-
     if not config_dir.exists():
         return
 
