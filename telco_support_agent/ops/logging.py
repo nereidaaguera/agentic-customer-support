@@ -16,6 +16,7 @@ from mlflow.models.resources import (
 from mlflow.types.responses import ResponsesAgentRequest
 
 from telco_support_agent import PACKAGE_DIR, PROJECT_ROOT
+from telco_support_agent.config import UCConfig
 from telco_support_agent.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
@@ -28,9 +29,7 @@ def log_agent(
     resources: Optional[list[Resource]] = None,
     environment: str = "prod",
     disable_tools: Optional[list[str]] = None,
-    uc_catalog: Optional[str] = None,
-    agent_schema: Optional[str] = None,
-    data_schema: Optional[str] = None,
+    uc_config: Optional[UCConfig] = None,
 ) -> ModelInfo:
     """Log agent using MLflow Models from Code approach.
 
@@ -41,9 +40,7 @@ def log_agent(
         resources: Optional list of resources (if None, will auto-detect)
         environment: Environment for resource detection (dev, prod)
         disable_tools: Optional list of tool names to disable. Can be simple names or full UC function names.
-        uc_catalog: Unity Catalog name
-        agent_schema: Schema for agent models and functions
-        data_schema: Schema for data tables
+        uc_config: Unity Catalog configuration object
 
     Returns:
         ModelInfo object containing details of the logged model
@@ -57,13 +54,22 @@ def log_agent(
     # config artifacts
     artifacts = _collect_config_artifacts()
 
+    # default UC config if not provided
+    if uc_config is None:
+        uc_config = UCConfig(
+            agent_catalog=f"telco_customer_support_{environment}",
+            agent_schema="agent",
+            data_schema="gold",
+            model_name="telco_customer_support_agent",
+        )
+
     # auto-detect resources if not provided
     if resources is None:
-        # Use provided UC config or defaults
-        catalog = uc_catalog or f"telco_customer_support_{environment}"
-        agent_sch = agent_schema or "agent"
-        data_sch = data_schema or "gold"
-        resources = _get_supervisor_resources(catalog, agent_sch, data_sch)
+        resources = _get_supervisor_resources(
+            uc_config.agent_catalog, 
+            uc_config.agent_schema, 
+            uc_config.data_schema
+        )
 
     if input_example is None:
         input_example = {
@@ -77,7 +83,7 @@ def log_agent(
     extra_pip_requirements = _get_requirements()
 
     with mlflow.start_run():
-        _log_config_dicts()
+        _log_config_dicts(uc_config)
 
         if disable_tools:
             import json
@@ -143,8 +149,6 @@ def _collect_config_artifacts() -> dict[str, str]:
             artifact_key = f"configs/agents/{config_file.name}"
             artifacts[artifact_key] = str(config_file)
             logger.info(f"Adding config artifact: {artifact_key}")
-
-    # UC config is now passed via parameters, no file needed
 
     # topics.yaml file
     topics_config_path = PROJECT_ROOT / "configs" / "agents" / "topics.yaml"
@@ -254,8 +258,14 @@ def _get_requirements() -> list[str]:
         return []
 
 
-def _log_config_dicts() -> None:
+def _log_config_dicts(uc_config: UCConfig) -> None:
     """Log configuration files as MLflow dictionaries."""
+    # Log UC config
+    uc_config_data = uc_config.model_dump()
+    mlflow.log_dict(uc_config_data, "uc_config.yaml")
+    logger.info(f"Logged UC config: {uc_config_data}")
+    
+    # Log agent config files
     config_dir = PROJECT_ROOT / "configs" / "agents"
 
     if not config_dir.exists():

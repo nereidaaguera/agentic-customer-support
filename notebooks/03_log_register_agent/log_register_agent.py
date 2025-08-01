@@ -131,9 +131,7 @@ logged_model_info = log_agent(
     input_example=config.input_example,
     environment=config.env,
     disable_tools=config.disable_tools,
-    uc_catalog=config.uc_catalog,
-    agent_schema=config.agent_schema,
-    data_schema=config.data_schema,
+    uc_config=uc_config,
 )
 
 print(f"Logged agent: {logged_model_info.model_uri}")
