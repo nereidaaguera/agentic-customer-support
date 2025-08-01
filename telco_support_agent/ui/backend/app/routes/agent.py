@@ -248,7 +248,7 @@ async def debug_info(settings: Settings = Depends(get_settings)):
 async def get_mlflow_experiment_info(settings: Settings = Depends(get_settings)):
     """Get MLflow experiment information including URL."""
     try:
-        experiment_id_map = {"dev": "2827072201880641", "prod": "2827072201880761"}
+        experiment_id_map = {"dev": "2827072201880641", "prod": "322488819830473"}
 
         env = "dev"
         if settings.databricks_endpoint_name.startswith("prod-"):
