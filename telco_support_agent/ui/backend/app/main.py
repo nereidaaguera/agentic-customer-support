@@ -60,7 +60,7 @@ def create_app() -> FastAPI:
     @app.middleware("http")
     async def track_app_usage(request: Request, call_next):
         """Track app usage with dbdemos-tracker."""
-        user_email = request.headers.get('X-Forwarded-Email')
+        user_email = request.headers.get("X-Forwarded-Email")
 
         # track app view
         if user_email:
