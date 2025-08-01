@@ -154,7 +154,7 @@ class TechSupportAgent(BaseAgent):
         mcp_tools = []
         self.mcp_tool_infos = []
         self.config = BaseAgent._load_config(
-            agent_type="tech_support", config_dir=config_dir, uc_config=uc_config
+            agent_type="tech_support", uc_config=uc_config
         )
         mcp_server_urls = override_mcp_server_urls or [
             server_spec.server_url for server_spec in self.config.mcp_servers

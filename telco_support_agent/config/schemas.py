@@ -42,6 +42,32 @@ class UCConfig(BaseModel):
         """Returns full UC model name (uses agent catalog)."""
         return f"{self.agent_catalog}.{self.agent_schema}.{self.model_name}"
 
+    @classmethod
+    def load_from_file(cls) -> Optional["UCConfig"]:
+        """Load UCConfig from yaml file."""
+        import logging
+
+        logger = logging.getLogger(__name__)
+        # Try file-based paths first (model serving)
+        search_paths = [
+            # Model Serving: artifacts under /model/artifacts/
+            Path("/model/artifacts") / "uc_config.yaml",
+            # Development/notebook setting: configs in project structure
+            Path(__file__).parent.parent.parent
+            / "configs"
+            / "agents"
+            / "uc_config.yaml",
+            # Current working directory (for local development)
+            Path.cwd() / "configs" / "agents" / "uc_config.yaml",
+        ]
+
+        for path in search_paths:
+            if path.exists():
+                logger.info(f"Found UC config artifact at: {path}")
+                with open(path) as f:
+                    config_dict = yaml.safe_load(f)
+                    return cls(**config_dict)
+        return None
 
 
 class MCPServer(BaseModel):

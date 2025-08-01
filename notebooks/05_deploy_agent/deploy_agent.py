@@ -54,6 +54,7 @@ print("Config loaded successfully!")
 # COMMAND ----------
 
 experiment = mlflow.set_experiment(f"/Shared/telco_support_agent/{config.env}/{config.env}_telco_support_agent")
+os.environ['MLFLOW_EXPERIMENT_ID'] = experiment.experiment_id
 print(experiment.experiment_id)
 
 # COMMAND ----------

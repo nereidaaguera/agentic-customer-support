@@ -1,6 +1,8 @@
 """Log Agent models to MLflow."""
 
 import inspect
+import os
+import tempfile
 from pathlib import Path
 from typing import Optional
 
@@ -59,9 +61,6 @@ def log_agent(
         config_dir = PROJECT_ROOT / "configs" / "agents"
     logger.info(f"Using config directory: {config_dir}")
 
-    # config artifacts
-    artifacts = _collect_config_artifacts(config_dir)
-
     # default UC config if not provided
     if uc_config is None:
         uc_config = UCConfig(
@@ -71,13 +70,21 @@ def log_agent(
             model_name="telco_customer_support_agent",
         )
 
+    # save uc_config in config directory.
+    uc_config_file_path = Path(config_dir, "uc_config.yaml")
+    with open(uc_config_file_path, "w") as file:
+        yaml.dump(uc_config.model_dump(), file, default_flow_style=False)
+
+    # config artifacts
+    artifacts = _collect_config_artifacts(config_dir)
+
     # auto-detect resources if not provided
     if resources is None:
         resources = _get_supervisor_resources(
-            uc_config.agent_catalog, 
-            uc_config.agent_schema, 
+            uc_config.agent_catalog,
+            uc_config.agent_schema,
             uc_config.data_schema,
-            config_dir
+            config_dir,
         )
 
     if input_example is None:
@@ -96,8 +103,6 @@ def log_agent(
 
         if disable_tools:
             import json
-            import os
-            import tempfile
 
             temp_dir = tempfile.gettempdir()
             disable_tools_path = os.path.join(temp_dir, "disable_tools.json")
@@ -167,6 +172,17 @@ def _collect_config_artifacts(config_dir: Path) -> dict[str, str]:
     else:
         logger.warning(
             "topics.yaml not found - topic classification may not work in deployment"
+        )
+
+    # uc_config.yaml file.
+    uc_config_path = config_dir / "uc_config.yaml"
+    if uc_config_path.exists():
+        uc_config_key = "configs/agents/uc_config.yaml"
+        artifacts[uc_config_key] = str(uc_config_path)
+        logger.info(f"Adding uc config file as artifact: {uc_config_key}")
+    else:
+        logger.warning(
+            "uc_config.yaml not found - UC Config may not work in deployment"
         )
 
     return artifacts
@@ -271,7 +287,7 @@ def _log_config_dicts(uc_config: UCConfig, config_dir: Path) -> None:
     uc_config_data = uc_config.model_dump()
     mlflow.log_dict(uc_config_data, "uc_config.yaml")
     logger.info(f"Logged UC config: {uc_config_data}")
-    
+
     # Log agent config files
     if not config_dir.exists():
         return

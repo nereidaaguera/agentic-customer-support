@@ -112,44 +112,6 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             logger.info(f"Disabled tools: {self.disable_tools}")
 
     @classmethod
-    def _load_uc_config_from_artifact(cls) -> Optional[UCConfig]:
-        """Load UC config from artifact if available."""
-        import yaml
-        
-        # Try file-based paths first (model serving)
-        search_paths = [
-            Path("/model/artifacts/uc_config.yaml"),  # Model serving
-            Path.cwd() / "uc_config.yaml",           # Local
-        ]
-        
-        for path in search_paths:
-            if path.exists():
-                logger.info(f"Found UC config artifact at: {path}")
-                with open(path) as f:
-                    config_dict = yaml.safe_load(f)
-                    return UCConfig(**config_dict)
-        
-        # Try MLflow artifact download (for dict artifacts)
-        try:
-            from mlflow.artifacts import download_artifacts
-            
-            logger.debug("Attempting to download uc_config.yaml via MLflow artifacts")
-            artifact_path = download_artifacts(artifact_path="uc_config.yaml")
-            
-            if artifact_path and Path(artifact_path).exists():
-                logger.info("Successfully downloaded uc_config.yaml from MLflow")
-                with open(artifact_path) as f:
-                    config_dict = yaml.safe_load(f)
-                    return UCConfig(**config_dict)
-            else:
-                logger.debug("MLflow artifact download returned no valid path")
-                
-        except Exception as e:
-            logger.debug(f"MLflow artifact download failed: {e}")
-        
-        return None
-
-    @classmethod
     def _load_config(
         cls,
         agent_type: str,
@@ -165,15 +127,18 @@ class BaseAgent(ResponsesAgent, abc.ABC):
             Validated agent configuration
         """
         # use cached config if available
-        cache_key = f"{agent_type}_{uc_config.agent_catalog if uc_config else 'default'}"
+        cache_key = (
+            f"{agent_type}_{uc_config.agent_catalog if uc_config else 'default'}"
+        )
         if cache_key in cls._config_cache:
             return cls._config_cache[cache_key]
 
         try:
             # Create default UC config if not provided
             if not uc_config:
+                logger.info("Loading uc_config from artifact...")
                 # Try to load from artifact first
-                uc_config = cls._load_uc_config_from_artifact()
+                uc_config = UCConfig.load_from_file()
                 if not uc_config:
                     # Fallback to dev defaults
                     logger.info("No UC config artifact found, using dev defaults")
@@ -183,7 +148,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
                         data_schema="gold",
                         model_name="telco_customer_support_agent",
                     )
-
+            logger.info(f"UCConfig loaded: {uc_config}")
             config = AgentConfig.load_from_file(agent_type, uc_config)
             cls._config_cache[cache_key] = config
             return config
