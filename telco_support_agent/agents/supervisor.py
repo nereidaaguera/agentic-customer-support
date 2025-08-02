@@ -129,20 +129,22 @@ class SupervisorAgent(BaseAgent):
                     "disable_tools": self.disable_tools,
                     "uc_config": self.config.uc_config,
                 }
-                
+
                 # For tech support agent, add environment-specific MCP server URL
                 if agent_type_enum == AgentType.TECH_SUPPORT:
                     # Check for explicit MCP_SERVER_URL first
                     mcp_server_url = os.getenv("MCP_SERVER_URL")
-                    
+
                     if mcp_server_url:
                         # Use explicit URL if provided
                         agent_kwargs["override_mcp_server_urls"] = [mcp_server_url]
                         logger.info(f"Using explicit MCP server URL: {mcp_server_url}")
                     else:
                         # Otherwise, use URL from config file (no override)
-                        logger.info("MCP_SERVER_URL not set, using URL from config file")
-                
+                        logger.info(
+                            "MCP_SERVER_URL not set, using URL from config file"
+                        )
+
                 agent = agents_classes[agent_type_enum](**agent_kwargs)
                 self._sub_agents[agent_type_str] = agent
                 logger.info(f"Initialized {agent_type_str} agent")
