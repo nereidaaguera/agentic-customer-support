@@ -11,7 +11,7 @@ resources:
       tasks:
         - task_key: log_register_agent
           notebook_task:
-            notebook_path: ../notebooks/03_log_register_agent/log_register_agent.py
+            notebook_path: ../../notebooks/03_log_register_agent/log_register_agent.py
             base_parameters:
               env: ${bundle.target}
               uc_catalog: ${var.uc_catalog}
@@ -26,7 +26,7 @@ resources:
           depends_on:
             - task_key: log_register_agent
           notebook_task:
-            notebook_path: ../notebooks/05_deploy_agent/deploy_agent.py
+            notebook_path: ../../notebooks/05_deploy_agent/deploy_agent.py
             base_parameters:
               env: ${bundle.target}
               uc_catalog: ${var.uc_catalog}

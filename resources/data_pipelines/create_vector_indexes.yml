@@ -12,7 +12,7 @@ resources:
       tasks:
         - task_key: create_vector_indexes
           notebook_task:
-            notebook_path: ../notebooks/01_vector_search_setup/create_vector_indexes.py
+            notebook_path: ../../notebooks/01_vector_search_setup/create_vector_indexes.py
             base_parameters:
               # Environment-specific parameters
               env: ${bundle.target}
