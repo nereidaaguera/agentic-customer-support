@@ -44,9 +44,7 @@ nest_asyncio.apply()
 
 # COMMAND ----------
 
-tech_agent = TechSupportAgent(override_mcp_server_urls=[
-    "https://e2-demo-west.cloud.databricks.com/api/2.0/mcp/functions/system/ai"
-])
+tech_agent = TechSupportAgent()
 
 print(f"\nAgent initialized successfully!")
 print(f"   Agent type: {tech_agent.agent_type}")
