@@ -4,7 +4,7 @@ import abc
 import json
 from collections.abc import Generator
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any, Optional
 from uuid import uuid4
 
 import backoff
@@ -76,7 +76,7 @@ class BaseAgent(ResponsesAgent, abc.ABC):
         """
         # load config file
         self.agent_type = agent_type
-        self.config = self._load_config(agent_type, config_dir, uc_config)
+        self.config = self._load_config(agent_type, uc_config)
         if disable_tools is None:
             disable_tools = self._load_disable_tools_from_artifact()
         self.disable_tools = disable_tools or []
@@ -115,34 +115,40 @@ class BaseAgent(ResponsesAgent, abc.ABC):
     def _load_config(
         cls,
         agent_type: str,
-        config_dir: Optional[Union[str, Path]] = None,
         uc_config: Optional[UCConfig] = None,
     ) -> AgentConfig:
         """Load agent configuration from YAML file.
 
         Args:
             agent_type: Type of agent to load config for
-            config_dir: Optional directory for config files
             uc_config: Optional UC config, if not provided will use defaults
 
         Returns:
             Validated agent configuration
         """
         # use cached config if available
-        cache_key = f"{agent_type}_{uc_config.catalog if uc_config else 'default'}"
+        cache_key = (
+            f"{agent_type}_{uc_config.agent_catalog if uc_config else 'default'}"
+        )
         if cache_key in cls._config_cache:
             return cls._config_cache[cache_key]
 
         try:
             # Create default UC config if not provided
             if not uc_config:
-                uc_config = UCConfig(
-                    agent_catalog="telco_customer_support_dev",
-                    agent_schema="agent",
-                    data_schema="gold",
-                    model_name="telco_customer_support_agent",
-                )
-
+                logger.info("Loading uc_config from artifact...")
+                # Try to load from artifact first
+                uc_config = UCConfig.load_from_file()
+                if not uc_config:
+                    # Fallback to dev defaults
+                    logger.info("No UC config artifact found, using dev defaults")
+                    uc_config = UCConfig(
+                        agent_catalog="telco_customer_support_dev",
+                        agent_schema="agent",
+                        data_schema="gold",
+                        model_name="telco_customer_support_agent",
+                    )
+            logger.info(f"UCConfig loaded: {uc_config}")
             config = AgentConfig.load_from_file(agent_type, uc_config)
             cls._config_cache[cache_key] = config
             return config

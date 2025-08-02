@@ -47,7 +47,7 @@ uc_config = UCConfig(
 )
 
 print("Unity Catalog Configuration:")
-print(f"  Catalog: {uc_config.catalog}")
+print(f"  Data Catalog: {uc_config.data_catalog}")
 print(f"  Data Schema: {uc_config.data_schema}")
 
 print("\nAvailable agent types and their functions:")

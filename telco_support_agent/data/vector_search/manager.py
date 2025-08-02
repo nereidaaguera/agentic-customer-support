@@ -82,8 +82,12 @@ class VectorSearchManager:
         )
 
         # index names
-        self.kb_index_name = f"{self.uc_config.catalog}.{self.uc_config.data_schema}.{self.config['indexes']['knowledge_base']['name']}"
-        self.tickets_index_name = f"{self.uc_config.catalog}.{self.uc_config.data_schema}.{self.config['indexes']['support_tickets']['name']}"
+        self.kb_index_name = self.uc_config.get_uc_index_name(
+            self.config["indexes"]["knowledge_base"]["name"]
+        )
+        self.tickets_index_name = self.uc_config.get_uc_index_name(
+            self.config["indexes"]["support_tickets"]["name"]
+        )
 
         # vector search endpoint - use parameter if provided, otherwise fall back to config
         if self.endpoint_name is None:
