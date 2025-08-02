@@ -32,7 +32,7 @@ jobs:
 
 
       - name: Run unit tests
-        run: poetry run pytest tests/unit/
+        run: poetry run pytest
 
   # validate Databricks asset bundle for each env
   validate-databricks-asset-bundle:
