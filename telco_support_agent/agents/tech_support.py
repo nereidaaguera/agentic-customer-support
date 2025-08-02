@@ -174,20 +174,21 @@ class TechSupportAgent(BaseAgent):
         """Setup MCP tools and return (mcp_tools, mcp_tool_infos)."""
         mcp_tools = []
         mcp_tool_infos = []
-        
+
         # Get MCP server URLs from config (environment interpolation already done)
         mcp_server_urls = [
-            server_spec.server_url 
+            server_spec.server_url
             for server_spec in self.config.mcp_servers
             if server_spec.server_url
         ]
-            
+
         if mcp_server_urls:
             from databricks.sdk import WorkspaceClient
+
             workspace_client = WorkspaceClient()
             mcp_tool_infos = get_mcp_tool_infos(workspace_client, mcp_server_urls)
             mcp_tools = [tool_info.spec for tool_info in mcp_tool_infos]
-            
+
         return mcp_tools, mcp_tool_infos
 
     def execute_tool(self, tool_name: str, args: dict) -> Any:

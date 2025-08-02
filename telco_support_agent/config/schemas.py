@@ -126,9 +126,9 @@ class AgentConfig(BaseModel):
     @classmethod
     def _interpolate_environment(cls, config_dict: dict) -> dict:
         """Replace {env} placeholders in config with actual environment value."""
-        import os
         import json
-        
+        import os
+
         env = os.getenv("ENV", "dev")
         # Convert to JSON string and back to handle nested dictionaries
         config_str = json.dumps(config_dict)

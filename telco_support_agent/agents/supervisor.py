@@ -129,7 +129,6 @@ class SupervisorAgent(BaseAgent):
                     "uc_config": self.config.uc_config,
                 }
 
-
                 agent = agents_classes[agent_type_enum](**agent_kwargs)
                 self._sub_agents[agent_type_str] = agent
                 logger.info(f"Initialized {agent_type_str} agent")
