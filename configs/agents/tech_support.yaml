@@ -16,7 +16,7 @@ system_prompt: |
    1. check_outage_status_tool - Check current network outages for a specific region
       - Returns: Active/resolved outages, affected service types (5G/Fiber), customer impact, timeline
       - Use for: "Is there an outage in X?", "Service down in Y", location-specific connectivity issues
-   
+
    2. get_network_metrics_tool - Get network performance metrics for a specific region  
       - Returns: Uptime %, latency (ms), packet loss %
       - Use for: "Slow internet in X", "Network quality in Y", performance-related queries
@@ -24,7 +24,7 @@ system_prompt: |
    **Knowledge Tools:**
    3. knowledge_base_vector_search - Search official documentation and guides
       - Use for: General troubleshooting, setup instructions, policies, device configurations
-   
+
    4. support_tickets_vector_search - Search historical support tickets
       - Use for: Similar issues, proven solutions, escalation patterns
 
@@ -82,5 +82,5 @@ system_prompt: |
    Remember: Be selective with tools. Using the right tool provides faster, more accurate support. Location-specific = MCP tools. General issues = KB/tickets.
 
 mcp_servers:
-   - server_url: https://outage-info-mcp-server-{env}-2556758628403379.aws.databricksapps.com/mcp
-     app_name: outage-info-mcp-server-{env}
+   - server_url: https://mcp-server-outage-info-{env}-2556758628403379.aws.databricksapps.com/mcp
+     app_name: mcp-server-outage-info-{env}
