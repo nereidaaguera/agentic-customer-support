@@ -73,7 +73,7 @@ class UCConfig(BaseModel):
 class MCPServer(BaseModel):
     """MCP Server configuration."""
 
-    server_url: str
+    server_url: Optional[str] = None
     app_name: Optional[str] = None
 
 
@@ -113,6 +113,8 @@ class AgentConfig(BaseModel):
                 logger.info(f"Found {agent_type} config at: {path}")
                 with open(path) as f:
                     config_dict = yaml.safe_load(f)
+                    # Replace {env} placeholders with actual environment
+                    config_dict = cls._interpolate_environment(config_dict)
                     return cls(**config_dict, uc_config=uc_config)
 
         logger.error(f"Config file not found for {agent_type}. Searched paths:")
@@ -120,3 +122,15 @@ class AgentConfig(BaseModel):
             logger.error(f"  - {path} (exists: {path.exists()})")
 
         raise FileNotFoundError(f"Agent config file not found for {agent_type}")
+
+    @classmethod
+    def _interpolate_environment(cls, config_dict: dict) -> dict:
+        """Replace {env} placeholders in config with actual environment value."""
+        import json
+        import os
+
+        env = os.getenv("ENV", "dev")
+        # Convert to JSON string and back to handle nested dictionaries
+        config_str = json.dumps(config_dict)
+        interpolated_str = config_str.replace("{env}", env)
+        return json.loads(interpolated_str)

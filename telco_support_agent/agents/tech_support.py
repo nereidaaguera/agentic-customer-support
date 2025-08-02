@@ -129,7 +129,6 @@ class TechSupportAgent(BaseAgent):
         config_dir: Optional[str] = None,
         disable_tools: Optional[list[str]] = None,
         uc_config: Optional[UCConfig] = None,
-        override_mcp_server_urls: Optional[list[str]] = None,
     ) -> None:
         """Init agent.
 
@@ -138,8 +137,6 @@ class TechSupportAgent(BaseAgent):
             config_dir: Optional directory for config files
             disable_tools: Optional list of tool names to disable
             uc_config: Optional UC configuration for Unity Catalog resources
-            override_mcp_server_urls: Optional list of MCP server URLs to discover tools from. If specified,
-            takes precedence over MCP servers specified in the config
         """
         self.retriever = TechSupportRetriever(uc_config=uc_config)
         retriever_tools = self.retriever.get_tools()
@@ -150,21 +147,11 @@ class TechSupportAgent(BaseAgent):
             "support_tickets_vector_search": self.retriever.tickets_retriever.retriever,
         }
 
-        # Discover and setup MCP tools
-        mcp_tools = []
-        self.mcp_tool_infos = []
+        # Setup MCP tools
         self.config = BaseAgent._load_config(
             agent_type="tech_support", uc_config=uc_config
         )
-        mcp_server_urls = override_mcp_server_urls or [
-            server_spec.server_url for server_spec in self.config.mcp_servers
-        ]
-        if mcp_server_urls:
-            from databricks.sdk import WorkspaceClient
-
-            workspace_client = WorkspaceClient()
-            self.mcp_tool_infos = get_mcp_tool_infos(workspace_client, mcp_server_urls)
-            mcp_tools.extend([tool_info.spec for tool_info in self.mcp_tool_infos])
+        mcp_tools, self.mcp_tool_infos = self._setup_mcp_tools()
 
         # Combine traditional retrieval tools with MCP tools
         all_tools = retriever_tools + mcp_tools
@@ -178,10 +165,31 @@ class TechSupportAgent(BaseAgent):
             llm_endpoint=llm_endpoint,
             config_dir=config_dir,
             tools=all_tools,  # tool specs for LLM (retrieval + MCP)
-            vector_search_tools=vector_search_tools,  # executable objects
+            exec_fns=vector_search_tools,  # executable functions for vector search tools
             disable_tools=disable_tools,
             uc_config=uc_config,
         )
+
+    def _setup_mcp_tools(self):
+        """Setup MCP tools and return (mcp_tools, mcp_tool_infos)."""
+        mcp_tools = []
+        mcp_tool_infos = []
+
+        # Get MCP server URLs from config (environment interpolation already done)
+        mcp_server_urls = [
+            server_spec.server_url
+            for server_spec in self.config.mcp_servers
+            if server_spec.server_url
+        ]
+
+        if mcp_server_urls:
+            from databricks.sdk import WorkspaceClient
+
+            workspace_client = WorkspaceClient()
+            mcp_tool_infos = get_mcp_tool_infos(workspace_client, mcp_server_urls)
+            mcp_tools = [tool_info.spec for tool_info in mcp_tool_infos]
+
+        return mcp_tools, mcp_tool_infos
 
     def execute_tool(self, tool_name: str, args: dict) -> Any:
         """Execute tool (UC function, vector search, or MCP tool)."""
