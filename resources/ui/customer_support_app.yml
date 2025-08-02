@@ -4,7 +4,7 @@
 
 resources:
   apps:
-    customer_support_ui:
-      name: "telco_customer_support_ui_${bundle.target}"
+    telco_support_agent_ui:
+      name: "telco-support-agent-${bundle.target}"
       description: "Customer support UI application"
       source_code_path: ../../telco_support_agent/ui
