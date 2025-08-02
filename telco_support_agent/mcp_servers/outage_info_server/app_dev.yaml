@@ -1,0 +1,7 @@
+command:
+- "python"
+- "mcp_server.py"
+
+env:
+  - name: "ENV"
+    value: "dev"

@@ -1,0 +1,82 @@
+name: Dev - Deploy Databricks Resources
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_ui:
+        description: 'Force deploy UI app'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  deploy:
+    name: Deploy to Dev
+    environment: dev
+    runs-on:
+      group: databricks-field-eng-protected-runner-group
+      labels: linux-ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup databricks CLI
+        uses: databricks/setup-cli@main
+
+      - name: Validate bundle for dev
+        id: validate
+        env:
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+        run: |
+          databricks bundle validate -t dev
+
+      - name: Deploy bundle to dev
+        id: deploy
+        env:
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+        run: |
+          databricks bundle deploy -t dev
+
+      - name: Check for UI Changes
+        id: ui-changes
+        run: |
+          if git diff --name-only HEAD~1 HEAD | grep -E '^(telco_support_agent/ui/|resources/ui/customer_support_app\.yml)'; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Deploy MCP Server
+        env:
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+        run: |
+          echo "Deploying MCP server..."
+          databricks bundle run outage_info_mcp_server -t dev
+
+      - name: Deploy UI App
+        if: ${{ github.event.inputs.deploy_ui == 'true' || steps.ui-changes.outputs.changed == 'true' }}
+        env:
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+        run: |
+          echo "Deploying UI app..."
+          databricks bundle run customer_support_ui -t dev
+
+      - name: Post Deployment Summary
+        if: always()
+        run: |
+          echo "## Dev Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: Dev" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **UI Changes**: ${{ steps.ui-changes.outputs.changed == 'true' && 'Detected' || 'None' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Force UI Deploy**: ${{ github.event.inputs.deploy_ui == 'true' && 'Yes' || 'No' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **UI Deployed**: ${{ (github.event.inputs.deploy_ui == 'true' || steps.ui-changes.outputs.changed == 'true') && 'Yes' || 'No' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Dev deployment completed." >> $GITHUB_STEP_SUMMARY

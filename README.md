@@ -20,15 +20,31 @@ This project implements a multi-agent system that processes telecom customer sup
 ## Repo Structure
 
 ```
-telco_support_agent/
+genai-customer-support-demo/
 ├── README.md
 ├── pyproject.toml           # Poetry for dependency management 
 ├── .pre-commit-config.yaml  # Pre-commit hooks configuration
-├── databricks.yml           # DAB config
+├── databricks.yml           # Databricks Asset Bundle config
+│
+├── resources/               # Databricks Asset Bundle resources
+│   ├── data_pipelines/      # Data pipeline resources
+│   ├── agent/               # Agent resources
+│   └── ui/                  # UI app resources
+│
+├── configs/                 # Configuration files
+│   ├── agents/              # Agent configurations
+│   └── data/                # Data pipeline configurations
+│
+├── .github/                 # CI/CD workflows
+│   └── workflows/
+│       ├── pr-validation.yml           # PR validation
+│       ├── dev-deploy-resources.yml    # Dev deployment
+│       ├── staging-deploy-resources.yml # Staging deployment  
+│       └── prod-deploy-resources.yml   # Production deployment
 │
 ├── telco_support_agent/    
 │   ├── __init__.py
-│   ├── config.py            # Config management
+│   ├── config/              # Config management
 │   │
 │   ├── agents/              # Agent implementations
 │   │   ├── __init__.py
@@ -39,32 +55,33 @@ telco_support_agent/
 │   │   └── product.py       # Product info agent
 │   │
 │   ├── tools/               # Agent tools
-│   │   ├── __init__.py
-│   │   └── ...
 │   │
 │   ├── data/                # Data generation and management
-│   │   ├── __init__.py
-│   │   ├── config.py        # Data generation configuration
-│   │   ├── generators/      # Data generators
-│   │   └── schemas/         # Pydantic models for data
 │   │
 │   ├── evaluation/          # Evaluation framework
-│   │   ├── __init__.py
-│   │   └── ...
 │   │
-│   └── ui/                  # Lakehouse app UI
-│       ├── __init__.py
-│       └── app.py
+│   ├── mcp_servers/         # MCP server implementations
+│   │   └── outage_info_server/
+│   │
+│   ├── ops/                 # AgentOps utilities
+│   │
+│   └── ui/                  # Customer support UI application
 │
 ├── notebooks/               # Databricks notebooks
+│   ├── 00_data_generation/  # Synthetic data generation
+│   ├── 01_vector_search_setup/ # Vector search index creation
+│   ├── 02_run_agent/        # Agent testing and development
+│   ├── 03_log_register_agent/ # MLflow logging and UC registration
+│   ├── 04_evals/            # Agent evals
+│   └── 05_deploy_agent/     # Model serving deployment
 │
 ├── scripts/                 # Utility scripts
 │   ├── lint.sh              # Linting script
 │   └── generate-requirements.sh  # Generate requirements.txt
 │
 └── tests/                   # Unit / integration tests
-    ├── __init__.py
-    └── ...
+    ├── unit/
+    └── integration/
 ```
 
 ## Development Environment
@@ -173,16 +190,70 @@ TODO
 
 ## Deployment
 
-The project uses Databricks Asset Bundles (DAB) for deployment:
+The project uses Databricks Asset Bundles (DAB) for deployment across three environments: dev, staging, and prod.
+
+### CI/CD Pipeline
+
+1. **PR Validation** (`pr-validation.yml`)
+   - Runs on all PRs to main branch
+   - Performs linting (Ruff), formatting checks, and unit tests
+   - Validates Databricks Asset Bundle configurations for all environments
+
+2. **Dev Deployment** (`dev-deploy-resources.yml`)
+   - Manual workflow dispatch
+   - Deploys to dev environment
+   - Always deploys MCP server
+   - UI deployment:
+     - Automatic: deploys when changes detected in `telco_support_agent/ui/` or `resources/ui/customer_support_app.yml`
+     - Manual: force deploy with `deploy_ui` flag
+   - Runs on protected runner group
+
+3. **Staging Deployment** (`staging-deploy-resources.yml`)
+   - Automatically triggers on push to main branch
+   - Manual workflow dispatch available
+   - Always deploys MCP server
+   - UI deployment:
+     - Automatic: deploys when changes detected in `telco_support_agent/ui/` or `resources/ui/customer_support_app.yml`
+     - Manual: force deploy with `deploy_ui` flag
+   - Uses Python 3.10 for compatibility
+
+4. **Production Deployment** (`prod-deploy-resources.yml`)
+   - Triggers on release publication or manual dispatch
+   - Requires semantic versioning tag (e.g., v1.2.3)
+   - Validates prerequisites:
+     - Tag must be on main branch
+     - Staging deployment must be successful
+   - Always deploys MCP server
+   - UI deployment:
+     - Automatic: deploys when changes detected in `telco_support_agent/ui/` or `resources/ui/customer_support_app.yml`
+     - Manual: force deploy with `deploy_ui` flag
+   - Uses Python 3.10 for compatibility
+
+### Manual Deployment Commands
 
 ```bash
-# deploy to dev env
+# Deploy to dev environment
 databricks bundle deploy -t dev
-databricks bundle run mcp-outage-info-server -t dev
-databricks bundle run telco_log_register_deploy_agent -t dev
 
-# deploy to prod env
-databricks bundle deploy -t prod
-databricks bundle run mcp-outage-info-server -t prod
-databricks bundle run telco_log_register_deploy_agent -t prod
+# Deploy and run specific resources
+databricks bundle run log_register_deploy_agent -t dev
+databricks bundle run create_vector_indexes -t dev
+databricks bundle run outage_info_mcp_server -t dev
+databricks bundle run customer_support_ui -t dev
+
+# Deploy to staging/prod (similar commands with -t staging or -t prod)
 ```
+
+### Databricks Resources
+
+The project deploys the following resources via Asset Bundles:
+
+1. **Agent Resources** (`resources/agent/`)
+   - `log_register_deploy_agent`: MLflow logging and model serving deployment
+   - `outage_info_mcp_server`: MCP server for outage information
+
+2. **Data Pipeline Resources** (`resources/data_pipelines/`)
+   - `create_vector_indexes`: Creates vector search indexes for knowledge base and support tickets
+
+3. **UI Resources** (`resources/ui/`)
+   - `customer_support_ui`: Customer support application interface

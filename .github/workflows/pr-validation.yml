@@ -1,0 +1,59 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  lint-and-unit-test:
+    runs-on:
+      group: databricks-field-eng-protected-runner-group
+      labels: linux-ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12.3'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install poetry
+          poetry install
+
+      - name: Check formatting with Ruff
+        run: poetry run ruff format --check .
+
+      - name: Lint with Ruff
+        run: poetry run ruff check .
+
+
+      - name: Run unit tests
+        run: poetry run pytest
+
+  # validate Databricks asset bundle for each env
+  validate-databricks-asset-bundle:
+    needs: lint-and-unit-test
+    runs-on:
+      group: databricks-field-eng-protected-runner-group
+      labels: linux-ubuntu-latest
+    strategy:
+      matrix:
+        environment: [dev, staging, prod]
+    environment: ${{ matrix.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: databricks/setup-cli@main
+
+      - name: Validate Bundle Configuration
+        env:
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+        run: |
+          echo "Validating bundle configuration for ${{ matrix.environment }} environment..."
+          databricks bundle validate -t ${{ matrix.environment }}
+          echo "${{ matrix.environment }} bundle configuration is valid"

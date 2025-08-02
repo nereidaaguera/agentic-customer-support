@@ -1,17 +1,17 @@
 # Agent Log, Register & Deploy Pipeline
 #
-# Databricks job that handles complete agent deployment pipeline:
+# Databricks job that handles agent deployment:
 # 1. log_register_agent: Logs the agent to MLflow and registers it in Unity Catalog
-# 2. deploy_agent: Deploys the registered agents using Agent Framework to a Databricks model serving endpoint
+# 2. deploy_agent: Deploys the registered agent using Agent Framework to Databricks model serving endpoint
 
 resources:
   jobs:
-    telco_log_register_deploy_agent:
+    log_register_deploy_agent:
       name: telco_log_register_deploy_agent_${bundle.target}
       tasks:
         - task_key: log_register_agent
           notebook_task:
-            notebook_path: ../notebooks/03_log_register_agent/log_register_agent.py
+            notebook_path: ../../notebooks/03_log_register_agent/log_register_agent.py
             base_parameters:
               env: ${bundle.target}
               uc_catalog: ${var.uc_catalog}
@@ -26,7 +26,7 @@ resources:
           depends_on:
             - task_key: log_register_agent
           notebook_task:
-            notebook_path: ../notebooks/05_deploy_agent/deploy_agent.py
+            notebook_path: ../../notebooks/05_deploy_agent/deploy_agent.py
             base_parameters:
               env: ${bundle.target}
               uc_catalog: ${var.uc_catalog}
@@ -36,9 +36,3 @@ resources:
               scale_to_zero_enabled: ${var.scale_to_zero_enabled}
               workload_size: ${var.workload_size}
               git_commit: ${bundle.git.commit}
-
-  apps:
-    mcp-outage-info-server:
-      name: "mcp-telco-outage-info-server"
-      description: "Server containing telco outage info"
-      source_code_path: ../telco_support_agent/mcp_servers/outage_info_server
