@@ -41,6 +41,6 @@ databricks bundle run create_vector_indexes -t <environment>
 
 Deploy app code to running apps:
 ```bash
-databricks bundle run outage_info_mcp_server -t <environment>
+databricks bundle run mcp_server_outage_info -t <environment>
 databricks bundle run customer_support_ui -t <environment>
 ```

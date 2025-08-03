@@ -1,0 +1,6 @@
+command:
+- "python"
+- "mcp_server.py"
+
+# Note: The ENV variable will be set by the bundle deployment
+# Each environment (dev/staging/prod) deploys a separate app instance

@@ -5,7 +5,7 @@
 
 resources:
   apps:
-    outage_info_mcp_server:
+    mcp_server_outage_info:
       name: "mcp-server-outage-info-${bundle.target}"
       description: "MCP Server - Telco outage info"
       source_code_path: ../../telco_support_agent/mcp_servers/outage_info_server
