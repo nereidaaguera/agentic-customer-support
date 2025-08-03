@@ -8,3 +8,7 @@ resources:
       name: "telco-support-agent-${bundle.target}"
       description: "Customer support UI application"
       source_code_path: ../../telco_support_agent/ui
+      config:
+        command:
+          - "python"
+          - "main.py"
