@@ -51,11 +51,10 @@ include:
 
 targets:
   dev:
+    mode: development
     default: true
     workspace:
       host: https://e2-demo-west.cloud.databricks.com
-    run_as:
-      service_principal_name: ${workspace.current_user.userName}
     variables:
       experiment_name: /Shared/telco_support_agent/dev/dev_telco_support_agent
       disable_tools: ""
