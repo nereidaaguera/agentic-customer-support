@@ -95,6 +95,15 @@ jobs:
             echo "Creating app $MCP_APP_NAME..."
             databricks apps create --name "$MCP_APP_NAME" --description "MCP Server - Telco outage info" || true
             echo "MCP app created"
+            # Grant permissions
+            databricks permissions update apps "$MCP_APP_NAME" --json '{
+              "access_control_list": [
+                {
+                  "user_name": "niall.turbitt@databricks.com",
+                  "permission_level": "CAN_MANAGE"
+                }
+              ]
+            }' || true
           fi
           
           # Check UI app
@@ -105,6 +114,15 @@ jobs:
             echo "Creating app $UI_APP_NAME..."
             databricks apps create --name "$UI_APP_NAME" --description "Customer support UI application" || true
             echo "UI app created"
+            # Grant permissions
+            databricks permissions update apps "$UI_APP_NAME" --json '{
+              "access_control_list": [
+                {
+                  "user_name": "niall.turbitt@databricks.com",
+                  "permission_level": "CAN_MANAGE"
+                }
+              ]
+            }' || true
           fi
 
       - name: Deploy Bundle to Prod
