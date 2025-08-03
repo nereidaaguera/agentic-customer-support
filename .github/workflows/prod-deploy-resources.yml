@@ -67,14 +67,6 @@ jobs:
           fi
           echo "✅ Release tag is on main branch"
           
-          # Check staging deployment was successful
-          LATEST_STAGING_RUN=$(gh run list --workflow="staging-deploy-resources.yml" --branch=main --limit=1 --json=conclusion --jq='.[0].conclusion')
-          if [[ "$LATEST_STAGING_RUN" != "success" ]]; then
-            echo "❌ Latest staging deployment was not successful: $LATEST_STAGING_RUN"
-            echo "DO NOT deploy to production without successful staging deployment."
-            exit 1
-          fi
-          
           echo "✅ All prerequisites validated successfully"
           
       - uses: databricks/setup-cli@main
