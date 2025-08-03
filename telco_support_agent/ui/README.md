@@ -229,7 +229,7 @@ uvicorn backend.app.main:app --reload  # backend
 ./deploy.sh staging
 
 # 4. After staging validation, deploy to production
-./deploy.sh prod PRODUCTION
+./deploy.sh prod
 ```
 
 ### Troubleshooting

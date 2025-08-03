@@ -90,6 +90,14 @@ jobs:
           databricks bundle deploy -t prod
           echo "Bundle deployed successfully"
 
+      - name: Deploy MCP Server
+        env:
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+        run: |
+          echo "Deploying MCP server..."
+          databricks bundle run outage_info_mcp_server -t prod          
+
       - name: Check for UI Changes
         id: ui-changes
         run: |
@@ -98,14 +106,6 @@ jobs:
           else
             echo "changed=false" >> $GITHUB_OUTPUT
           fi
-
-      - name: Deploy MCP Server
-        env:
-          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
-          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
-        run: |
-          echo "Deploying MCP server..."
-          databricks bundle run outage_info_mcp_server -t prod
 
       - name: Deploy UI App
         if: ${{ github.event.inputs.deploy_ui == 'true' || steps.ui-changes.outputs.changed == 'true' }}
