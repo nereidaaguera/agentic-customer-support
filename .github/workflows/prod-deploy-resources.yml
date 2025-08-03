@@ -80,6 +80,16 @@ jobs:
           echo "Validating bundle configuration..."
           databricks bundle validate -t prod
           
+      # TEMPORARY: Destroy existing resources to clean up state
+      - name: Destroy Existing Resources
+        env:
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+        run: |
+          echo "Destroying existing prod resources to clean up state..."
+          databricks bundle destroy -t prod --auto-approve || true
+          echo "Cleanup completed"
+
       - name: Deploy Bundle to Prod
         id: deploy
         env:

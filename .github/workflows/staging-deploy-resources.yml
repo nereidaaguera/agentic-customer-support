@@ -37,6 +37,16 @@ jobs:
           echo "Validating bundle configuration..."
           databricks bundle validate -t staging
 
+      # TEMPORARY: Destroy existing resources to clean up state
+      - name: Destroy Existing Resources
+        env:
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+        run: |
+          echo "Destroying existing staging resources to clean up state..."
+          databricks bundle destroy -t staging --auto-approve || true
+          echo "Cleanup completed"
+
       - name: Deploy to Staging
         env:
           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
