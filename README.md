@@ -236,7 +236,7 @@ databricks bundle deploy -t dev
 # Deploy and run specific resources
 databricks bundle run log_register_deploy_agent -t dev
 databricks bundle run create_vector_indexes -t dev
-databricks bundle run mcp_server_outage_info -t dev
+databricks bundle run mcp_telco_outage_info -t dev
 databricks bundle run customer_support_ui -t dev
 
 # Deploy to staging/prod (similar commands with -t staging or -t prod)
@@ -248,7 +248,7 @@ The project deploys the following resources via Asset Bundles:
 
 1. **Agent Resources** (`resources/agent/`)
    - `log_register_deploy_agent`: MLflow logging and model serving deployment
-   - `mcp_server_outage_info`: MCP server for outage information
+   - `mcp_telco_outage_info`: MCP server for outage information
 
 2. **Data Pipeline Resources** (`resources/data_pipelines/`)
    - `create_vector_indexes`: Creates vector search indexes for knowledge base and support tickets
