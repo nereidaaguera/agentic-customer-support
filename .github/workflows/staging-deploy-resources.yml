@@ -37,51 +37,6 @@ jobs:
           echo "Validating bundle configuration..."
           databricks bundle validate -t staging
 
-      - name: Create Apps if not exist
-        env:
-          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
-          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
-        run: |
-          echo "Checking if apps exist..."
-          
-          # Check MCP app
-          MCP_APP_NAME="mcp-server-outage-info-staging"
-          if databricks apps get --name "$MCP_APP_NAME" 2>/dev/null; then
-            echo "App $MCP_APP_NAME already exists"
-          else
-            echo "Creating app $MCP_APP_NAME..."
-            databricks apps create --name "$MCP_APP_NAME" --description "MCP Server - Telco outage info" || true
-            echo "MCP app created"
-            # Grant permissions
-            databricks permissions update apps "$MCP_APP_NAME" --json '{
-              "access_control_list": [
-                {
-                  "user_name": "niall.turbitt@databricks.com",
-                  "permission_level": "CAN_MANAGE"
-                }
-              ]
-            }' || true
-          fi
-          
-          # Check UI app
-          UI_APP_NAME="telco-support-agent-staging"
-          if databricks apps get --name "$UI_APP_NAME" 2>/dev/null; then
-            echo "App $UI_APP_NAME already exists"
-          else
-            echo "Creating app $UI_APP_NAME..."
-            databricks apps create --name "$UI_APP_NAME" --description "Customer support UI application" || true
-            echo "UI app created"
-            # Grant permissions
-            databricks permissions update apps "$UI_APP_NAME" --json '{
-              "access_control_list": [
-                {
-                  "user_name": "niall.turbitt@databricks.com",
-                  "permission_level": "CAN_MANAGE"
-                }
-              ]
-            }' || true
-          fi
-
       - name: Deploy to Staging
         env:
           DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
@@ -97,7 +52,7 @@ jobs:
           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
         run: |
           echo "Deploying MCP server..."
-          databricks bundle run outage_info_mcp_server -t staging          
+          databricks bundle run mcp_server_outage_info -t staging          
 
       - name: Check for UI Changes
         id: ui-changes
