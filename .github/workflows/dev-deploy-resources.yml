@@ -65,7 +65,7 @@ jobs:
           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
         run: |
           echo "Deploying UI app..."
-          databricks bundle run customer_support_ui -t dev
+          databricks bundle run telco_support_agent_ui -t dev
 
       - name: Post Deployment Summary
         if: always()
