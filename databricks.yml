@@ -81,4 +81,5 @@ targets:
     variables:
       experiment_name: /Shared/telco_support_agent/prod/prod_telco_support_agent
       workload_size: Small
+      scale_to_zero_enabled: false
       disable_tools: ""

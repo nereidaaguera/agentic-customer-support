@@ -13,6 +13,7 @@ resources:
           notebook_task:
             notebook_path: ../../notebooks/03_log_register_agent/log_register_agent.py
             base_parameters:
+              root_path: ${workspace.root_path}/files
               env: ${bundle.target}
               uc_catalog: ${var.uc_catalog}
               agent_schema: ${var.agent_schema}
@@ -28,6 +29,7 @@ resources:
           notebook_task:
             notebook_path: ../../notebooks/05_deploy_agent/deploy_agent.py
             base_parameters:
+              root_path: ${workspace.root_path}/files
               env: ${bundle.target}
               uc_catalog: ${var.uc_catalog}
               agent_schema: ${var.agent_schema}

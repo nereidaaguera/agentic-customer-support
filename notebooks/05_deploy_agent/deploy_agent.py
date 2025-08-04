@@ -13,6 +13,7 @@
 
 # COMMAND ----------
 
+dbutils.widgets.text("root_path", "")
 dbutils.widgets.text("env", "dev")
 dbutils.widgets.text("git_commit", "")
 dbutils.widgets.text("uc_catalog", "telco_customer_support_dev")
@@ -29,8 +30,8 @@ import sys
 
 import mlflow
 
-project_root = os.path.abspath(os.path.join(os.getcwd(), "../.."))
-sys.path.append(project_root)
+if root_path := dbutils.widgets.get("root_path"):
+    sys.path.append(root_path)
 
 # COMMAND ----------
 
