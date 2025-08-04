@@ -16,7 +16,7 @@ variables:
     description: Model name in UC
     default: telco_customer_support_agent
     
-  # MLflow
+  # MLflow Experiment
   experiment_name:
     description: MLflow experiment name
     default: /Shared/telco_support_agent/${bundle.target}/${bundle.target}_telco_support_agent
@@ -58,7 +58,6 @@ targets:
     workspace:
       host: https://e2-demo-west.cloud.databricks.com
     variables:
-      experiment_name: /Shared/telco_support_agent/dev/dev_telco_support_agent
       disable_tools: ""
       
   staging:
@@ -68,7 +67,6 @@ targets:
     run_as:
       service_principal_name: fc51b87a-e4da-47a9-820e-deb6c056ec8b
     variables:
-      experiment_name: /telco_support_agent/staging/experiments/staging_telco_support_agent
       scale_to_zero_enabled: true
       disable_tools: get_usage_info
       
@@ -79,7 +77,6 @@ targets:
     run_as:
       service_principal_name: fc51b87a-e4da-47a9-820e-deb6c056ec8b
     variables:
-      experiment_name: /Shared/telco_support_agent/prod/prod_telco_support_agent
       workload_size: Small
       scale_to_zero_enabled: false
       disable_tools: ""
