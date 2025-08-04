@@ -18,7 +18,9 @@ class Settings(BaseSettings):
     )
 
     # App settings
-    environment: str = Field(default="development")
+    environment: str = Field(
+        default_factory=lambda: os.getenv("ENV", "dev")
+    )
     host: str = Field(default="0.0.0.0")  # noqa: S104
     port: int = Field(
         default_factory=lambda: int(os.getenv("DATABRICKS_APP_PORT", "8000"))
@@ -41,7 +43,7 @@ class Settings(BaseSettings):
     )
     databricks_endpoint_name: str = Field(
         default_factory=lambda: os.getenv(
-            "DATABRICKS_ENDPOINT_NAME", "telco-customer-support-agent"
+            "DATABRICKS_ENDPOINT_NAME", "dev-telco-customer-support-agent"
         )
     )
 
@@ -159,11 +161,15 @@ class Settings(BaseSettings):
         # get environment and base name from endpoint name
         if self.databricks_endpoint_name.startswith("dev-"):
             env = "dev"
+        elif self.databricks_endpoint_name.startswith("staging-"):
+            env = "staging"
         elif self.databricks_endpoint_name.startswith("prod-"):
             env = "prod"
         else:
-            if self.environment == "production":
+            if self.environment in ("production", "prod"):
                 env = "prod"
+            elif self.environment == "staging":
+                env = "staging"
             else:
                 env = "dev"
 
