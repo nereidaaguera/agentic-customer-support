@@ -58,7 +58,7 @@ class LogRegisterConfig(BaseModel):
             "input": [
                 {
                     "role": "user",
-                    "content": "What was the customer's data usage last month?",
+                    "content": "What was the customer's data in May?",
                 }
             ],
             "custom_inputs": {"customer": "CUS-10001"},

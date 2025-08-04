@@ -35,12 +35,11 @@ if root_path := dbutils.widgets.get("root_path"):
 
 # COMMAND ----------
 
-from telco_support_agent.config import WidgetConfigLoader, DeployAgentConfig
+from telco_support_agent.config import DeployAgentConfig, WidgetConfigLoader
 from telco_support_agent.ops.deployment import (AgentDeploymentError,
                                                 cleanup_old_deployments,
                                                 deploy_agent)
 from telco_support_agent.ops.registry import get_latest_model_version
-
 
 # COMMAND ----------
 
@@ -98,7 +97,7 @@ try:
     print("✅ Model loaded successfully")
 
     test_input = {
-        "input": [{"role": "user", "content": "what was the customer's data usage last month?"}],
+        "input": [{"role": "user", "content": "What was the customer's data in May?"}],
         "custom_inputs": {"customer": "CUS-10001"}
     }
 
@@ -190,9 +189,9 @@ print("="*50)
 
 # COMMAND ----------
 
+from telco_support_agent.evaluation import SCORERS
 from telco_support_agent.ops.monitoring import (AgentMonitoringError,
                                                 create_agent_monitor)
-from telco_support_agent.evaluation import SCORERS
 
 if config.monitoring_enabled:
     print("="*50)
