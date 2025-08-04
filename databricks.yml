@@ -45,6 +45,8 @@ permissions:
     group_name: telco-customer-support
   - level: CAN_VIEW
     group_name: users
+  - level: CAN_MANAGE
+    service_principal_name: fc51b87a-e4da-47a9-820e-deb6c056ec8b
 
 include:
   - ./resources/**/*.yml
@@ -64,7 +66,7 @@ targets:
     workspace:
       host: https://e2-demo-west.cloud.databricks.com
     run_as:
-      service_principal_name: ${workspace.current_user.userName}
+      service_principal_name: fc51b87a-e4da-47a9-820e-deb6c056ec8b
     variables:
       experiment_name: /telco_support_agent/staging/experiments/staging_telco_support_agent
       scale_to_zero_enabled: true
@@ -75,7 +77,7 @@ targets:
     workspace:
       host: https://e2-demo-west.cloud.databricks.com
     run_as:
-      service_principal_name: ${workspace.current_user.userName}
+      service_principal_name: fc51b87a-e4da-47a9-820e-deb6c056ec8b
     variables:
       experiment_name: /Shared/telco_support_agent/prod/prod_telco_support_agent
       workload_size: Small
