@@ -70,7 +70,11 @@ jobs:
           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
         run: |
           echo "Deploying UI app..."
-          databricks bundle run telco_support_agent_ui -t staging
+          # TODO: Temp workaround - use deploy.sh instead of `databricks bundle run` approach
+          # When the bundle syncs, it doesn't properly handle buidling the frontend assets
+          cd telco_support_agent/ui
+          chmod +x deploy.sh
+          ./deploy.sh staging
 
       - name: Post Deployment Summary
         if: always()
