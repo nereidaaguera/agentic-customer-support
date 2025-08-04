@@ -1,10 +1,3 @@
-# ⚠️ DEPRECATED
-
-**This repository has been moved to: https://github.com/databricks-solutions/agentic-customer-support**
-
-Please use the [new repository](https://github.com/databricks-solutions/agentic-customer-support). This repository is no longer actively maintained.
-
---- 
 # Telco Support Agent
 
 Production-grade AI-powered customer support Agent System built on Databricks.
