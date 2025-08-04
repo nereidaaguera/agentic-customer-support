@@ -96,7 +96,7 @@ jobs:
           DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
         run: |
           echo "Deploying MCP server..."
-          databricks bundle run mcp_server_outage_info -t prod          
+          databricks bundle run mcp_telco_outage_info -t prod          
 
       - name: Check for UI Changes
         id: ui-changes

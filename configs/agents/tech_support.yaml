@@ -82,5 +82,5 @@ system_prompt: |
    Remember: Be selective with tools. Using the right tool provides faster, more accurate support. Location-specific = MCP tools. General issues = KB/tickets.
 
 mcp_servers:
-   - server_url: https://mcp-server-outage-info-{env}-2556758628403379.aws.databricksapps.com/mcp
-     app_name: mcp-server-outage-info-{env}
+   - server_url: https://mcp-telco-outage-info-{env}-2556758628403379.aws.databricksapps.com/mcp
+     app_name: mcp-telco-outage-info-{env}
