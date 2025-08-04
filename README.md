@@ -133,11 +133,11 @@ uv add package-name==2.0.0
 
 # after any dependency changes:
 uv lock
-uv export --format requirements-txt > requirements.txt
+python scripts/generate_requirements.py
 uv sync
 ```
 
-**Important**: The `requirements.txt` file must be kept in sync with `pyproject.toml` for notebook pip installs to work correctly.
+**Important**: The `requirements.txt` file contains only the direct dependencies from `pyproject.toml` with semantic versioning ranges. This format is optimized for Databricks notebook installations and avoids conflicts with pre-installed packages. Use the `scripts/generate_requirements.py` script to regenerate it after any dependency changes.
 
 ### Using requirements.txt
 
