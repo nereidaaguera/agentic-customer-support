@@ -14,7 +14,7 @@ jobs:
     name: Deploy to Dev
     environment: dev
     runs-on:
-      group: databricks-field-eng-protected-runner-group
+      group: databricks-solutions-protected-runner-group
       labels: linux-ubuntu-latest
     steps:
       - name: Checkout repository

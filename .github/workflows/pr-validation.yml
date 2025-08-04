@@ -7,7 +7,7 @@ on:
 jobs:
   lint-and-unit-test:
     runs-on:
-      group: databricks-field-eng-protected-runner-group
+      group: databricks-solutions-protected-runner-group
       labels: linux-ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,7 +39,7 @@ jobs:
   validate-databricks-asset-bundle:
     needs: lint-and-unit-test
     runs-on:
-      group: databricks-field-eng-protected-runner-group
+      group: databricks-solutions-protected-runner-group
       labels: linux-ubuntu-latest
     strategy:
       matrix:
