@@ -35,7 +35,7 @@ jobs:
       - name: Run unit tests
         run: uv run pytest
 
-  # validate Databricks asset bundle for each env
+  # validate Databricks asset bundle for each env separately
   validate-databricks-asset-bundle:
     needs: lint-and-unit-test
     runs-on:
