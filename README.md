@@ -1,5 +1,3 @@
-> **NOTE:** In process of migrating to https://github.com/databricks-solutions/agentic-customer-support 
-
 # Telco Support Agent
 
 Production-grade AI-powered customer support Agent System built on Databricks.
