@@ -96,19 +96,29 @@ try:
     loaded_model = mlflow.pyfunc.load_model(model_uri)
     print("✅ Model loaded successfully")
 
-    test_input = {
-        "input": [{"role": "user", "content": "What was the customer's data in May?"}],
-        "custom_inputs": {"customer": "CUS-10001"}
-    }
+    test_queries = [
+        {
+            "input": [{"role": "user", "content": "What was the customer's data in May?"}],
+            "custom_inputs": {"customer": "CUS-10001"}
+        },
+        {
+            "input": [{"role": "user", "content": "Is there an outage in San Francisco?"}],
+            "custom_inputs": {"customer": "CUS-10001"}
+        }
+    ]
 
-    print("Testing model prediction...")
-    response = loaded_model.predict(test_input)
-
-    if response and "output" in response and len(response["output"]) > 0:
-        print("✅ Model prediction successful")
-        print("Proceeding with deployment...")
-    else:
-        raise ValueError("Model returned empty or invalid response")
+    print("Testing model predictions...")
+    for i, test_input in enumerate(test_queries, 1):
+        print(f"Test {i}: {test_input['input'][0]['content']}")
+        response = loaded_model.predict(test_input)
+        
+        if response and "output" in response and len(response["output"]) > 0:
+            print(f"✅ Test {i} passed")
+        else:
+            raise ValueError(f"Test {i} failed: Model returned empty or invalid response")
+    
+    print("✅ All model predictions successful")
+    print("Proceeding with deployment...")
 
 except Exception as e:
     print(f"❌ Pre-deployment validation failed: {str(e)}")
