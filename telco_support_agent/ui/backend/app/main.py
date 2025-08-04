@@ -69,8 +69,8 @@ def create_app() -> FastAPI:
                 tracker = Tracker(org)
                 tracker.track_app_view(
                     user_email=user_email,
-                    app_name="agentic-customer-support",
-                    path=str(request.url.path),
+                    demo_name="agentic-customer-support",
+                    app_path=str(request.url.path),
                 )
             except Exception as e:
                 print(f"Tracking error: {e}")
