@@ -22,7 +22,9 @@ This project implements a multi-agent system that processes telecom customer sup
 ```
 genai-customer-support-demo/
 ├── README.md
-├── pyproject.toml           # Poetry for dependency management 
+├── pyproject.toml           # uv for dependency management 
+├── uv.lock                  # uv lock file
+├── requirements.txt         # Dependencies for notebook installation
 ├── .pre-commit-config.yaml  # Pre-commit hooks configuration
 ├── databricks.yml           # Databricks Asset Bundle config
 │
@@ -77,11 +79,11 @@ genai-customer-support-demo/
 │
 ├── scripts/                 # Utility scripts
 │   ├── lint.sh              # Linting script
-│   └── generate-requirements.sh  # Generate requirements.txt
+│   └── run_tech_support_agent.py  # Tech support agent runner
 │
-└── tests/                   # Unit / integration tests
-    ├── unit/
-    └── integration/
+└── tests/                   # Unit tests
+    ├── conftest.py
+    └── test_data/
 ```
 
 ## Development Environment
@@ -92,11 +94,11 @@ This project is designed to run on [Databricks Runtime 16.3](https://docs.databr
 
 #### Prerequisites
 - Python 3.12+
-- Poetry (2.1.2 and above) for dependency management
+- uv for dependency management
 
 #### Local Development
 
-For local development, create a virtual environment using Poetry:
+For local development, create a virtual environment using uv:
 
 ```bash
 # Install Python 3.12.3
@@ -106,26 +108,21 @@ pyenv local 3.12.3
 # Check Python version
 python --version  # Should output Python 3.12.3
 
-# Install poetry - requires at least 2.1.2
-curl -sSL https://install.python-poetry.org | python3 -
-
-# Configure poetry to use Python 3.12
-poetry env use 3.12.3
+# Install uv
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Install dependencies
-poetry install
+uv sync
 ```
 
-### Generating requirements.txt
+### Using requirements.txt
 
-We use a `requirements.txt` file to pip install dependencies in notebooks. To generate a clean `requirements.txt` from `pyproject.toml`:
+We maintain a `requirements.txt` file for pip installing dependencies in notebooks. The file is kept in sync with the `pyproject.toml` dependencies and can be installed directly:
 
 ```bash
-# Generate requirements.txt (removes platform markers)
-./scripts/generate-requirements.sh
+# Install dependencies from requirements.txt
+pip install -r requirements.txt
 ```
-
-The generated `requirements.txt` contains only the main dependencies with clean `package==version` format.
 
 ### Databricks Development
 
@@ -146,11 +143,11 @@ This project uses Ruff for linting and formatting, mypy for type checking, and p
 
 ```bash
 # install development dependencies
-poetry install
+uv sync
 
 # set up pre-commit hooks
 # NOTE: may run into issues with this if also running Databricks pre-commit git hooks
-poetry run pre-commit install
+uv run pre-commit install
 ```
 
 ### Running Linting Manually
@@ -161,9 +158,9 @@ chmod +x scripts/lint.sh
 ./scripts/lint.sh
 
 # or run commands individually
-poetry run ruff format .                  # Format code
-poetry run ruff check . --fix             # Run linter with auto-fixes
-poetry run mypy telco_support_agent       # Type checking
+uv run ruff format .                  # Format code
+uv run ruff check . --fix             # Run linter with auto-fixes
+uv run mypy telco_support_agent       # Type checking
 ```
 
 ### Code Style
@@ -204,6 +201,7 @@ The project uses Databricks Asset Bundles (DAB) for deployment across three envi
    - Deploys to dev environment
    - Always deploys MCP server
    - UI deployment:
+     - Currently uses `deploy.sh` script as a temporary workaround (builds frontend assets properly)
      - Automatic: deploys when changes detected in `telco_support_agent/ui/` or `resources/ui/customer_support_app.yml`
      - Manual: force deploy with `deploy_ui` flag
    - Runs on protected runner group
@@ -213,6 +211,7 @@ The project uses Databricks Asset Bundles (DAB) for deployment across three envi
    - Manual workflow dispatch available
    - Always deploys MCP server
    - UI deployment:
+     - Currently uses `deploy.sh` script as a temporary workaround (builds frontend assets properly)
      - Automatic: deploys when changes detected in `telco_support_agent/ui/` or `resources/ui/customer_support_app.yml`
      - Manual: force deploy with `deploy_ui` flag
    - Uses Python 3.10 for compatibility
@@ -225,6 +224,7 @@ The project uses Databricks Asset Bundles (DAB) for deployment across three envi
      - Staging deployment must be successful
    - Always deploys MCP server
    - UI deployment:
+     - Currently uses `deploy.sh` script as a temporary workaround (builds frontend assets properly)
      - Automatic: deploys when changes detected in `telco_support_agent/ui/` or `resources/ui/customer_support_app.yml`
      - Manual: force deploy with `deploy_ui` flag
    - Uses Python 3.10 for compatibility
@@ -239,10 +239,15 @@ databricks bundle deploy -t dev
 databricks bundle run log_register_deploy_agent -t dev
 databricks bundle run create_vector_indexes -t dev
 databricks bundle run mcp_telco_outage_info -t dev
-databricks bundle run customer_support_ui -t dev
+
+# UI deployment (currently using deploy.sh script)
+cd telco_support_agent/ui
+./deploy.sh dev  # or staging/prod
 
 # Deploy to staging/prod (similar commands with -t staging or -t prod)
 ```
+
+**Note**: UI deployment currently uses the `deploy.sh` script as a temporary workaround because the bundle sync approach doesn't properly build frontend assets. The script handles frontend building, static file management, and deployment to the correct environment.
 
 ### Databricks Resources
 

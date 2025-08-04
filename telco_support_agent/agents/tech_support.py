@@ -165,7 +165,7 @@ class TechSupportAgent(BaseAgent):
             llm_endpoint=llm_endpoint,
             config_dir=config_dir,
             tools=all_tools,  # tool specs for LLM (retrieval + MCP)
-            exec_fns=vector_search_tools,  # executable functions for vector search tools
+            vector_search_tools=vector_search_tools,  # executable functions for vector search tools
             disable_tools=disable_tools,
             uc_config=uc_config,
         )
