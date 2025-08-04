@@ -51,7 +51,17 @@ fi
 
 # Environment-specific deployment
 ENVIRONMENT=$1
-DATABRICKS_PROFILE=${2:-"DEFAULT"}
+
+# Check if running in CI environment (GitHub Actions)
+if [[ -n "$GITHUB_ACTIONS" || (-n "$DATABRICKS_CLIENT_ID" && -n "$DATABRICKS_CLIENT_SECRET") ]]; then
+    # In CI environment, use environment variables instead of profile
+    DATABRICKS_PROFILE=""
+    PROFILE_FLAG=""
+else
+    # Local environment, use profile
+    DATABRICKS_PROFILE=${2:-"DEFAULT"}
+    PROFILE_FLAG="--profile $DATABRICKS_PROFILE"
+fi
 
 validate_environment "$ENVIRONMENT"
 
@@ -142,22 +152,22 @@ echo "✅ Deployment package created"
 
 # Upload to workspace
 echo "📁 Uploading to workspace..."
-databricks workspace delete "$APP_FOLDER_IN_WORKSPACE" --recursive --profile $DATABRICKS_PROFILE 2>/dev/null || true
-databricks workspace import-dir .databricks_app_build "$APP_FOLDER_IN_WORKSPACE" --overwrite --profile $DATABRICKS_PROFILE
+databricks workspace delete "$APP_FOLDER_IN_WORKSPACE" --recursive $PROFILE_FLAG 2>/dev/null || true
+databricks workspace import-dir .databricks_app_build "$APP_FOLDER_IN_WORKSPACE" --overwrite $PROFILE_FLAG
 echo "✅ Files uploaded to workspace"
 
 # Create app if doesn't exist
 echo "🚀 Creating/Deploying Databricks application..."
-if ! databricks apps get "$LAKEHOUSE_APP_NAME" --profile $DATABRICKS_PROFILE >/dev/null 2>&1; then
+if ! databricks apps get "$LAKEHOUSE_APP_NAME" $PROFILE_FLAG >/dev/null 2>&1; then
   echo "📱 Creating new app: $LAKEHOUSE_APP_NAME"
-  databricks apps create "$LAKEHOUSE_APP_NAME" --profile $DATABRICKS_PROFILE
+  databricks apps create "$LAKEHOUSE_APP_NAME" $PROFILE_FLAG
 fi
 
 # Deploy the application
 echo "🚀 Deploying to app: $LAKEHOUSE_APP_NAME"
 databricks apps deploy "$LAKEHOUSE_APP_NAME" \
   --source-code-path "$APP_FOLDER_IN_WORKSPACE" \
-  --profile $DATABRICKS_PROFILE
+  $PROFILE_FLAG
 
 # Cleanup
 rm -rf .databricks_app_build/
@@ -172,8 +182,8 @@ echo "App name: $LAKEHOUSE_APP_NAME"
 echo "Workspace folder: $APP_FOLDER_IN_WORKSPACE"
 echo ""
 echo "📱 Check app status:"
-echo "   databricks apps get $LAKEHOUSE_APP_NAME --profile $DATABRICKS_PROFILE"
+echo "   databricks apps get $LAKEHOUSE_APP_NAME $PROFILE_FLAG"
 echo ""
 echo "📋 View logs:"
-echo "   databricks apps logs $LAKEHOUSE_APP_NAME --profile $DATABRICKS_PROFILE"
+echo "   databricks apps logs $LAKEHOUSE_APP_NAME $PROFILE_FLAG"
 echo "================================================"
