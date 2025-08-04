@@ -20,7 +20,7 @@ This project implements a multi-agent system that processes telecom customer sup
 ## Repo Structure
 
 ```
-genai-customer-support-demo/
+agentic-customer-support/
 ├── README.md
 ├── pyproject.toml           # uv for dependency management 
 ├── uv.lock                  # uv lock file
