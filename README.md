@@ -113,6 +113,32 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 uv sync
 ```
 
+### Managing Dependencies
+
+#### Adding or Updating Dependencies
+
+When adding new dependencies or updating existing versions:
+
+1. Update `pyproject.toml` - add or modify dependencies in the `pyproject.toml` file
+2. Update the lock file - run `uv lock` to update the `uv.lock` file
+3. Regenerate `requirements.txt` - run `uv export --format requirements-txt > requirements.txt`
+4. Sync your environment - run `uv sync` to update your local environment
+
+```bash
+# Example: adding a new dependency
+uv add new-package
+
+# Example: updating a specific package
+uv add package-name==2.0.0
+
+# after any dependency changes:
+uv lock
+uv export --format requirements-txt > requirements.txt
+uv sync
+```
+
+**Important**: The `requirements.txt` file must be kept in sync with `pyproject.toml` for notebook pip installs to work correctly.
+
 ### Using requirements.txt
 
 We maintain a `requirements.txt` file for pip installing dependencies in notebooks. The file is kept in sync with the `pyproject.toml` dependencies and can be installed directly:
