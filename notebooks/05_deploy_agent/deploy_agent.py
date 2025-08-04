@@ -68,6 +68,8 @@ print(f"  Environment: {config.env}")
 print(f"  Git commit: {config.git_commit}")
 print(f"  Experiment ID: {experiment.experiment_id}")
 
+os.environ['ENV'] = config.env
+
 # COMMAND ----------
 
 # Get model version
@@ -99,10 +101,6 @@ try:
     test_queries = [
         {
             "input": [{"role": "user", "content": "What was the customer's data in May?"}],
-            "custom_inputs": {"customer": "CUS-10001"}
-        },
-        {
-            "input": [{"role": "user", "content": "Is there an outage in San Francisco?"}],
             "custom_inputs": {"customer": "CUS-10001"}
         }
     ]
