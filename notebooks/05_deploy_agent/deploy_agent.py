@@ -203,7 +203,6 @@ if config.monitoring_enabled:
     print(f"Agent schema: {config.agent_schema}")
     # display custom metrics
     print("Custom Telco Assessments:")
-    # Taking only top 4 because more than that throws an error.
     scorers = SCORERS[:4]
     for scorer in scorers:
         print(f"  - {scorer.name}")
