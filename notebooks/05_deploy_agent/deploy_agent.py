@@ -35,12 +35,11 @@ if root_path := dbutils.widgets.get("root_path"):
 
 # COMMAND ----------
 
-from telco_support_agent.config import WidgetConfigLoader, DeployAgentConfig
+from telco_support_agent.config import DeployAgentConfig, WidgetConfigLoader
 from telco_support_agent.ops.deployment import (AgentDeploymentError,
                                                 cleanup_old_deployments,
                                                 deploy_agent)
 from telco_support_agent.ops.registry import get_latest_model_version
-
 
 # COMMAND ----------
 
@@ -68,6 +67,8 @@ print(f"  Workload size: {config.workload_size}")
 print(f"  Environment: {config.env}")
 print(f"  Git commit: {config.git_commit}")
 print(f"  Experiment ID: {experiment.experiment_id}")
+
+os.environ['ENV'] = config.env
 
 # COMMAND ----------
 
@@ -97,19 +98,25 @@ try:
     loaded_model = mlflow.pyfunc.load_model(model_uri)
     print("✅ Model loaded successfully")
 
-    test_input = {
-        "input": [{"role": "user", "content": "what was the customer's data usage last month?"}],
-        "custom_inputs": {"customer": "CUS-10001"}
-    }
+    test_queries = [
+        {
+            "input": [{"role": "user", "content": "What was the customer's data in May?"}],
+            "custom_inputs": {"customer": "CUS-10001"}
+        }
+    ]
 
-    print("Testing model prediction...")
-    response = loaded_model.predict(test_input)
-
-    if response and "output" in response and len(response["output"]) > 0:
-        print("✅ Model prediction successful")
-        print("Proceeding with deployment...")
-    else:
-        raise ValueError("Model returned empty or invalid response")
+    print("Testing model predictions...")
+    for i, test_input in enumerate(test_queries, 1):
+        print(f"Test {i}: {test_input['input'][0]['content']}")
+        response = loaded_model.predict(test_input)
+        
+        if response and "output" in response and len(response["output"]) > 0:
+            print(f"✅ Test {i} passed")
+        else:
+            raise ValueError(f"Test {i} failed: Model returned empty or invalid response")
+    
+    print("✅ All model predictions successful")
+    print("Proceeding with deployment...")
 
 except Exception as e:
     print(f"❌ Pre-deployment validation failed: {str(e)}")
@@ -190,9 +197,9 @@ print("="*50)
 
 # COMMAND ----------
 
+from telco_support_agent.evaluation import SCORERS
 from telco_support_agent.ops.monitoring import (AgentMonitoringError,
                                                 create_agent_monitor)
-from telco_support_agent.evaluation import SCORERS
 
 if config.monitoring_enabled:
     print("="*50)
@@ -204,7 +211,6 @@ if config.monitoring_enabled:
     print(f"Agent schema: {config.agent_schema}")
     # display custom metrics
     print("Custom Telco Assessments:")
-    # Taking only top 4 because more than that throws an error.
     scorers = SCORERS[:4]
     for scorer in scorers:
         print(f"  - {scorer.name}")

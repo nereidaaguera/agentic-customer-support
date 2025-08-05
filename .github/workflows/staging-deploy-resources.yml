@@ -14,7 +14,7 @@ on:
 jobs:
   deploy-staging:
     runs-on:
-      group: databricks-field-eng-protected-runner-group
+      group: databricks-solutions-protected-runner-group
       labels: linux-ubuntu-latest
     environment: staging
     steps:

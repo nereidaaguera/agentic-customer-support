@@ -20,7 +20,7 @@ jobs:
     name: Deploy to Production
     environment: prod
     runs-on:
-      group: databricks-field-eng-protected-runner-group
+      group: databricks-solutions-protected-runner-group
       labels: linux-ubuntu-latest
     steps:
       - uses: actions/checkout@v4

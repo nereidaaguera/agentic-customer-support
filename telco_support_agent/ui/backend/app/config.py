@@ -49,6 +49,9 @@ class Settings(BaseSettings):
     mlflow_experiment_path_override: str = Field(
         default_factory=lambda: os.getenv("MLFLOW_EXPERIMENT_PATH", "")
     )
+    mlflow_experiment_id: str = Field(
+        default_factory=lambda: os.getenv("MLFLOW_EXPERIMENT_ID", "")
+    )
 
     # Request settings
     request_timeout: int = Field(default=300)
@@ -152,25 +155,11 @@ class Settings(BaseSettings):
 
     @property
     def mlflow_experiment_path(self) -> str:
-        """Get the MLflow experiment path based on environment and endpoint."""
+        """Get the MLflow experiment path based on environment."""
         if self.mlflow_experiment_path_override:
             return self.mlflow_experiment_path_override
 
-        # get environment and base name from endpoint name
-        if self.databricks_endpoint_name.startswith("dev-"):
-            env = "dev"
-        elif self.databricks_endpoint_name.startswith("staging-"):
-            env = "staging"
-        elif self.databricks_endpoint_name.startswith("prod-"):
-            env = "prod"
-        else:
-            if self.environment in ("production", "prod"):
-                env = "prod"
-            elif self.environment == "staging":
-                env = "staging"
-            else:
-                env = "dev"
-
+        env = self.environment
         experiment_path = f"/Shared/telco_support_agent/{env}/{env}_telco_support_agent"
 
         return experiment_path

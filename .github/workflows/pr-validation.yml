@@ -7,7 +7,7 @@ on:
 jobs:
   lint-and-unit-test:
     runs-on:
-      group: databricks-field-eng-protected-runner-group
+      group: databricks-solutions-protected-runner-group
       labels: linux-ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -35,11 +35,11 @@ jobs:
       - name: Run unit tests
         run: uv run pytest
 
-  # validate Databricks asset bundle for each env
+  # validate Databricks asset bundle for each env separately
   validate-databricks-asset-bundle:
     needs: lint-and-unit-test
     runs-on:
-      group: databricks-field-eng-protected-runner-group
+      group: databricks-solutions-protected-runner-group
       labels: linux-ubuntu-latest
     strategy:
       matrix:

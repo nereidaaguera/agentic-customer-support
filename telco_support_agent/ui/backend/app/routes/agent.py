@@ -248,19 +248,10 @@ async def debug_info(settings: Settings = Depends(get_settings)):
 async def get_mlflow_experiment_info(settings: Settings = Depends(get_settings)):
     """Get MLflow experiment information including URL."""
     try:
-        experiment_id_map = {"dev": "2827072201880641", "prod": "322488819830473"}
+        experiment_id = settings.mlflow_experiment_id
+        env = settings.environment
 
-        env = "dev"
-        if settings.databricks_endpoint_name.startswith("prod-"):
-            env = "prod"
-        elif settings.databricks_endpoint_name.startswith("dev-"):
-            env = "dev"
-        elif settings.environment == "production":
-            env = "prod"
-
-        experiment_id = experiment_id_map.get(env, experiment_id_map["dev"])
-
-        mlflow_host = "https://e2-demo-west.cloud.databricks.com"
+        mlflow_host = settings.databricks_host.rstrip("/")
         mlflow_url = f"{mlflow_host}/ml/experiments/{experiment_id}"
 
         return {
