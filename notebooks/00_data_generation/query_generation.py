@@ -8,8 +8,6 @@
 # COMMAND ----------
 
 # MAGIC %pip install -r ../../requirements.txt -q
-# MAGIC %pip install mlflow databricks-agents --upgrade --pre
-# MAGIC %pip install retry
 # MAGIC dbutils.library.restartPython()
 
 # COMMAND ----------
@@ -546,26 +544,10 @@ class FeedbackGenerator:
         feedbacks = []
         agent_name = self.get_random_agent()
         
-        # Generate 1-3 different feedback items per query
-        num_feedbacks = random.randint(1, 4)
-        
-        feedback_types = [
-            self._generate_user_feedback,
-            self._generate_query_answered,
-            self._generate_user_router_feedback
-            # self._generate_accuracy_feedback,
-            # self._generate_clarity_feedback,
-            # self._generate_completeness_feedback,
-            # self._generate_relevance_feedback,
-            # self._generate_data_usage_feedback,
-        ]
-        
-        selected_feedback_types = random.sample(feedback_types, min(num_feedbacks, len(feedback_types)))
-        
-        for feedback_func in selected_feedback_types:
-            feedback = feedback_func(query, response, metadata, agent_name, trace_id)
-            if feedback:
-                feedbacks.append(feedback)
+        # Only generate user_feedback assessment
+        feedback = self._generate_user_feedback(query, response, metadata, agent_name, trace_id)
+        if feedback:
+            feedbacks.append(feedback)
         
         return feedbacks
     
@@ -573,58 +555,66 @@ class FeedbackGenerator:
                                 metadata: Dict[str, Any], agent_name: str, trace_id: str) -> Dict[str, Any]:
         """Generate user feedback by reading the response."""
         text_response = response['output'][-1]['content'][-1]['text']
-        user_feedback = judges.meets_guidelines(
-            guidelines=[
-                "The response must not be an error message, it must sound like a person would respond.",
-                "The response must not say that there were any technical errors or issues."
-            ],
-            context={
-                "response": text_response
-            }
-        )
-        # Don't log good feedback as this is not realistic.
-        if user_feedback.value == "yes" and random.random() < 0.8:
-            return
         
-        real_route, expected_route = self._compute_correct_routing(
-            query, response, metadata, agent_name, trace_id
-        )
+        # Use LLM to generate contextual feedback
+        system_prompt = """You are a customer who just interacted with a telecom support agent. Generate realistic feedback.
 
-        # Don't log all the time as this is not realistic.
-        should_log = random.random() < 0.5 or real_route != expected_route
-        if not should_log:
-            return
+Analyze the query and response, then:
+1. Decide if you're satisfied (True) or dissatisfied (False) - roughly 80% should be satisfied
+2. Write a brief, natural comment (under 10 words) explaining your reaction
+
+Consider:
+- Did the agent answer your specific question?
+- Was the information useful and relevant?
+- How clear and understandable was the response?
+- Would you need to ask follow-up questions?
+
+Output format:
+FEEDBACK: True/False
+RATIONALE: [your brief reaction to the response]
+
+Be creative and contextual - base your feedback on what actually happened in this specific interaction."""
+
+        user_prompt = f"""Query: {query}
+
+Response: {text_response}
+
+Generate realistic user feedback for this interaction."""
+
+        try:
+            llm_response = self._call_llm(system_prompt, user_prompt)
+            
+            # Parse the LLM response
+            lines = llm_response.strip().split('\n')
+            feedback_value = True  # default
+            rationale = "helpful response"  # default
+            
+            for line in lines:
+                if line.startswith("FEEDBACK:"):
+                    feedback_value = "true" in line.lower()
+                elif line.startswith("RATIONALE:"):
+                    rationale = line.replace("RATIONALE:", "").strip()
+            
+            # Sometimes don't log feedback to be realistic
+            if feedback_value and random.random() < 0.3:  # Skip 30% of positive feedback
+                return None
+                
+        except Exception as e:
+            # Fallback to simple random feedback if LLM fails
+            print(f"LLM feedback generation failed, using fallback: {e}")
+            is_positive = random.random() < 0.8
+            if is_positive:
+                rationale = random.choice(["helpful response", "really accurate", "great service"])
+            else:
+                rationale = random.choice(["not helpful", "too generic", "wrong information"])
+            feedback_value = is_positive
         
-        human_rationale = self._call_llm(
-            system_prompt="""
-                Your job is to convert computer generated explanations about why a certain response was bad or good into a human readable explanation.
-                The response should be short and concise as if a human explained why a response was bad after they gaves a thumbs down. Usually should be less than 10 words and can sometimes be formal, sometimes informal.
-
-                As input you will get:
-                <response>The agent's response</response>
-                <computer_rationale>A computer generated rationale of why the response was bad.</computer_rationale>
-
-                For example:
-                <response>Max iterations (10) reached. Stopping.</response>
-                <computer_rationale>The response 'Max iterations (10) reached. Stopping.' is an error message and indicates a technical issue. Therefore, it does not satisfy the guideline that the response must not be an error message and must not say that there were any technical errors or issues.<computer_rationale>
-
-                Example outputs:
-                - the agent seems broken
-                - help me
-                - the agent is broken
-                - the agent is not working
-            """,
-            user_prompt=f"""
-            <response>{text_response}</response>
-            <computer_rationale>{user_feedback.rationale}</computer_rationale>
-            """
-        )
-
+        # Return feedback in the expected format
         return {
             "name": "user_feedback",
-            "value": user_feedback.value == "yes",
+            "value": feedback_value,
             "source": agent_name,
-            "rationale": human_rationale
+            "rationale": rationale
         }
 
     @retry(tries=3, delay=2)
@@ -645,263 +635,6 @@ class FeedbackGenerator:
             print(f"LLM call failed: {e}")
             raise
     
-    def _generate_user_router_feedback(self, query: str, response: Dict[str, Any], 
-                                metadata: Dict[str, Any], agent_name: str, trace_id: str) -> Dict[str, Any]:
-        route_output, good_supervisor_response = self._compute_correct_routing(query, response, metadata, agent_name, trace_id)
-        if route_output != good_supervisor_response:
-            return {
-                "name": "user_feedback",
-                "value": False,
-                "source": "databricks",
-                "rationale": f"Route: {route_output}, Best route: {good_supervisor_response}"
-            }
-            
-    def _compute_correct_routing(self, query: str, response: Dict[str, Any], 
-                                metadata: Dict[str, Any], agent_name: str, trace_id: str) -> Dict[str, Any]:
-        """Generate user feedback by reading the response."""
-        text_response = response['output'][-1]['content'][-1]['text']
-        good_supervisor_prompt = """
-            You are an intelligent AI assistant for a telecom customer support system. Your job is to analyze customer queries and route them to the appropriate specialized agent based on the query's intent, required data sources, and the specific capabilities of each agent.
-
-            ## SPECIALIZED AGENTS AND THEIR CAPABILITIES:
-
-            ### 1. ACCOUNT AGENT
-            **Purpose**: Customer profile information, account status, subscription details, and account management
-            **Data Access**: Customer profiles, subscription details, plan information, account metrics 
-            **Route to ACCOUNT for queries about**:
-            - Current plan/subscription details ("What plan am I on?", "Show me my subscriptions")
-            - Account status and profile ("Is my account active?", "What's my loyalty tier?")
-            - Account history ("When did I create my account?", "How long have I been a customer?")
-            - Subscription management ("Is autopay enabled on my account?", "How many lines do I have?")
-            - Customer segment information ("What customer tier am I in?")
-
-            ### 2. BILLING AGENT  
-            **Purpose**: Bills, payments, charges, billing cycles, usage data, and financial inquiries
-            **Data Access**: Billing records, payment history, usage statistics, billing cycles
-            **Route to BILLING for queries about**:
-            - Bill amounts and charges ("Why is my bill $X?", "What are my charges for [date]?")
-            - Payment information ("When is my payment due?", "Did my payment go through?")
-            - Usage statistics ("How much data did I use?", "Show me my usage for [period]")
-            - Billing disputes ("I don't recognize this charge", "My bill seems wrong")
-            - Billing cycles and patterns ("Why is my bill different this month?")
-
-            ### 3. TECH_SUPPORT AGENT
-            **Purpose**: Technical troubleshooting, connectivity issues, device problems, and how-to guidance
-            **Data Access**: Knowledge base articles (FAQs, troubleshooting guides), historical support tickets
-            **Tools Available**:
-            **Route to TECH_SUPPORT for queries about**:
-            - Device connectivity ("My phone won't connect", "WiFi not working")
-            - Service issues ("Can't make calls", "No signal", "Internet is slow")
-            - Technical setup ("How do I set up voicemail?", "Configure international roaming")
-            - Troubleshooting steps ("My device keeps restarting", "Apps won't work")
-            - Technical how-to questions ("Reset network settings", "Update device software")
-
-            ### 4. PRODUCT AGENT
-            **Purpose**: Service plans, devices, promotions, product comparisons, and recommendations
-            **Data Access**: Plan catalog, device specifications, current promotions, customer device info
-            **Route to PRODUCT for queries about**:
-            - Plan comparisons ("What's the difference between Standard and Premium?")
-            - Device information ("Is my phone 5G compatible?", "What Samsung devices are available?")
-            - Promotions and offers ("Do you have any promotions?", "Are there iPhone upgrade deals?")
-            - Product recommendations ("Which plan has the most data?", "Best device for my needs?")
-            - Upgrade eligibility ("Can I upgrade my device early?", "What plans work with 5G?")
-
-            ## ROUTING DECISION CRITERIA:
-
-            **Primary Indicators**:
-            - Keywords related to money/payments → BILLING
-            - Technical problems/troubleshooting → TECH_SUPPORT  
-            - Plan/device comparisons or shopping → PRODUCT
-            - Account status/profile questions → ACCOUNT
-
-            **For Ambiguous Queries**:
-            - "What devices do I have?" → PRODUCT (customer-specific device info)
-            - "When does my contract end?" → ACCOUNT (subscription details)
-            - "How much do I owe?" → BILLING (payment/balance info)
-            - "My service isn't working" → TECH_SUPPORT (troubleshooting needed)
-
-            **Multi-Domain Queries**:
-            - If query spans multiple domains, route to the PRIMARY domain:
-                - "How much does the Premium plan cost and do I qualify?" → PRODUCT (primary: plan info)
-                - "My bill is high, what plan options do I have?" → BILLING (primary: bill inquiry)
-
-            ## RESPONSE FORMAT:
-            Analyze the query and respond with ONLY ONE of these four agent types:
-            - account
-            - billing  
-            - tech_support
-            - product
-
-            Do NOT include any explanation, reasoning, or additional text in your response.
-        """
-
-        good_supervisor_response = self._call_llm(
-            system_prompt=good_supervisor_prompt,
-            user_prompt=f"""<request>{query}</query>"""
-        )
-        trace = mlflow.get_trace(trace_id)
-        route_query_span = trace.search_spans(name='route_query')
-        route_output = route_query_span[0].outputs
-
-        print('Route comparison, bad output:', route_output, 'better route:', good_supervisor_response)
-
-        return route_output, good_supervisor_response
-
-    def _generate_query_answered(self, query: str, response: Dict[str, Any], 
-                                metadata: Dict[str, Any], agent_name: str, trace_id: str) -> Dict[str, Any]:
-        """Generate user feedback by reading the response."""
-        text_response = response['output'][-1]['content'][-1]['text']
-        query_answered = judges.meets_guidelines(
-            guidelines=[
-                "The response answer the user's query.",
-                "The response must be helpful."
-            ],
-            context={
-                "response": text_response
-            }
-        )
-
-        return {
-            "name": "query_answered",
-            "value": query_answered.value,
-            "source": "databricks",
-            "source_type": AssessmentSourceType.LLM_JUDGE,
-            "rationale": query_answered.rationale
-        }
-
-    def _generate_helpfulness_feedback(self, query: str, response: Dict[str, Any], 
-                                     metadata: Dict[str, Any], agent_name: str) -> Dict[str, Any]:
-        """Generate helpfulness feedback (mostly positive)."""
-        # 85% positive feedback
-        is_helpful = random.random() < 0.85
-        
-        return {
-            "name": "helpfulness",
-            "value": is_helpful,
-            "source": agent_name,
-            "rationale": random.choice([
-                "Response directly addressed the customer's question with actionable information",
-                "Customer seemed satisfied with the level of detail provided",
-                "The agent provided clear next steps for the customer",
-                "Response was comprehensive and covered all aspects of the inquiry"
-            ]) if is_helpful else random.choice([
-                "Customer needed additional clarification after the response",
-                "Response could have been more specific to the customer's situation",
-                "Some important details were missing from the response"
-            ])
-        }
-    
-    def _generate_accuracy_feedback(self, query: str, response: Dict[str, Any], 
-                                  metadata: Dict[str, Any], agent_name: str) -> Dict[str, Any]:
-        """Generate accuracy feedback."""
-        # 90% accurate feedback
-        is_accurate = random.random() < 0.90
-        
-        return {
-            "name": "accuracy",
-            "value": is_accurate,
-            "source": agent_name,
-            "rationale": random.choice([
-                "Information provided was consistent with company policies",
-                "Data retrieved appeared correct based on customer account",
-                "Technical guidance was sound and appropriate",
-                "Billing information matched customer records"
-            ]) if is_accurate else random.choice([
-                "Minor discrepancy noted in billing calculation",
-                "One piece of information needed verification",
-                "Policy reference could be more current"
-            ])
-        }
-    
-    def _generate_clarity_feedback(self, query: str, response: Dict[str, Any], 
-                                 metadata: Dict[str, Any], agent_name: str) -> Dict[str, Any]:
-        """Generate clarity feedback."""
-        # 80% clear feedback
-        is_clear = random.random() < 0.80
-        
-        return {
-            "name": "clarity",
-            "value": is_clear,
-            "source": agent_name,
-            "rationale": random.choice([
-                "Response was easy to understand and well-structured",
-                "Technical terms were explained appropriately",
-                "Step-by-step instructions were clear and logical",
-                "Customer could easily follow the guidance provided"
-            ]) if is_clear else random.choice([
-                "Some technical language could be simplified",
-                "Response structure could be more organized",
-                "Customer asked for clarification on certain points"
-            ])
-        }
-    
-    def _generate_completeness_feedback(self, query: str, response: Dict[str, Any], 
-                                      metadata: Dict[str, Any], agent_name: str) -> Dict[str, Any]:
-        """Generate completeness feedback."""
-        # 80% complete feedback
-        is_complete = random.random() < 0.8
-        
-        return {
-            "name": "completeness",
-            "value": is_complete,
-            "source": agent_name,
-            "rationale": random.choice([
-                "All aspects of the customer's question were addressed",
-                "Response included relevant additional information",
-                "Follow-up options were clearly provided",
-                "No further questions were needed from the customer"
-            ]) if is_complete else random.choice([
-                "Customer had follow-up questions about specific details",
-                "One aspect of the inquiry could have been expanded",
-                "Additional context would have been helpful"
-            ])
-        }
-    
-    def _generate_relevance_feedback(self, query: str, response: Dict[str, Any], 
-                                   metadata: Dict[str, Any], agent_name: str) -> Dict[str, Any]:
-        """Generate relevance feedback for telco-specific queries."""
-        # 85% relevant feedback
-        is_relevant = random.random() < 0.85
-        
-        category = metadata.get("category", "unknown")
-        
-        return {
-            "name": "relevance_to_query",
-            "value": is_relevant,
-            "source": agent_name,
-            "rationale": random.choice([
-                f"Response addressed the {category} query with appropriate telco-specific information",
-                f"Answer was well-suited to the customer's {category} needs",
-                f"Response included relevant {category} details and next steps",
-                f"Content was appropriate for a {category} support interaction"
-            ]) if is_relevant else random.choice([
-                f"Response could have been more specific to {category} domain",
-                f"Some {category} context was missing from the response",
-                f"Answer was too generic for this {category} query"
-            ])
-        }
-    
-    def _generate_data_usage_feedback(self, query: str, response: Dict[str, Any], 
-                                    metadata: Dict[str, Any], agent_name: str) -> Dict[str, Any]:
-        """Generate feedback on proper use of customer data."""
-        # 90% proper data usage
-        proper_data_use = random.random() < 0.90
-        
-        return {
-            "name": "proper_data_usage",
-            "value": proper_data_use,
-            "source": agent_name,
-            "rationale": random.choice([
-                "Agent appropriately used customer-specific data in response",
-                "Response referenced correct customer account information",
-                "Customer data was used securely and appropriately",
-                "Agent accessed only necessary customer information"
-            ]) if proper_data_use else random.choice([
-                "Could have used more specific customer data in response",
-                "Response was too generic given available customer context",
-                "Some relevant customer information was not utilized"
-            ])
-        }
 
 # COMMAND ----------
 
