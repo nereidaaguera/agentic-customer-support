@@ -1,0 +1,27 @@
+# Data Generation Pipeline
+#
+# Databricks job that handles synthetic data generation:
+# 1. data_generation: Creates synthetic telecom customer data
+
+resources:
+  jobs:
+    data_generation:
+      name: telco_data_generation_${bundle.target}
+      tasks:
+        - task_key: generate_data
+          notebook_task:
+            notebook_path: ../../notebooks/00_data_generation/data_generation.py
+            base_parameters:
+              env: ${bundle.target}
+              uc_catalog: ${var.uc_catalog}
+              data_schema: ${var.data_schema}
+              generate_all: "true"
+              generate_plans: "true"
+              generate_devices: "true"
+              generate_promotions: "true"
+              generate_customers: "true"
+              generate_subscriptions: "true"
+              generate_billing: "true"
+              generate_usage: "true"
+              generate_kb_articles: "true"
+              generate_support_tickets: "true"

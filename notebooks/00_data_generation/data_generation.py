@@ -33,31 +33,49 @@ from telco_support_agent.data.generators.products import ProductGenerator
 
 # COMMAND ----------
 
-env = "prod"
+# MAGIC %md
+# MAGIC ## Configuration
+# COMMAND ----------
+
+dbutils.widgets.text("env", "prod")
+dbutils.widgets.text("generate_all", "false")
+dbutils.widgets.text("generate_plans", "false")
+dbutils.widgets.text("generate_devices", "false")
+dbutils.widgets.text("generate_promotions", "false")
+dbutils.widgets.text("generate_customers", "false")
+dbutils.widgets.text("generate_subscriptions", "false")
+dbutils.widgets.text("generate_billing", "false")
+dbutils.widgets.text("generate_usage", "false")
+dbutils.widgets.text("generate_kb_articles", "false")
+dbutils.widgets.text("generate_support_tickets", "false")
+
+# COMMAND ----------
+
+env = dbutils.widgets.get("env")
 print(f"Running data generation for {env} environment")
 
 # Configure which tables to generate (set to True for tables to generate)
 generate_config = {
 
     # Set to True to regenerate all tables
-    "all": False,
+    "all": dbutils.widgets.get("generate_all").lower() == "true",
 
     # Product data
-    "plans": False,
-    "devices": False,
-    "promotions": True,
+    "plans": dbutils.widgets.get("generate_plans").lower() == "true",
+    "devices": dbutils.widgets.get("generate_devices").lower() == "true",
+    "promotions": dbutils.widgets.get("generate_promotions").lower() == "true",
 
     # Customer data
-    "customers": False,
-    "subscriptions": False,
+    "customers": dbutils.widgets.get("generate_customers").lower() == "true",
+    "subscriptions": dbutils.widgets.get("generate_subscriptions").lower() == "true",
 
     # Billing data
-    "billing": False,
-    "usage": False,
+    "billing": dbutils.widgets.get("generate_billing").lower() == "true",
+    "usage": dbutils.widgets.get("generate_usage").lower() == "true",
 
     # Knowledge base data
-    "kb_articles": False,
-    "support_tickets": True,
+    "kb_articles": dbutils.widgets.get("generate_kb_articles").lower() == "true",
+    "support_tickets": dbutils.widgets.get("generate_support_tickets").lower() == "true",
 
 }
 
