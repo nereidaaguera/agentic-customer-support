@@ -37,7 +37,8 @@ class ChatRequest(BaseModel):
         default_factory=list, description="Previous conversation messages"
     )
     intelligence_enabled: bool = Field(
-        default=True, description="Whether to use agent intelligence or generic responses"
+        default=True,
+        description="Whether to use agent intelligence or generic responses",
     )
 
 

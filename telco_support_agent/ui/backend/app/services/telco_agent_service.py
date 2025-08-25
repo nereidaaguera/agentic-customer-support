@@ -157,7 +157,10 @@ class TelcoAgentService:
 
         payload = {
             "input": input_messages,
-            "custom_inputs": {"customer": customer_id, "intelligence_enabled": intelligence_enabled},
+            "custom_inputs": {
+                "customer": customer_id,
+                "intelligence_enabled": intelligence_enabled,
+            },
             "databricks_options": {"return_trace": True},
         }
 
@@ -165,8 +168,12 @@ class TelcoAgentService:
             payload["stream"] = True
 
         # Debug logging
-        logger.error(f"DEBUG: TelcoAgentService payload - intelligence_enabled: {intelligence_enabled}")
-        logger.error(f"DEBUG: TelcoAgentService payload - custom_inputs: {payload['custom_inputs']}")
+        logger.error(
+            f"DEBUG: TelcoAgentService payload - intelligence_enabled: {intelligence_enabled}"
+        )
+        logger.error(
+            f"DEBUG: TelcoAgentService payload - custom_inputs: {payload['custom_inputs']}"
+        )
 
         return payload
 
@@ -460,7 +467,11 @@ class TelcoAgentService:
 
         try:
             payload = self._build_databricks_payload(
-                message, customer_id, conversation_history, stream=False, intelligence_enabled=intelligence_enabled
+                message,
+                customer_id,
+                conversation_history,
+                stream=False,
+                intelligence_enabled=intelligence_enabled,
             )
 
             logger.info(f"Sending request to Databricks for customer {customer_id}")
@@ -553,13 +564,19 @@ class TelcoAgentService:
 
         try:
             payload = self._build_databricks_payload(
-                message, customer_id, conversation_history, stream=True, intelligence_enabled=intelligence_enabled
+                message,
+                customer_id,
+                conversation_history,
+                stream=True,
+                intelligence_enabled=intelligence_enabled,
             )
 
             logger.info(f"Starting streaming request for customer {customer_id}")
-            logger.error(f"DEBUG: Request endpoint: {self.settings.databricks_endpoint}")
+            logger.error(
+                f"DEBUG: Request endpoint: {self.settings.databricks_endpoint}"
+            )
             logger.error(f"DEBUG: Request payload: {payload}")
-            
+
             headers = await self._get_headers()
             logger.error(f"DEBUG: Request headers: {headers}")
 
