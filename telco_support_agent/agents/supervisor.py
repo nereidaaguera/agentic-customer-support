@@ -399,7 +399,11 @@ class SupervisorAgent(BaseAgent):
             The response from the sub-agent
         """
         # Extract intelligence_enabled from custom_inputs
-        intelligence_enabled = request.custom_inputs.get("intelligence_enabled", True)
+        intelligence_enabled = (
+            request.custom_inputs.get("intelligence_enabled", True)
+            if request.custom_inputs
+            else True
+        )
 
         if not intelligence_enabled:
             logger.info("Intelligence disabled - using direct response")
@@ -474,7 +478,11 @@ class SupervisorAgent(BaseAgent):
             ResponsesAgentStreamEvent objects from the sub-agent
         """
         # Extract intelligence_enabled from custom_inputs
-        intelligence_enabled = request.custom_inputs.get("intelligence_enabled", True)
+        intelligence_enabled = (
+            request.custom_inputs.get("intelligence_enabled", True)
+            if request.custom_inputs
+            else True
+        )
 
         if not intelligence_enabled:
             logger.info("Intelligence disabled - using direct response (streaming)")
