@@ -36,6 +36,9 @@ class ChatRequest(BaseModel):
     conversation_history: list[ChatMessage] = Field(
         default_factory=list, description="Previous conversation messages"
     )
+    intelligence_enabled: bool = Field(
+        default=True, description="Whether to use agent intelligence or generic responses"
+    )
 
 
 class AgentResponse(BaseModel):
@@ -126,6 +129,7 @@ async def chat(
             message=request.message,
             customer_id=request.customer_id,
             conversation_history=request.conversation_history,
+            intelligence_enabled=request.intelligence_enabled,
         )
 
         logger.info(f"Agent response tools_used: {response.tools_used}")
@@ -163,6 +167,7 @@ async def chat_stream(
                     message=request.message,
                     customer_id=request.customer_id,
                     conversation_history=request.conversation_history,
+                    intelligence_enabled=request.intelligence_enabled,
                 ):
                     yield event_data
 
