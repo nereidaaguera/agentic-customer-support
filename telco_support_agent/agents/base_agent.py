@@ -140,13 +140,10 @@ class BaseAgent(ResponsesAgent, abc.ABC):
                 # Try to load from artifact first
                 uc_config = UCConfig.load_from_file()
                 if not uc_config:
-                    # Fallback to environment-specific defaults
-                    import os
-
-                    env = os.getenv("ENV", "dev")
-                    logger.info(f"No UC config artifact found, using {env} defaults")
+                    # Fallback to dev defaults
+                    logger.info("No UC config artifact found, using dev defaults")
                     uc_config = UCConfig(
-                        agent_catalog=f"telco_customer_support_{env}",
+                        agent_catalog="telco_customer_support_dev",
                         agent_schema="agent",
                         data_schema="gold",
                         model_name="telco_customer_support_agent",
